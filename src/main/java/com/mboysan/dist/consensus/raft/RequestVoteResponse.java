@@ -1,8 +1,8 @@
 package com.mboysan.dist.consensus.raft;
 
-import java.io.Serializable;
+import com.mboysan.dist.Message;
 
-public class RequestVoteResponse implements Serializable {
+public class RequestVoteResponse extends Message {
 
     /**
      * currentTerm, for candidate to update itself
@@ -31,6 +31,6 @@ public class RequestVoteResponse implements Serializable {
         return "RequestVoteResponse{" +
                 "term=" + term +
                 ", voteGranted=" + voteGranted +
-                '}';
+                "} " + super.toString();
     }
 }

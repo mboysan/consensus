@@ -1,7 +1,7 @@
 package com.mboysan.dist;
 
-import java.io.Serializable;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -15,31 +15,27 @@ public class InVMTransport implements Transport, AutoCloseable {
     private final Map<String, Callback<Message>> callbackMap = new ConcurrentHashMap<>();
 
     @Override
-    public void addServer(int nodeId, ProtocolRPC protoServer) {
-        Server server = new Server(protoServer);
-        // add this server to map and start processing
-        serverMap.put(nodeId, server);
-        // create clients for other servers on this server
-        serverMap.forEach((serverId, otherServer) -> {
-            server.clientMap.put(serverId, protoServer.createClient(this, nodeId, serverId));
-        });
-        // create this server's client on other servers
-        serverMap.forEach((serverId, otherServer) -> {
-            otherServer.clientMap.put(nodeId, protoServer.createClient(this, serverId, nodeId));
-        });
-        serverExecutor.execute(server);
-    }
-
-    public void sendForEach(int senderId, Consumer<ProtocolRPC> protoClient) {
-        serverMap.get(senderId).clientMap.forEach((clientId, client) -> {
-            protoClient.accept(client);
+    public void addServer(int nodeId, RPCProtocol protoServer) {
+        serverMap.computeIfAbsent(nodeId, id -> {
+            Server server = new Server(protoServer);
+            // add this server to map and start processing
+            serverMap.put(nodeId, server);
+            serverMap.forEach((i, s) -> s.protoServer.onServerListChanged(Set.copyOf(serverMap.keySet())));
+            serverExecutor.execute(server);
+            return server;
         });
     }
 
     @Override
-    public void send(int senderId, int receiverId, Consumer<ProtocolRPC> protoClient) {
-        ProtocolRPC client = serverMap.get(senderId).clientMap.get(receiverId);
-        protoClient.accept(client);
+    public Message sendRecv(Message message) {
+        try {
+            return sendRecvAsync(message).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);  //fixme
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);  //fixme
+        }
     }
 
     @Override
@@ -52,12 +48,7 @@ public class InVMTransport implements Transport, AutoCloseable {
     }
 
     @Override
-    public int getServerCount() {
-        return serverMap.size();
-    }
-
-    @Override
-    public void close() {
+    public synchronized void close() {
         serverExecutor.shutdown();
         callbackExecutor.shutdown();
         callbackMap.clear();
@@ -89,10 +80,9 @@ public class InVMTransport implements Transport, AutoCloseable {
     class Server implements Runnable, AutoCloseable {
         volatile boolean isRunning = true;
         final BlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
-        final ProtocolRPC protoServer;
-        final Map<Integer, ProtocolRPC> clientMap = new ConcurrentHashMap<>();
+        final RPCProtocol protoServer;
 
-        Server(ProtocolRPC protoServer) {
+        Server(RPCProtocol protoServer) {
             this.protoServer = protoServer;
         }
 
@@ -115,13 +105,12 @@ public class InVMTransport implements Transport, AutoCloseable {
                     }
 
                     // we first process the message
-                    Serializable response = protoServer.apply(message.getCommand());
+                    Message response = protoServer.apply(message);
 
                     // we send the response to the callback
                     Callback<Message> msgCallback = callbackMap.remove(message.getCorrelationId());
                     if (msgCallback != null) {
-                        Message respMsg = new Message(correlationId, message.getReceiverId(), message.getSenderId(), response);
-                        msgCallback.accept(respMsg);
+                        msgCallback.accept(response);
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -132,7 +121,7 @@ public class InVMTransport implements Transport, AutoCloseable {
         @Override
         public synchronized void close() {
             isRunning = false;
-            messageQueue.offer(new Message("closingServer", -1, -1, null));
+            messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
             messageQueue.clear();
         }
     }

@@ -1,35 +1,26 @@
 package com.mboysan.dist;
 
 import java.io.Serializable;
+import java.util.UUID;
 
-public class Message implements Serializable {
-    final String correlationId;
-    final int senderId;
-    final int receiverId;
-    final Serializable command;
-    final int retryCount;
+public abstract class Message implements Serializable {
+    private String correlationId = UUID.randomUUID().toString();
+    private int senderId;
+    private int receiverId;
 
-    public Message(String correlationId, int senderId, int receiverId, Serializable command) {
-        this(correlationId, senderId, receiverId, command, 0);
-    }
-
-    public Message(String correlationId, int senderId, int receiverId, Serializable command, int retryCount) {
+    public <T extends Message> T setCorrelationId(String correlationId) {
         this.correlationId = correlationId;
-        this.senderId = senderId;
-        this.receiverId = receiverId;
-        this.command = command;
-        this.retryCount = retryCount;
+        return (T) this;
     }
 
-    public Message(Message other) {
-        this(
-                other.getCorrelationId(),
-                other.getSenderId(),
-                other.getReceiverId(),
-                other.getCommand(),
-                other.getRetryCount() + 1
-        );
+    public <T extends Message> T setSenderId(int senderId) {
+        this.senderId = senderId;
+        return (T) this;
+    }
 
+    public <T extends Message> T setReceiverId(int receiverId) {
+        this.receiverId = receiverId;
+        return (T) this;
     }
 
     public String getCorrelationId() {
@@ -44,22 +35,18 @@ public class Message implements Serializable {
         return receiverId;
     }
 
-    public Serializable getCommand() {
-        return command;
-    }
-
-    public int getRetryCount() {
-        return retryCount;
-    }
-
     @Override
     public String toString() {
         return "Message{" +
                 "correlationId='" + correlationId + '\'' +
                 ", senderId=" + senderId +
                 ", receiverId=" + receiverId +
-                ", command=" + command +
-                ", retryCount=" + retryCount +
                 '}';
+    }
+
+    public <REQ extends Message, RESP extends Message> RESP responseTo(REQ request) {
+        return this.setCorrelationId(request.getCorrelationId())
+                .setSenderId(request.getReceiverId())
+                .setReceiverId(request.getSenderId());
     }
 }

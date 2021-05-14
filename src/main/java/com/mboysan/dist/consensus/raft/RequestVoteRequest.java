@@ -1,8 +1,8 @@
 package com.mboysan.dist.consensus.raft;
 
-import java.io.Serializable;
+import com.mboysan.dist.Message;
 
-public class RequestVoteRequest implements Serializable {
+public class RequestVoteRequest extends Message {
 
     /**
      * candidate’s term
@@ -51,6 +51,6 @@ public class RequestVoteRequest implements Serializable {
                 ", candidateId=" + candidateId +
                 ", lastLogIndex=" + lastLogIndex +
                 ", lastLogTerm=" + lastLogTerm +
-                '}';
+                "} " + super.toString();
     }
 }

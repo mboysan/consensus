@@ -1,9 +1,10 @@
 package com.mboysan.dist.consensus.raft;
 
-import java.io.Serializable;
+import com.mboysan.dist.Message;
+
 import java.util.List;
 
-public class AppendEntriesRequest implements Serializable {
+public class AppendEntriesRequest extends Message {
     /**
      * leader’s term
      */
@@ -71,6 +72,6 @@ public class AppendEntriesRequest implements Serializable {
                 ", prevLogTerm=" + prevLogTerm +
                 ", entries=" + entries +
                 ", leaderCommit=" + leaderCommit +
-                '}';
+                "} " + super.toString();
     }
 }

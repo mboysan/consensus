@@ -1,8 +1,8 @@
 package com.mboysan.dist.consensus.raft;
 
-import java.io.Serializable;
+import com.mboysan.dist.Message;
 
-public class AppendEntriesResponse implements Serializable {
+public class AppendEntriesResponse extends Message {
 
     /**
      * for leader to update itself
@@ -43,6 +43,6 @@ public class AppendEntriesResponse implements Serializable {
                 "term=" + term +
                 ", success=" + success +
                 ", matchIndex=" + matchIndex +
-                '}';
+                "} " + super.toString();
     }
 }

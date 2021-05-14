@@ -1,49 +1,34 @@
 package com.mboysan.dist.consensus.raft;
 
-import com.mboysan.dist.Message;
 import com.mboysan.dist.Transport;
 
-import java.io.Serializable;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+import java.util.Set;
 
 public class RaftClient implements RaftRPC {
 
-    final Transport transport;
-    final int senderId;
-    final int receiverId;
+    private final Transport transport;
 
-    public RaftClient(Transport transport, int senderId, int receiverId) {
+    public RaftClient(Transport transport) {
         this.transport = transport;
-        this.senderId = senderId;
-        this.receiverId = receiverId;
     }
 
     @Override
     public RequestVoteResponse requestVote(RequestVoteRequest request) {
-        return (RequestVoteResponse) sendRecv(request);
+        return (RequestVoteResponse) transport.sendRecv(request);
     }
 
     @Override
     public AppendEntriesResponse appendEntries(AppendEntriesRequest request) {
-        return (AppendEntriesResponse) sendRecv(request);
+        return (AppendEntriesResponse) transport.sendRecv(request);
     }
 
     @Override
-    public boolean stateMachineRequest(String clientCommand) {
-        return (Boolean) sendRecv(clientCommand);
+    public StateMachineResponse stateMachineRequest(StateMachineRequest request) {
+        return (StateMachineResponse) transport.sendRecv(request);
     }
 
-    Serializable sendRecv(Serializable request) {
-        String corrId = UUID.randomUUID().toString();
-        Message message = new Message(corrId, senderId, receiverId, request);
-        try {
-            return transport.sendRecvAsync(message).get().getCommand();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+    @Override
+    public void onServerListChanged(Set<Integer> serverIds) {
+        throw new UnsupportedOperationException("this is relevant to only the RaftServer");
     }
 }
