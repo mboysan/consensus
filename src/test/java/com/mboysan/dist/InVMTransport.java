@@ -1,12 +1,14 @@
 package com.mboysan.dist;
 
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class InVMTransport implements Transport, AutoCloseable {
+public class InVMTransport implements Transport {
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool();
     private final ExecutorService callbackExecutor = Executors.newCachedThreadPool();
@@ -15,15 +17,26 @@ public class InVMTransport implements Transport, AutoCloseable {
     private final Map<String, Callback<Message>> callbackMap = new ConcurrentHashMap<>();
 
     @Override
-    public void addServer(int nodeId, RPCProtocol protoServer) {
-        serverMap.computeIfAbsent(nodeId, id -> {
-            Server server = new Server(protoServer);
+    public synchronized void addServer(int nodeId, RPCProtocol protoServer) {
+        Server server = serverMap.get(nodeId);
+        if (server == null) {
+            server = new Server(protoServer);
             // add this server to map and start processing
             serverMap.put(nodeId, server);
             serverMap.forEach((i, s) -> s.protoServer.onServerListChanged(Set.copyOf(serverMap.keySet())));
             serverExecutor.execute(server);
-            return server;
-        });
+        }
+    }
+
+    @Override
+    public synchronized void removeServer(int nodeId) {
+        Server server = serverMap.get(nodeId);
+        if (server != null) {
+            Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());
+            idsTmp.remove(nodeId);
+            serverMap.forEach((i, s) -> s.protoServer.onServerListChanged(Set.copyOf(idsTmp)));
+            serverMap.remove(nodeId);
+        }
     }
 
     @Override
@@ -40,6 +53,13 @@ public class InVMTransport implements Transport, AutoCloseable {
 
     @Override
     public Future<Message> sendRecvAsync(Message message) {
+        if (message.getSenderId() == message.getReceiverId()) {
+            // this is the local server, no need to create a separate thread/task, so we do the processing
+            // on the current thread.
+            Message resp = serverMap.get(message.getReceiverId()).protoServer.apply(message);
+            return new GetOnlyFuture<>(resp);
+        }
+
         Callback<Message> msgCallback = new Callback<>();
         callbackMap.put(message.getCorrelationId(), msgCallback);
         Future<Message> respFuture = callbackExecutor.submit(msgCallback::get);
@@ -101,6 +121,7 @@ public class InVMTransport implements Transport, AutoCloseable {
                         continue;
                     }
                     if (correlationId.equals("closingServer")) {
+                        messageQueue.clear();
                         continue;   // this will force the loop to check for isRunning=false
                     }
 
@@ -122,7 +143,39 @@ public class InVMTransport implements Transport, AutoCloseable {
         public synchronized void close() {
             isRunning = false;
             messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
-            messageQueue.clear();
+        }
+    }
+
+    private static final class GetOnlyFuture<T> implements Future<T> {
+        private final T objToGet;
+
+        private GetOnlyFuture(T objToGet) {
+            this.objToGet = objToGet;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isCancelled() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isDone() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public T get() {
+            return objToGet;
+        }
+
+        @Override
+        public T get(long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException();
         }
     }
 

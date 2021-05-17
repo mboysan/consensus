@@ -2,7 +2,13 @@ package com.mboysan.dist.consensus.raft;
 
 import java.util.Stack;
 
+import static com.mboysan.dist.consensus.raft.State.Role.CANDIDATE;
+
 public class State {
+
+    enum Role {
+        CANDIDATE, FOLLOWER, LEADER
+    }
 
     // Persistent state on all servers:
 
@@ -21,12 +27,51 @@ public class State {
     /** index of highest log entry applied to state machine (initialized to 0, increases monotonically) */
     int lastApplied;
 
-    //Volatile state on leaders:
+    int leaderId = -1;
+    boolean isElectionNeeded = true;
+    Role role = CANDIDATE;
 
-    /** for each server, index of the next log entry to send to that server (initialized to leader last log index + 1) */
-    int nextIndex[];
-    /** for each server, index of highest log entry known to be replicated on server (initialized to 0,
-     * increases monotonically) */
-    int matchIndex[];
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof State)) return false;
 
+        State state = (State) o;
+
+        if (currentTerm != state.currentTerm) return false;
+        if (votedFor != state.votedFor) return false;
+        if (commitIndex != state.commitIndex) return false;
+        if (lastApplied != state.lastApplied) return false;
+        if (leaderId != state.leaderId) return false;
+        if (isElectionNeeded != state.isElectionNeeded) return false;
+        if (!raftLog.equals(state.raftLog)) return false;
+        return role == state.role;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = currentTerm;
+        result = 31 * result + votedFor;
+        result = 31 * result + raftLog.hashCode();
+        result = 31 * result + commitIndex;
+        result = 31 * result + lastApplied;
+        result = 31 * result + leaderId;
+        result = 31 * result + (isElectionNeeded ? 1 : 0);
+        result = 31 * result + role.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "State{" +
+                "currentTerm=" + currentTerm +
+                ", votedFor=" + votedFor +
+                ", raftLog=" + raftLog +
+                ", commitIndex=" + commitIndex +
+                ", lastApplied=" + lastApplied +
+                ", leaderId=" + leaderId +
+                ", isElectionNeeded=" + isElectionNeeded +
+                ", role=" + role +
+                '}';
+    }
 }

@@ -1,5 +1,7 @@
 package com.mboysan.dist.consensus.raft;
 
+import java.util.Objects;
+
 public class LogEntry {
 
     private final String command;
@@ -16,5 +18,31 @@ public class LogEntry {
 
     public int getTerm() {
         return term;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof LogEntry)) return false;
+
+        LogEntry logEntry = (LogEntry) o;
+
+        if (term != logEntry.term) return false;
+        return Objects.equals(command, logEntry.command);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = command != null ? command.hashCode() : 0;
+        result = 31 * result + term;
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "LogEntry{" +
+                "command='" + command + '\'' +
+                ", term=" + term +
+                '}';
     }
 }

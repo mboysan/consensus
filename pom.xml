@@ -16,11 +16,11 @@
         <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
         <maven.war.plugin.version>3.3.1</maven.war.plugin.version>
         <maven.surefire.version>3.0.0-M5</maven.surefire.version>
-        <cargo.maven.plugin.version>1.9.1</cargo.maven.plugin.version>
         <jacoco.version>0.8.6</jacoco.version>
 
         <slf4j.version>1.7.30</slf4j.version>
         <mockito.version>1.10.19</mockito.version>
+        <junit.jupiter.version>5.7.1</junit.jupiter.version>
     </properties>
 
     <dependencies>
@@ -30,6 +30,12 @@
             <version>${slf4j.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
