@@ -1,10 +1,11 @@
 package com.mboysan.dist.consensus.raft;
 
 import com.mboysan.dist.Transport;
+import com.mboysan.util.TimerQueue;
+import com.mboysan.util.Timers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -13,7 +14,7 @@ import java.util.stream.IntStream;
 
 import static com.mboysan.dist.consensus.raft.State.Role.*;
 
-public class RaftServer implements RaftRPC, AutoCloseable {
+public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     private final Logger LOG = LoggerFactory.getLogger(RaftServer.class);
 
@@ -25,11 +26,10 @@ public class RaftServer implements RaftRPC, AutoCloseable {
 
     private final ExecutorService executorQueue = Executors.newCachedThreadPool();
 
-    private static long ELECTION_TIMEOUT = 10000;
-    private static long RPC_TIMEOUT = 10000;
-    private static final long ELECTION_TIMER_TIMEOUT_MS = 5000;
+    private static final long ELECTION_TIMEOUT_MS = 5000;
+    private final Timers timers = new TimerQueue();
 
-    private final ScheduledExecutorService electionTimer = Executors.newSingleThreadScheduledExecutor();
+    private volatile boolean isRunning;
 
     private final Transport transport;
     private final int nodeId;
@@ -41,14 +41,11 @@ public class RaftServer implements RaftRPC, AutoCloseable {
         this.nodeId = nodeId;
         this.transport = transport;
         transport.addServer(nodeId, this);
-
-//        scheduleElectionTimer();
+        isRunning = true;
     }
 
-    void scheduleElectionTimer() {
-        long electionTimeoutMs = RNG.nextInt((int) (ELECTION_TIMER_TIMEOUT_MS/1000) + 1) * 1000;
-        System.out.println("Election timeout for node=" + nodeId + " is " + electionTimeoutMs);
-        electionTimer.scheduleAtFixedRate(() -> onElectionTimeout(), 0, electionTimeoutMs, TimeUnit.MILLISECONDS);
+    public int getNodeId() {
+        return nodeId;
     }
 
     @Override
@@ -67,10 +64,12 @@ public class RaftServer implements RaftRPC, AutoCloseable {
     private void forEachPeerParallel(Consumer<Peer> peerConsumer) {
         List<Future<?>> futures = new ArrayList<>();
         peers.forEach((id, peer) -> {
-            Future<?> future = executorQueue.submit(() -> {
-                peerConsumer.accept(peer);
-            });
-            futures.add(future);
+            if (id != nodeId) {
+                futures.add(executorQueue.submit(() -> peerConsumer.accept(peer)));
+            } else {
+                // we don't send the request to self.
+//                peerConsumer.accept(peer);
+            }
         });
         for (Future<?> future : futures) {
             try {
@@ -86,10 +85,27 @@ public class RaftServer implements RaftRPC, AutoCloseable {
 
     @Override
     public synchronized void close() {
+        isRunning = false;
+        timers.shutdown();
         executorQueue.shutdown();
-        electionTimer.shutdown();
         transport.removeServer(nodeId);
         peers.clear();
+    }
+
+    @Override
+    public void run() {
+        scheduleTimers();
+        /*while (isRunning) {
+            update();
+        }*/
+    }
+
+    void scheduleTimers() {
+        long electionTimeoutMs = RNG.nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
+        timers.schedule("electionTimer-node" + nodeId, this::onElectionTimeout, electionTimeoutMs, electionTimeoutMs);
+
+        long updateTimeoutMs = electionTimeoutMs / 2;
+        timers.schedule("updateTimer-node" + nodeId, this::update, updateTimeoutMs, updateTimeoutMs);
     }
 
     /*----------------------------------------------------------------------------------
@@ -97,10 +113,10 @@ public class RaftServer implements RaftRPC, AutoCloseable {
      * ----------------------------------------------------------------------------------*/
 
     private synchronized void onElectionTimeout() {
+        LOG.info("isElectionNeeded={}", state.isElectionNeeded);
         if (!state.isElectionNeeded) {
-            state.isElectionNeeded = true;    // it will be needed in the next iteration
-        } else {
-            update();
+            state.isElectionNeeded = true;
+            LOG.info("node {} election timeout.", nodeId);
         }
     }
 
@@ -109,10 +125,14 @@ public class RaftServer implements RaftRPC, AutoCloseable {
         sendRequestVoteToPeers();
         becomeLeader();
         sendAppendEntriesToPeers();
+        advanceCommitIndex();
+        advanceStateMachine();
     }
 
-    private void startNewElection() {
-        if (state.role == FOLLOWER || state.role == CANDIDATE && state.isElectionNeeded) {
+    void startNewElection() {
+        if ((state.role == FOLLOWER || state.role == CANDIDATE) && state.isElectionNeeded) {
+            LOG.info("node {} starting new election", nodeId);
+
             state.isElectionNeeded = false;
             state.currentTerm++;
             state.votedFor = nodeId;
@@ -125,11 +145,13 @@ public class RaftServer implements RaftRPC, AutoCloseable {
 
     private void sendRequestVoteToPeers() {
         if (state.role == CANDIDATE) {
+            LOG.info("node {} sending RequestVote to peers", nodeId);
+
             final Object lock = new Object();
 
             int currentTerm = state.currentTerm;
-            int lastLogTerm = logTerm(state.raftLog.size());
-            int lastLogIndex = state.raftLog.size();
+            int lastLogTerm = state.raftLog.lastLogTerm();
+            int lastLogIndex = state.raftLog.lastLogIndex();
             forEachPeerParallel((peer) -> {
                 RequestVoteRequest request = new RequestVoteRequest(currentTerm, nodeId, lastLogIndex, lastLogTerm)
                         .setSenderId(nodeId)
@@ -150,36 +172,40 @@ public class RaftServer implements RaftRPC, AutoCloseable {
     }
 
     private void becomeLeader() {
-        int voteCount = peers.values().stream().mapToInt(peer -> peer.voteGranted ? 1 : 0).sum();
-        if (state.role == CANDIDATE && (voteCount + 1) > peers.size() / 2) {
-            state.role = LEADER;
-            state.leaderId = nodeId;
-            peers.forEach((peerId, peer) -> {
-                peer.nextIndex = state.raftLog.size() + 1;
-            });
+        if (state.role == CANDIDATE) {
+            LOG.info("node {} becoming leader", nodeId);
+
+            int voteCount = peers.values().stream().mapToInt(peer -> peer.voteGranted ? 1 : 0).sum();
+            if (voteCount + 1 > peers.size() / 2) {
+                state.role = LEADER;
+                state.leaderId = nodeId;
+//                peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size() + 1);
+                peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
+            }
         }
     }
 
     private void sendAppendEntriesToPeers() {
         if (state.role == LEADER) {
+            LOG.info("node {} sending AppendEntries to peers", nodeId);
+
             final Object lock = new Object();
 
-            List<LogEntry> raftLog = List.copyOf(state.raftLog);
+            List<LogEntry> raftLog = state.raftLog.copyOfEntries();
             int logSize = raftLog.size();
             int leaderId = state.leaderId;
             int currentTerm = state.currentTerm;
             int commitIndex = state.commitIndex;
             forEachPeerParallel((peer) -> {
                 if (peer.matchIndex < logSize) {
-                    peer.rpcDue = System.currentTimeMillis() + ELECTION_TIMEOUT / 2;    //TODO: revise
-                    int prevIndex = peer.nextIndex - 1;
-                    int lastIndex = Math.min(prevIndex, logSize);
-                    peer.nextIndex = lastIndex;
-                    int prevTerm = logTerm(prevIndex);
+                    peer.rpcDue = System.currentTimeMillis() + ELECTION_TIMEOUT_MS / 2;    //TODO: revise
+                    int prevLogIndex = peer.nextIndex - 1;
+                    int prevLogTerm = state.raftLog.logTerm(prevLogIndex);
+                    int lastIndex = state.raftLog.lastLogIndex();
                     List<LogEntry> entries = raftLog.subList(peer.nextIndex, lastIndex);
 
                     AppendEntriesRequest request = new AppendEntriesRequest(
-                            currentTerm, leaderId, prevIndex, prevTerm, entries, commitIndex)
+                            currentTerm, leaderId, prevLogIndex, prevLogTerm, entries, commitIndex)
                             .setSenderId(nodeId)
                             .setReceiverId(peer.peerId);
                     AppendEntriesResponse response = getRPC(transport).appendEntries(request);
@@ -192,7 +218,8 @@ public class RaftServer implements RaftRPC, AutoCloseable {
                                 peer.matchIndex = response.getMatchIndex();
                                 peer.nextIndex = response.getMatchIndex() + 1;
                             } else {
-                                peer.nextIndex = Math.max(1, peer.nextIndex - 1);   // decrement peer.nextIndex, TODO: retry
+//                                peer.nextIndex = Math.max(1, peer.nextIndex - 1);   // decrement peer.nextIndex, TODO: retry
+                                peer.nextIndex = Math.max(0, peer.nextIndex - 1);   // decrement peer.nextIndex, TODO: retry
                             }
                         }
                     }
@@ -203,30 +230,29 @@ public class RaftServer implements RaftRPC, AutoCloseable {
 
     private void advanceCommitIndex() {
         if (state.role == LEADER) {
+//            LOG.info("node {} advancing commit index", nodeId);
+
             int majorityIdx = peers.size() / 2;
             int n = IntStream.concat(
                     peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
                     IntStream.of(state.raftLog.size())) // append len(log)
                     .sorted()
                     .boxed().collect(Collectors.toList()).get(majorityIdx);
-            if (logTerm(n) == state.currentTerm) {
+            if (state.raftLog.logTerm(n) == state.currentTerm) {
                 state.commitIndex = n;
             }
         }
     }
 
     private void advanceStateMachine() {
-        if (state.lastApplied < state.commitIndex) {
-            state.lastApplied++;
-            Serializable result = stateMachineApply(state.raftLog.get(state.lastApplied).getCommand());
-            if (state.role == LEADER && logTerm(state.lastApplied) == state.currentTerm) {
-                // send result to client
+        if (state.role == LEADER) {
+//            LOG.info("node {} advancing state machine", nodeId);
+
+            while (state.lastApplied < state.commitIndex) {
+                state.lastApplied++;
+                // apply on StateMachine
             }
         }
-    }
-
-    Serializable stateMachineApply(Serializable command) {
-        return "APPLIED";
     }
 
     /*----------------------------------------------------------------------------------
@@ -239,10 +265,9 @@ public class RaftServer implements RaftRPC, AutoCloseable {
         if (state.currentTerm < request.getTerm()) {
             stepDown(request.getTerm());
         }
-        if (state.currentTerm == request.getTerm() &&
-                (state.votedFor == -1 || state.votedFor == request.getCandidateId()) &&
-                (request.getLastLogTerm() >= logTerm(state.raftLog.size())) ||
-                ((request.getLastLogTerm() == logTerm(state.raftLog.size())) && (request.getLastLogIndex() >= state.raftLog.size()))
+        if (state.currentTerm == request.getTerm() && (state.votedFor == -1 || state.votedFor == request.getCandidateId()) &&
+                (request.getLastLogTerm() > state.raftLog.lastLogTerm()
+                        || (request.getLastLogTerm() == state.raftLog.lastLogTerm() && request.getLastLogIndex() >= state.raftLog.size()))
         ) {
             granted = true;
             state.votedFor = request.getCandidateId();
@@ -266,14 +291,14 @@ public class RaftServer implements RaftRPC, AutoCloseable {
             state.isElectionNeeded = false;
             boolean success = (request.getPrevLogIndex() == 0) ||
                     (request.getPrevLogIndex() <= state.raftLog.size() &&
-                            logTerm(request.getPrevLogIndex()) == request.getPrevLogTerm());
+                            state.raftLog.logTerm(request.getPrevLogIndex()) == request.getPrevLogTerm());
             int index;
             if (success) {
                 index = request.getPrevLogIndex();
                 for (int i = 0; i < request.getEntries().size(); i++) {
                     index++;
-                    if (logTerm(index) != request.getEntries().get(i).getTerm()) {
-                        while (state.raftLog.size() > index - 1) {
+                    if (state.raftLog.logTerm(index) != request.getEntries().get(i).getTerm()) {
+                        while (state.raftLog.size() > index) {
                             state.raftLog.pop();
                         }
                         state.raftLog.push(request.getEntries().get(i));
@@ -289,12 +314,15 @@ public class RaftServer implements RaftRPC, AutoCloseable {
 
     @Override
     public synchronized StateMachineResponse stateMachineRequest(StateMachineRequest request) {
-        if (state.role == LEADER) {
-            state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
-            return new StateMachineResponse(true).responseTo(request);
-        }
         if (state.leaderId == -1) {
             throw new IllegalStateException("leader unresolved");
+        }
+        if (state.role == LEADER) {
+            state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
+            int entryIndex = state.raftLog.lastLogIndex();
+            update();
+            boolean isApplied = state.raftLog.logTerm(entryIndex) == state.currentTerm;
+            return new StateMachineResponse(isApplied).responseTo(request);
         }
 
         return getRPC(transport).stateMachineRequest(request)
@@ -311,13 +339,6 @@ public class RaftServer implements RaftRPC, AutoCloseable {
         state.role = FOLLOWER;
         state.votedFor = -1;
         state.isElectionNeeded = false;
-    }
-
-    private synchronized int logTerm(int index) {
-        if (index < 1 || index > state.raftLog.size()) {
-            return 0;
-        }
-        return state.raftLog.get(index - 1).getTerm();
     }
 
     /*----------------------------------------------------------------------------------
@@ -342,8 +363,10 @@ public class RaftServer implements RaftRPC, AutoCloseable {
         void reset() {
             rpcDue = 0;
             voteGranted = false;
-            matchIndex = 0;
-            nextIndex = 1;
+/*            matchIndex = 0;
+            nextIndex = 1;*/
+            matchIndex = -1;
+            nextIndex = 0;
         }
     }
 

@@ -1,9 +1,6 @@
 package com.mboysan.dist;
 
-import com.mboysan.dist.consensus.raft.RaftServer;
-import com.mboysan.dist.consensus.raft.RequestVoteRequest;
-import com.mboysan.dist.consensus.raft.RequestVoteResponse;
-import com.mboysan.dist.consensus.raft.StateMachineRequest;
+import com.mboysan.dist.consensus.raft.*;
 
 public class Main {
 
@@ -12,17 +9,28 @@ public class Main {
 
         RaftServer rs1 = new RaftServer(1, transport);
         RaftServer rs2 = new RaftServer(2, transport);
-        RaftServer rs3 = new RaftServer(3, transport);
+//        RaftServer rs3 = new RaftServer(3, transport);
 
-        try {
-            boolean result = rs1.stateMachineRequest(new StateMachineRequest("set=myKey,val=myVal")).isApplied();
-            System.out.println("result=" + result);
-        } catch (Exception e) {
-            System.err.println(e);
-        }
+        Thread trs1 = new Thread(rs1, "RaftServer1");
+//        Thread trs2 = new Thread(rs2, "RaftServer2");
+//        Thread trs3 = new Thread(rs3, "RaftServer3");
 
-        RequestVoteResponse resp = rs1.getRPC(transport).requestVote(new RequestVoteRequest(1, 1, 1, 1).setSenderId(1).setReceiverId(2));
+        trs1.start();
+//        trs2.start();
+//        trs3.start();
 
-        transport.close();
+//        Thread.sleep(100000);
+        Thread.sleep(10000);
+
+        StateMachineResponse resp1 = rs1.stateMachineRequest(new StateMachineRequest("test command"));
+        StateMachineResponse resp2 = rs1.stateMachineRequest(new StateMachineRequest("test command2"));
+        StateMachineResponse resp3 = rs1.stateMachineRequest(new StateMachineRequest("test command3"));
+        StateMachineResponse resp4 = rs1.stateMachineRequest(new StateMachineRequest("test command4"));
+
+        System.out.println("ENDING PROGRAM");
+
+//        transport.close();
+
+        System.out.println("PROGRAM ENDED");
     }
 }

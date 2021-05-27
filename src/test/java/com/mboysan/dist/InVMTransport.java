@@ -1,5 +1,8 @@
 package com.mboysan.dist;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -9,6 +12,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class InVMTransport implements Transport {
+
+    private static final Logger LOG = LoggerFactory.getLogger(InVMTransport.class);
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool();
     private final ExecutorService callbackExecutor = Executors.newCachedThreadPool();
@@ -53,10 +58,12 @@ public class InVMTransport implements Transport {
 
     @Override
     public Future<Message> sendRecvAsync(Message message) {
+        LOG.debug("OUT : {}", message);
         if (message.getSenderId() == message.getReceiverId()) {
             // this is the local server, no need to create a separate thread/task, so we do the processing
             // on the current thread.
             Message resp = serverMap.get(message.getReceiverId()).protoServer.apply(message);
+            LOG.debug("IN (self) : {}", resp);
             return new GetOnlyFuture<>(resp);
         }
 
@@ -80,6 +87,7 @@ public class InVMTransport implements Transport {
         private T objToSupply = null;
         @Override
         public synchronized void accept(T r) {
+            LOG.debug("IN (callback) : {}", r);
             objToSupply = r;
             notify();
         }
@@ -115,6 +123,7 @@ public class InVMTransport implements Transport {
             while (isRunning) {
                 try {
                     Message message = messageQueue.take();
+                    LOG.debug("IN : {}", message);
                     String correlationId = message.getCorrelationId();
                     if (correlationId == null) {
                         System.err.println("correlationId cannot be null");

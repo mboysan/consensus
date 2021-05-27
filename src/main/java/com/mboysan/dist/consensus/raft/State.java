@@ -1,8 +1,6 @@
 package com.mboysan.dist.consensus.raft;
 
-import java.util.Stack;
-
-import static com.mboysan.dist.consensus.raft.State.Role.CANDIDATE;
+import static com.mboysan.dist.consensus.raft.State.Role.FOLLOWER;
 
 public class State {
 
@@ -13,23 +11,22 @@ public class State {
     // Persistent state on all servers:
 
     /** latest term server has seen (initialized to 0 on first boot, increases monotonically */
-    int currentTerm;
+    int currentTerm = 0;
     /** candidateId that received vote in current term (or null if none), null=-1 */
     int votedFor = -1;
     /** log entries; each entry contains command for state machine, and term when entry was received by leader
      * (first index is 1) */
-//    List<RaftLog> raftLog = new ArrayList<>();
-    Stack<LogEntry> raftLog = new Stack<>();
+    RaftLog raftLog = new RaftLog();
 
     //Volatile state on all servers:
     /** index of highest log entry known to be committed (initialized to 0, increases monotonically) */
-    int commitIndex;
+    int commitIndex = 0;
     /** index of highest log entry applied to state machine (initialized to 0, increases monotonically) */
-    int lastApplied;
+    int lastApplied = 0;
 
     int leaderId = -1;
-    boolean isElectionNeeded = true;
-    Role role = CANDIDATE;
+    boolean isElectionNeeded = false;
+    Role role = FOLLOWER;
 
     @Override
     public boolean equals(Object o) {
