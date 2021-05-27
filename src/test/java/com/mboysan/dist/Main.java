@@ -27,10 +27,11 @@ public class Main {
         StateMachineResponse resp3 = rs1.stateMachineRequest(new StateMachineRequest("test command3"));
         StateMachineResponse resp4 = rs1.stateMachineRequest(new StateMachineRequest("test command4"));
 
+        Thread.sleep(10000);
+
         System.out.println("ENDING PROGRAM");
-
-//        transport.close();
-
+        transport.close();
+        rs1.close();
         System.out.println("PROGRAM ENDED");
     }
 }

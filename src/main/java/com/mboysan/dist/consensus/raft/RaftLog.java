@@ -3,19 +3,22 @@ package com.mboysan.dist.consensus.raft;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Index of the log entries start from 0 unlike described in Raft paper which starts from 1.
+ */
 public class RaftLog implements Comparable<RaftLog> {
     private final List<LogEntry> entries = new ArrayList<>();
 
     int lastLogIndex() {
-        return entries.size();
+        return entries.size() - 1;
     }
 
     int lastLogTerm() {
-        return logTerm(entries.size());
+        return logTerm(lastLogIndex());
     }
 
     int logTerm(int index) {
-        if (index < 1 || index > entries.size()) {
+        if (index < 0 || index >= entries.size()) {
             return 0;
         }
         return get(index).getTerm();
@@ -33,10 +36,7 @@ public class RaftLog implements Comparable<RaftLog> {
     }
 
     LogEntry get(int index) {
-        if (index < 1 || index > entries.size()) {
-            throw new IndexOutOfBoundsException("out of bounds index=" + index + ", Note: log index starts from 1");
-        }
-        return entries.get(index -1);
+        return entries.get(index);
     }
 
     int size() {
@@ -53,6 +53,27 @@ public class RaftLog implements Comparable<RaftLog> {
             log.push(entry);
         }
         return log;
+    }
+
+    void removeEntriesFrom(int indexIncluded) {
+        int size = size();
+        if (indexIncluded < 0) {
+            throw new IndexOutOfBoundsException("index=" + indexIncluded + ", logSize=" + size);
+        }
+        if (indexIncluded >= size) {
+            return;
+        }
+        for (int i = 0; i < (size - indexIncluded); i++) {
+            pop();
+        }
+    }
+
+    List<LogEntry> getEntriesFrom(int indexIncluded) {
+        int size = size();
+        if (indexIncluded != 0 && indexIncluded >= size) {
+            throw new IllegalArgumentException("index=" + indexIncluded + ", logSize=" + size);
+        }
+        return List.copyOf(entries.subList(indexIncluded, size));
     }
 
 

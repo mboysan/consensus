@@ -113,10 +113,9 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
      * ----------------------------------------------------------------------------------*/
 
     private synchronized void onElectionTimeout() {
-        LOG.info("isElectionNeeded={}", state.isElectionNeeded);
         if (!state.isElectionNeeded) {
             state.isElectionNeeded = true;
-            LOG.info("node {} election timeout.", nodeId);
+            LOG.info("node {} needs election.", nodeId);
         }
     }
 
@@ -179,7 +178,6 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
             if (voteCount + 1 > peers.size() / 2) {
                 state.role = LEADER;
                 state.leaderId = nodeId;
-//                peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size() + 1);
                 peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
             }
         }
@@ -191,18 +189,15 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
             final Object lock = new Object();
 
-            List<LogEntry> raftLog = state.raftLog.copyOfEntries();
-            int logSize = raftLog.size();
             int leaderId = state.leaderId;
             int currentTerm = state.currentTerm;
             int commitIndex = state.commitIndex;
             forEachPeerParallel((peer) -> {
-                if (peer.matchIndex < logSize) {
+                if (peer.matchIndex < state.raftLog.size()) {
                     peer.rpcDue = System.currentTimeMillis() + ELECTION_TIMEOUT_MS / 2;    //TODO: revise
                     int prevLogIndex = peer.nextIndex - 1;
                     int prevLogTerm = state.raftLog.logTerm(prevLogIndex);
-                    int lastIndex = state.raftLog.lastLogIndex();
-                    List<LogEntry> entries = raftLog.subList(peer.nextIndex, lastIndex);
+                    List<LogEntry> entries = state.raftLog.getEntriesFrom(peer.nextIndex);
 
                     AppendEntriesRequest request = new AppendEntriesRequest(
                             currentTerm, leaderId, prevLogIndex, prevLogTerm, entries, commitIndex)
@@ -267,7 +262,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         }
         if (state.currentTerm == request.getTerm() && (state.votedFor == -1 || state.votedFor == request.getCandidateId()) &&
                 (request.getLastLogTerm() > state.raftLog.lastLogTerm()
-                        || (request.getLastLogTerm() == state.raftLog.lastLogTerm() && request.getLastLogIndex() >= state.raftLog.size()))
+                        || (request.getLastLogTerm() == state.raftLog.lastLogTerm() && request.getLastLogIndex() >= state.raftLog.lastLogIndex()))
         ) {
             granted = true;
             state.votedFor = request.getCandidateId();
@@ -289,22 +284,19 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
             state.leaderId = request.getLeaderId();
             state.role = FOLLOWER;
             state.isElectionNeeded = false;
-            boolean success = (request.getPrevLogIndex() == 0) ||
-                    (request.getPrevLogIndex() <= state.raftLog.size() &&
+            boolean success = (request.getPrevLogIndex() < 0) ||
+                    (request.getPrevLogIndex() <= state.raftLog.lastLogIndex() &&
                             state.raftLog.logTerm(request.getPrevLogIndex()) == request.getPrevLogTerm());
-            int index;
             if (success) {
-                index = request.getPrevLogIndex();
-                for (int i = 0; i < request.getEntries().size(); i++) {
-                    index++;
-                    if (state.raftLog.logTerm(index) != request.getEntries().get(i).getTerm()) {
-                        while (state.raftLog.size() > index) {
-                            state.raftLog.pop();
-                        }
-                        state.raftLog.push(request.getEntries().get(i));
-                    }
+                int index = request.getPrevLogIndex();
+                state.raftLog.removeEntriesFrom(index + 1);
+                for (LogEntry entry : request.getEntries()) {
+                    state.raftLog.push(entry);
                 }
-                state.commitIndex = Math.max(state.commitIndex, request.getLeaderCommit());
+
+                state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
+                state.votedFor = request.getLeaderId();
+
                 return new AppendEntriesResponse(state.currentTerm, true, index).responseTo(request);
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
@@ -349,11 +341,11 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         final int peerId;
         long rpcDue;
         boolean voteGranted;
-        /** for each server, index of the next log entry to send to that server (initialized to leader last
-         * log index + 1) */
-        int matchIndex;
         /** for each server, index of highest log entry known to be replicated on server (initialized to 0,
          * increases monotonically) */
+        int matchIndex;
+        /** for each server, index of the next log entry to send to that server (initialized to leader last
+         * log index, i.e. unlike Raft paper states which is last log index + 1) */
         int nextIndex;
 
         private Peer(int peerId) {
