@@ -70,7 +70,7 @@ public class RaftLog implements Comparable<RaftLog> {
 
     List<LogEntry> getEntriesFrom(int indexIncluded) {
         int size = size();
-        if (indexIncluded != 0 && indexIncluded >= size) {
+        if (indexIncluded != 0 && indexIncluded > size) {
             throw new IllegalArgumentException("index=" + indexIncluded + ", logSize=" + size);
         }
         return List.copyOf(entries.subList(indexIncluded, size));

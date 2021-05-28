@@ -7,9 +7,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.mboysan.dist.consensus.raft.State.Role.*;
@@ -25,9 +29,12 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
     private final static Random RNG = new Random(SEED);
 
     private final ExecutorService executorQueue = Executors.newCachedThreadPool();
+    private final Lock updateLock = new ReentrantLock();
 
     private static final long ELECTION_TIMEOUT_MS = 5000;
-    private final Timers timers = new TimerQueue();
+    private long electionTimeoutMs;
+    private long electionTime;
+    private final Timers timers;
 
     private volatile boolean isRunning;
 
@@ -41,7 +48,12 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         this.nodeId = nodeId;
         this.transport = transport;
         transport.addServer(nodeId, this);
+        timers = createTimers();
         isRunning = true;
+    }
+
+    Timers createTimers() {
+        return new TimerQueue();
     }
 
     public int getNodeId() {
@@ -50,9 +62,9 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     @Override
     public synchronized void onServerListChanged(Set<Integer> serverIds) {
-        // first, we add new peers for each new serverId
+        // first, we add new peers for each new serverId. (we do not add ourself as a peer)
         serverIds.forEach(nodeId -> {
-            peers.putIfAbsent(nodeId, new Peer(nodeId));
+            peers.computeIfAbsent(nodeId, id -> id != this.nodeId ? new Peer(nodeId) : null);
         });
 
         // next, we remove all peers who are not in the serverIds set.
@@ -67,6 +79,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
             if (id != nodeId) {
                 futures.add(executorQueue.submit(() -> peerConsumer.accept(peer)));
             } else {
+                throw new UnsupportedOperationException();
                 // we don't send the request to self.
 //                peerConsumer.accept(peer);
             }
@@ -94,28 +107,26 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     @Override
     public void run() {
-        scheduleTimers();
-        /*while (isRunning) {
-            update();
-        }*/
-    }
-
-    void scheduleTimers() {
-        long electionTimeoutMs = RNG.nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
-        timers.schedule("electionTimer-node" + nodeId, this::onElectionTimeout, electionTimeoutMs, electionTimeoutMs);
-
+        electionTimeoutMs = RNG.nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
+        electionTime = timers.currentTime() + electionTimeoutMs;
         long updateTimeoutMs = electionTimeoutMs / 2;
-        timers.schedule("updateTimer-node" + nodeId, this::update, updateTimeoutMs, updateTimeoutMs);
+        timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
     }
 
     /*----------------------------------------------------------------------------------
      * Rules for Servers
      * ----------------------------------------------------------------------------------*/
 
-    private synchronized void onElectionTimeout() {
-        if (!state.isElectionNeeded) {
-            state.isElectionNeeded = true;
-            LOG.info("node {} needs election.", nodeId);
+    void onUpdateTimeout() {
+        if (updateLock.tryLock()) {
+            try {
+                LOG.debug("node{} update timeout", nodeId);
+                update();
+            } finally {
+                updateLock.unlock();
+            }
+        } else {
+            LOG.debug("update in progress, skipped.");
         }
     }
 
@@ -129,10 +140,9 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
     }
 
     void startNewElection() {
-        if ((state.role == FOLLOWER || state.role == CANDIDATE) && state.isElectionNeeded) {
+        if ((state.role == FOLLOWER || state.role == CANDIDATE) && isElectionNeeded()) {
             LOG.info("node {} starting new election", nodeId);
 
-            state.isElectionNeeded = false;
             state.currentTerm++;
             state.votedFor = nodeId;
             state.role = CANDIDATE;
@@ -142,9 +152,23 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         }
     }
 
+    boolean isElectionNeeded() {
+        long currentTime = timers.currentTime();
+        if (currentTime >= electionTime) {
+            electionTime = currentTime + electionTimeoutMs;
+            boolean isElectionNeeded = state.role != LEADER && !state.seenLeader;
+            state.seenLeader = false;
+            if (isElectionNeeded) {
+                LOG.info("node{} needs a new election", nodeId);
+            }
+            return isElectionNeeded;
+        }
+        return false;
+    }
+
     private void sendRequestVoteToPeers() {
         if (state.role == CANDIDATE) {
-            LOG.info("node {} sending RequestVote to peers", nodeId);
+            LOG.info("node{} sending RequestVote to peers", nodeId);
 
             final Object lock = new Object();
 
@@ -172,12 +196,13 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     private void becomeLeader() {
         if (state.role == CANDIDATE) {
-            LOG.info("node {} becoming leader", nodeId);
+            LOG.info("node{} becoming leader", nodeId);
 
             int voteCount = peers.values().stream().mapToInt(peer -> peer.voteGranted ? 1 : 0).sum();
             if (voteCount + 1 > peers.size() / 2) {
                 state.role = LEADER;
                 state.leaderId = nodeId;
+                state.seenLeader = true;
                 peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
             }
         }
@@ -185,7 +210,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     private void sendAppendEntriesToPeers() {
         if (state.role == LEADER) {
-            LOG.info("node {} sending AppendEntries to peers", nodeId);
+            LOG.info("node{} sending AppendEntries to peers", nodeId);
 
             final Object lock = new Object();
 
@@ -227,7 +252,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         if (state.role == LEADER) {
 //            LOG.info("node {} advancing commit index", nodeId);
 
-            int majorityIdx = peers.size() / 2;
+/*            int majorityIdx = peers.size() / 2;
             int n = IntStream.concat(
                     peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
                     IntStream.of(state.raftLog.size())) // append len(log)
@@ -235,6 +260,25 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
                     .boxed().collect(Collectors.toList()).get(majorityIdx);
             if (state.raftLog.logTerm(n) == state.currentTerm) {
                 state.commitIndex = n;
+            }*/
+
+            /* If there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N,
+               and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).*/
+            int N = IntStream.concat(
+                    peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
+                    IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
+                    .max().orElseThrow();
+            if (N > state.commitIndex) {
+                int countGreaterEquals = state.raftLog.lastLogIndex() >= N ? 1 : 0;
+                for (Peer peer : peers.values()) {
+                    if (peer.matchIndex >= N) {
+                        countGreaterEquals++;
+                    }
+                }
+                if (countGreaterEquals > peers.size() / 2
+                        && state.raftLog.logTerm(N) == state.currentTerm) {
+                    state.commitIndex = N;
+                }
             }
         }
     }
@@ -266,7 +310,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         ) {
             granted = true;
             state.votedFor = request.getCandidateId();
-            state.isElectionNeeded = false;
+            state.seenLeader = true;
         } else {
             granted = false;
         }
@@ -283,13 +327,12 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         } else {
             state.leaderId = request.getLeaderId();
             state.role = FOLLOWER;
-            state.isElectionNeeded = false;
+            state.seenLeader = true;
             boolean success = (request.getPrevLogIndex() < 0) ||
                     (request.getPrevLogIndex() <= state.raftLog.lastLogIndex() &&
                             state.raftLog.logTerm(request.getPrevLogIndex()) == request.getPrevLogTerm());
             if (success) {
-                int index = request.getPrevLogIndex();
-                state.raftLog.removeEntriesFrom(index + 1);
+                state.raftLog.removeEntriesFrom(request.getPrevLogIndex() + 1);
                 for (LogEntry entry : request.getEntries()) {
                     state.raftLog.push(entry);
                 }
@@ -297,7 +340,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
                 state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
                 state.votedFor = request.getLeaderId();
 
-                return new AppendEntriesResponse(state.currentTerm, true, index).responseTo(request);
+                return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex()).responseTo(request);
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
             }
@@ -305,21 +348,22 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
     }
 
     @Override
-    public synchronized StateMachineResponse stateMachineRequest(StateMachineRequest request) {
-        if (state.leaderId == -1) {
-            throw new IllegalStateException("leader unresolved");
-        }
-        if (state.role == LEADER) {
-            state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
-            int entryIndex = state.raftLog.lastLogIndex();
-            update();
-            boolean isApplied = state.raftLog.logTerm(entryIndex) == state.currentTerm;
-            return new StateMachineResponse(isApplied).responseTo(request);
+    public StateMachineResponse stateMachineRequest(StateMachineRequest request) {
+        synchronized (this) {
+            if (state.leaderId == -1) {
+                throw new IllegalStateException("leader unresolved");
+            }
+            if (state.role == LEADER) {
+                state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
+                int entryIndex = state.raftLog.lastLogIndex();
+                update();
+                boolean isApplied = state.raftLog.logTerm(entryIndex) == state.currentTerm;
+                return new StateMachineResponse(isApplied).responseTo(request);
+            }
         }
 
-        return getRPC(transport).stateMachineRequest(request)
-                .setReceiverId(state.leaderId)
-                .setSenderId(nodeId);   // TODO: investigate
+        return getRPC(transport).stateMachineRequest(request.setReceiverId(state.leaderId).setSenderId(nodeId))
+                .responseTo(request);
     }
 
     /*----------------------------------------------------------------------------------
@@ -330,7 +374,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         state.currentTerm = newTerm;
         state.role = FOLLOWER;
         state.votedFor = -1;
-        state.isElectionNeeded = false;
+        state.seenLeader = false;
     }
 
     /*----------------------------------------------------------------------------------
@@ -355,8 +399,6 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         void reset() {
             rpcDue = 0;
             voteGranted = false;
-/*            matchIndex = 0;
-            nextIndex = 1;*/
             matchIndex = -1;
             nextIndex = 0;
         }

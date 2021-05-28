@@ -25,6 +25,7 @@ public class State {
     int lastApplied = 0;
 
     int leaderId = -1;
+    boolean seenLeader = false;
     boolean isElectionNeeded = false;
     Role role = FOLLOWER;
 
@@ -40,7 +41,7 @@ public class State {
         if (commitIndex != state.commitIndex) return false;
         if (lastApplied != state.lastApplied) return false;
         if (leaderId != state.leaderId) return false;
-        if (isElectionNeeded != state.isElectionNeeded) return false;
+        if (seenLeader != state.seenLeader) return false;
         if (!raftLog.equals(state.raftLog)) return false;
         return role == state.role;
     }
@@ -53,7 +54,7 @@ public class State {
         result = 31 * result + commitIndex;
         result = 31 * result + lastApplied;
         result = 31 * result + leaderId;
-        result = 31 * result + (isElectionNeeded ? 1 : 0);
+        result = 31 * result + (seenLeader ? 1 : 0);
         result = 31 * result + role.hashCode();
         return result;
     }
@@ -67,7 +68,7 @@ public class State {
                 ", commitIndex=" + commitIndex +
                 ", lastApplied=" + lastApplied +
                 ", leaderId=" + leaderId +
-                ", isElectionNeeded=" + isElectionNeeded +
+                ", seenLeader=" + seenLeader +
                 ", role=" + role +
                 '}';
     }

@@ -40,6 +40,11 @@ public class TimerQueue implements Timers {
     }
 
     @Override
+    public long currentTime() {
+        return System.currentTimeMillis();
+    }
+
+    @Override
     public synchronized void shutdown() {
         isRunning = false;
         taskMap.clear();

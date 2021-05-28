@@ -7,31 +7,36 @@ public class Main {
     public static void main(String[] args) throws Exception {
         Transport transport = new InVMTransport();
 
-        RaftServer rs1 = new RaftServer(1, transport);
-        RaftServer rs2 = new RaftServer(2, transport);
-//        RaftServer rs3 = new RaftServer(3, transport);
+        int serverCount = 3;
 
-        Thread trs1 = new Thread(rs1, "RaftServer1");
-//        Thread trs2 = new Thread(rs2, "RaftServer2");
-//        Thread trs3 = new Thread(rs3, "RaftServer3");
+        RaftServer[] servers = new RaftServer[serverCount];
+        Thread[] serverThreads = new Thread[serverCount];
+        for (int i = 0; i < serverCount; i++) {
+            int nodeId = i + 1;
+            servers[i] = new RaftServer(nodeId, transport);
+            serverThreads[i] = new Thread(servers[i], "RaftServer" + nodeId);
+            serverThreads[i].start();
+        }
 
-        trs1.start();
-//        trs2.start();
-//        trs3.start();
-
-//        Thread.sleep(100000);
         Thread.sleep(10000);
 
-        StateMachineResponse resp1 = rs1.stateMachineRequest(new StateMachineRequest("test command"));
-        StateMachineResponse resp2 = rs1.stateMachineRequest(new StateMachineRequest("test command2"));
-        StateMachineResponse resp3 = rs1.stateMachineRequest(new StateMachineRequest("test command3"));
-        StateMachineResponse resp4 = rs1.stateMachineRequest(new StateMachineRequest("test command4"));
+        int cmdCount = 10;
+        for (int i = 0; i < cmdCount; i++) {
+            RaftServer server = servers[0];
+            StateMachineResponse resp = server.stateMachineRequest(new StateMachineRequest("test command " + i));
+            System.out.println(resp);
+        }
 
         Thread.sleep(10000);
 
         System.out.println("ENDING PROGRAM");
         transport.close();
-        rs1.close();
+
+        for (int i = 0; i < serverCount; i++) {
+            servers[i].close();
+            serverThreads[i].join();
+        }
+
         System.out.println("PROGRAM ENDED");
     }
 }
