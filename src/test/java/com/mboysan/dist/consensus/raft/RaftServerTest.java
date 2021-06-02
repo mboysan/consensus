@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class RaftServerTest {
 
     private final static int SERVER_COUNT = 3;
-    private Transport transport;
+    private InVMTransport transport;
     private final RaftServer[] servers = new RaftServer[SERVER_COUNT];
     private final ExecutorService raftServerExecutor = Executors.newFixedThreadPool(SERVER_COUNT);
     private int leaderId = -1;
@@ -49,6 +49,7 @@ public class RaftServerTest {
 
     @AfterEach
     void tearDown() throws Exception {
+        System.out.println("TEARING DOWN");
         raftServerExecutor.shutdown();
         for (RaftServer server : servers) {
             server.close();
@@ -57,11 +58,28 @@ public class RaftServerTest {
         for (RaftServer server : servers) {
             assertEquals(0, server.peers.keySet().size());
         }
+        System.out.println("TEARED DOWN");
     }
 
     @Test
-    public void testSimple() {
+    void tesst() {
 
+    }
+
+    @Test
+    void testSimple() throws InterruptedException {
+        System.out.println("killing");
+
+        int id = getNextNonLeader().getNodeId();
+        transport.kill(id);
+
+        Thread.sleep(6000);
+
+        transport.revive(id);
+
+        Thread.sleep(6000);
+
+        System.out.println("test should've ended");
     }
 
     private RaftServer getLeader() {

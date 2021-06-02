@@ -9,7 +9,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class TimerQueue implements Timers {
-    private static final Logger LOG = LoggerFactory.getLogger(TimerQueue.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TimerQueue.class);
 
     private volatile boolean isRunning;
     private final Timer queue = new Timer(true);
@@ -36,7 +36,7 @@ public class TimerQueue implements Timers {
         };
         taskMap.put(taskName, newTask);
         queue.schedule(newTask, delay, period);
-        LOG.info("Timer for task={} scheduled with delay={} and period={}", taskName, delay, period);
+        LOGGER.info("Timer for task={} scheduled with delay={} and period={}", taskName, delay, period);
     }
 
     @Override
