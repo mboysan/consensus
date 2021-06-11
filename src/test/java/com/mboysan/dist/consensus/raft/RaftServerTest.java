@@ -2,10 +2,13 @@ package com.mboysan.dist.consensus.raft;
 
 import com.mboysan.dist.InVMTransport;
 import com.mboysan.dist.Transport;
+import com.mboysan.util.Timers;
+import com.mboysan.util.TimersForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -15,9 +18,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class RaftServerTest {
 
+    private static final TimersForTesting TIMER = new TimersForTesting();
+
     private final static int SERVER_COUNT = 3;
     private InVMTransport transport;
-    private final RaftServer[] servers = new RaftServer[SERVER_COUNT];
+    private final RaftServerForTesting[] servers = new RaftServerForTesting[SERVER_COUNT];
     private final ExecutorService raftServerExecutor = Executors.newFixedThreadPool(SERVER_COUNT);
     private int leaderId = -1;
     private int next = -1;
@@ -27,11 +32,15 @@ public class RaftServerTest {
         Set<Integer> serverIds = new HashSet<>();
         transport = new InVMTransport();
         for (int i = 0; i < SERVER_COUNT; i++) {
-            RaftServer server = new RaftServer(i, transport);
+            RaftServerForTesting server = new RaftServerForTesting(i, transport);
             servers[i] = server;
             serverIds.add(server.getNodeId());
-            raftServerExecutor.submit(server);
+            server.run();
+//            raftServerExecutor.submit(server);
         }
+
+        TIMER.runAll();
+
         for (RaftServer server : servers) {
             assertFalse(server.peers.containsKey(server.getNodeId()));
             Set<Integer> idsExceptSelf = new HashSet<>(serverIds);
@@ -48,38 +57,67 @@ public class RaftServerTest {
     }
 
     @AfterEach
-    void tearDown() throws Exception {
-        System.out.println("TEARING DOWN");
+    void tearDown() {
         raftServerExecutor.shutdown();
         for (RaftServer server : servers) {
-            server.close();
+            server.shutdown();
         }
-        transport.close();
+        transport.shutdown();
         for (RaftServer server : servers) {
             assertEquals(0, server.peers.keySet().size());
         }
-        System.out.println("TEARED DOWN");
     }
 
     @Test
-    void tesst() {
+    void testFollowerFailure() throws IOException, InterruptedException {
+        RaftServer follower1 = getNextNonLeader();
+        assertTrue(newEntry(follower1, "cmd1"));
 
-    }
+        TIMER.runAll();
+        TIMER.runAll();
 
-    @Test
-    void testSimple() throws InterruptedException {
-        System.out.println("killing");
-
-        int id = getNextNonLeader().getNodeId();
+        int id = follower1.getNodeId();
         transport.kill(id);
 
-        Thread.sleep(6000);
+        TIMER.runAll();
+        TIMER.runAll();
+
+        RaftServer follower2 = getNextNonLeader();
+        assertTrue(newEntry(follower2, "cmd2"));
+
+        TIMER.runAll();
+        TIMER.runAll();
 
         transport.revive(id);
 
-        Thread.sleep(6000);
+        TIMER.runAll();
+        TIMER.runAll();
 
-        System.out.println("test should've ended");
+        System.out.println();
+    }
+
+    @Test
+    void testLeaderFailure() throws IOException {
+        RaftServer leader = getLeader();
+        assertTrue(newEntry(leader, "cmd1"));
+
+        TIMER.runAll();
+
+        int id = leader.getNodeId();
+        transport.kill(id);
+
+        TIMER.runAll();
+
+        RaftServer follower = getNextNonLeader();
+        assertFalse(newEntry(follower, "cmd2"));
+
+        TIMER.runAll();
+
+        transport.revive(id);
+
+        TIMER.runAll();
+
+        System.out.println();
     }
 
     private RaftServer getLeader() {
@@ -94,15 +132,17 @@ public class RaftServerTest {
         return servers[next];
     }
 
+    private boolean newEntry(RaftServer server, String entry) throws IOException {
+        return server.stateMachineRequest(new StateMachineRequest(entry)).isApplied();
+    }
+
     private static class RaftServerForTesting extends RaftServer {
         public RaftServerForTesting(int nodeId, Transport transport) {
             super(nodeId, transport);
         }
-        synchronized void assertState(State expectedState) {
-            assertEquals(expectedState, state);
-        }
-        synchronized int getLeaderId() {
-            return state.leaderId;
+        @Override
+        Timers createTimers() {
+            return TIMER;
         }
     }
 

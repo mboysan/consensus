@@ -32,4 +32,9 @@ public class RaftClient implements RaftRPC {
     public void onServerListChanged(Set<Integer> serverIds) {
         throw new UnsupportedOperationException("this is relevant to only the RaftServer");
     }
+
+    @Override
+    public void shutdown() {
+        throw new UnsupportedOperationException("Client shutdown currently unneeded");
+    }
 }

@@ -20,7 +20,7 @@ import java.util.stream.IntStream;
 
 import static com.mboysan.dist.consensus.raft.State.Role.*;
 
-public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
+public class RaftServer implements Runnable, RaftRPC {
 
     private final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
 
@@ -101,8 +101,10 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         }
     }
 
-    @Override
-    public synchronized void close() {
+    public synchronized void shutdown() {
+        if (!isRunning) {
+            return;
+        }
         isRunning = false;
         timers.shutdown();
         executorQueue.shutdown();
@@ -122,7 +124,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
      * Rules for Servers
      * ----------------------------------------------------------------------------------*/
 
-    void onUpdateTimeout() {
+    private void onUpdateTimeout() {
         if (updateLock.tryLock()) {
             try {
                 LOGGER.debug("node-{} update timeout", nodeId);
@@ -144,7 +146,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         advanceStateMachine();
     }
 
-    void startNewElection() {
+    private void startNewElection() {
         if ((state.role == FOLLOWER || state.role == CANDIDATE) && isElectionNeeded()) {
             LOGGER.info("node-{} starting new election", nodeId);
 
@@ -157,7 +159,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
         }
     }
 
-    boolean isElectionNeeded() {
+    private boolean isElectionNeeded() {
         long currentTime = timers.currentTime();
         if (currentTime >= electionTime) {
             electionTime = currentTime + electionTimeoutMs;
@@ -206,14 +208,13 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
 
     private void becomeLeader() {
         if (state.role == CANDIDATE) {
-            LOGGER.info("node-{} becoming leader", nodeId);
-
             int voteCount = peers.values().stream().mapToInt(peer -> peer.voteGranted ? 1 : 0).sum();
             if (voteCount + 1 > peers.size() / 2) {
                 state.role = LEADER;
                 state.leaderId = nodeId;
                 state.seenLeader = true;
                 peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
+                LOGGER.info("node-{} thinks it's leader", nodeId);
             }
         }
     }
@@ -384,7 +385,7 @@ public class RaftServer implements Runnable, RaftRPC, AutoCloseable {
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
 
-    private synchronized void stepDown(int newTerm) {
+    private void stepDown(int newTerm) {
         LOGGER.info("node-{} stepped down at term={} because of newTerm={}", nodeId, state.currentTerm, newTerm);
         state.currentTerm = newTerm;
         state.role = FOLLOWER;

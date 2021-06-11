@@ -30,10 +30,10 @@ public class Main {
         Thread.sleep(10000);
 
         System.out.println("ENDING PROGRAM");
-        transport.close();
+        transport.shutdown();
 
         for (int i = 0; i < serverCount; i++) {
-            servers[i].close();
+            servers[i].shutdown();
             serverThreads[i].join();
         }
 

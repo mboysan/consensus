@@ -52,17 +52,22 @@ public class InVMTransport implements Transport {
     }
 
     public synchronized void kill(int nodeId) {
-        serverMap.get(nodeId).close();
-        LOGGER.info("server-{} killed", nodeId);
+//        serverMap.get(nodeId).shutdown();
+        serverMap.get(nodeId).isConnectedToNetwork = false;
+        LOGGER.info("server-{} disconnected from network --------------------", nodeId);
     }
 
     public synchronized void revive(int nodeId) {
-        serverExecutor.submit(serverMap.get(nodeId));
-        LOGGER.info("server-{} revived", nodeId);
+//        serverExecutor.submit(serverMap.get(nodeId));
+        serverMap.get(nodeId).isConnectedToNetwork = true;
+        LOGGER.info("server-{} connected to network ++++++++++++++++++++", nodeId);
     }
 
     @Override
     public Message sendRecv(Message message) throws IOException {
+        verifySenderAlive(message);
+        verifyReceiverAlive(message);
+
         LOGGER.debug("OUT (sendRecv) : {}", message);
         if (message.getSenderId() == message.getReceiverId()) {
             return sendRecvSelf(message);
@@ -75,6 +80,9 @@ public class InVMTransport implements Transport {
 
     @Override
     public Future<Message> sendRecvAsync(Message message) throws IOException {
+        verifySenderAlive(message);
+        verifyReceiverAlive(message);
+
         LOGGER.debug("OUT (sendRecvAsync) : {}", message);
         if (message.getSenderId() == message.getReceiverId()) {
             return new GetOnlyFuture<>(sendRecvSelf(message));
@@ -98,12 +106,23 @@ public class InVMTransport implements Transport {
         return resp;
     }
 
-    @Override
-    public synchronized void close() {
+    private void verifySenderAlive(Message message) throws IOException {
+        if (!serverMap.get(message.getSenderId()).isConnectedToNetwork) {
+            throw new IOException("sender is down, cannot send msg=" + message);
+        }
+    }
+
+    private void verifyReceiverAlive(Message message) throws IOException {
+        if (!serverMap.get(message.getReceiverId()).isConnectedToNetwork) {
+            throw new IOException("receiver is down, cannot receive msg=" + message);
+        }
+    }
+
+    public synchronized void shutdown() {
         serverExecutor.shutdown();
         callbackExecutor.shutdown();
         callbackMap.clear();
-        serverMap.forEach((i, server) -> server.close());
+        serverMap.forEach((i, server) -> server.shutdown());
         serverMap.clear();
     }
 
@@ -126,9 +145,13 @@ public class InVMTransport implements Transport {
             LOGGER.debug("IN (callback) : {}", objToSupply);
             return objToSupply;
         }
+        public void cancel() {
+            latch.countDown();
+        }
     }
 
-    class Server implements Runnable, AutoCloseable {
+    class Server implements Runnable {
+        volatile boolean isConnectedToNetwork = true;
         volatile boolean isRunning = true;
         final BlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
         final RPCProtocol protoServer;
@@ -139,6 +162,10 @@ public class InVMTransport implements Transport {
 
         private void add(Message msg) throws IOException {
             if (!isRunning) {
+                Callback<Message> msgCallback = callbackMap.remove(msg.getCorrelationId());
+                if (msgCallback != null) {
+                    msgCallback.cancel();
+                }
                 throw new IOException("server is closed, cannot accept new messages, msg=" + msg);
             }
             messageQueue.offer(msg);
@@ -178,8 +205,8 @@ public class InVMTransport implements Transport {
             }
         }
 
-        @Override
-        public synchronized void close() {
+        public synchronized void shutdown() {
+            isConnectedToNetwork = false;
             isRunning = false;
             messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
         }
