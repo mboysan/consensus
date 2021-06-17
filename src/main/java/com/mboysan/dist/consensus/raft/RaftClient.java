@@ -4,6 +4,7 @@ import com.mboysan.dist.Transport;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.Future;
 
 public class RaftClient implements RaftRPC {
 
@@ -34,7 +35,12 @@ public class RaftClient implements RaftRPC {
     }
 
     @Override
+    public Future<Void> start() {
+        throw new UnsupportedOperationException("no start() for client");
+    }
+
+    @Override
     public void shutdown() {
-        throw new UnsupportedOperationException("Client shutdown currently unneeded");
+        throw new UnsupportedOperationException("no shutdown() for client");
     }
 }

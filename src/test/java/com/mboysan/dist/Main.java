@@ -1,6 +1,12 @@
 package com.mboysan.dist;
 
-import com.mboysan.dist.consensus.raft.*;
+import com.mboysan.dist.consensus.raft.RaftServer;
+import com.mboysan.dist.consensus.raft.StateMachineRequest;
+import com.mboysan.dist.consensus.raft.StateMachineResponse;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
 
 public class Main {
 
@@ -10,15 +16,16 @@ public class Main {
         int serverCount = 3;
 
         RaftServer[] servers = new RaftServer[serverCount];
-        Thread[] serverThreads = new Thread[serverCount];
+        List<Future<Void>> serverFutures = new ArrayList<>();
         for (int i = 0; i < serverCount; i++) {
             int nodeId = i + 1;
             servers[i] = new RaftServer(nodeId, transport);
-            serverThreads[i] = new Thread(servers[i], "RaftServer" + nodeId);
-            serverThreads[i].start();
+            serverFutures.add(servers[i].start());
         }
 
-        Thread.sleep(10000);
+        for (Future<Void> serverFuture : serverFutures) {
+            serverFuture.get();
+        }
 
         int cmdCount = 10;
         for (int i = 0; i < cmdCount; i++) {
@@ -34,7 +41,6 @@ public class Main {
 
         for (int i = 0; i < serverCount; i++) {
             servers[i].shutdown();
-            serverThreads[i].join();
         }
 
         System.out.println("PROGRAM ENDED");

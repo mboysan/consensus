@@ -20,9 +20,9 @@ public class State {
 
     //Volatile state on all servers:
     /** index of highest log entry known to be committed (initialized to 0, increases monotonically) */
-    int commitIndex = 0;
+    int commitIndex = -1;
     /** index of highest log entry applied to state machine (initialized to 0, increases monotonically) */
-    int lastApplied = 0;
+    int lastApplied = -1;
 
     int leaderId = -1;
     boolean seenLeader = false;

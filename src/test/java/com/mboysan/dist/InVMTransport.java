@@ -19,12 +19,9 @@ public class InVMTransport implements Transport {
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool(
             new BasicThreadFactory.Builder().namingPattern("ServerExec-%d").daemon(true).build()
     );
-    private final ExecutorService callbackExecutor = Executors.newCachedThreadPool(
-            new BasicThreadFactory.Builder().namingPattern("CallbackExec-%d").daemon(true).build()
-    );
 
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();
-    private final Map<String, Callback<Message>> callbackMap = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     @Override
     public synchronized void addServer(int nodeId, RPCProtocol protoServer) {
@@ -52,13 +49,11 @@ public class InVMTransport implements Transport {
     }
 
     public synchronized void kill(int nodeId) {
-//        serverMap.get(nodeId).shutdown();
         serverMap.get(nodeId).isConnectedToNetwork = false;
         LOGGER.info("server-{} disconnected from network --------------------", nodeId);
     }
 
     public synchronized void revive(int nodeId) {
-//        serverExecutor.submit(serverMap.get(nodeId));
         serverMap.get(nodeId).isConnectedToNetwork = true;
         LOGGER.info("server-{} connected to network ++++++++++++++++++++", nodeId);
     }
@@ -72,10 +67,17 @@ public class InVMTransport implements Transport {
         if (message.getSenderId() == message.getReceiverId()) {
             return sendRecvSelf(message);
         }
-        Callback<Message> msgCallback = new Callback<>();
-        callbackMap.put(message.getCorrelationId(), msgCallback);
+        CompletableFuture<Message> msgFuture = new CompletableFuture<>();
+        callbackMap.put(message.getCorrelationId(), msgFuture);
         serverMap.get(message.getReceiverId()).add(message);
-        return msgCallback.get();
+        try {
+            return msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
     }
 
     @Override
@@ -83,16 +85,14 @@ public class InVMTransport implements Transport {
         verifySenderAlive(message);
         verifyReceiverAlive(message);
 
-        LOGGER.debug("OUT (sendRecvAsync) : {}", message);
         if (message.getSenderId() == message.getReceiverId()) {
-            return new GetOnlyFuture<>(sendRecvSelf(message));
+            return CompletableFuture.completedFuture(sendRecvSelf(message));
         }
 
-        Callback<Message> msgCallback = new Callback<>();
-        callbackMap.put(message.getCorrelationId(), msgCallback);
-        Future<Message> respFuture = callbackExecutor.submit(msgCallback::get);
+        CompletableFuture<Message> msgFuture = new CompletableFuture<>();
+        callbackMap.put(message.getCorrelationId(), msgFuture);
         serverMap.get(message.getReceiverId()).add(message);
-        return respFuture;
+        return msgFuture;
     }
 
     private Message sendRecvSelf(Message message) {
@@ -120,35 +120,11 @@ public class InVMTransport implements Transport {
 
     public synchronized void shutdown() {
         serverExecutor.shutdown();
-        callbackExecutor.shutdown();
         callbackMap.clear();
         serverMap.forEach((i, server) -> server.shutdown());
         serverMap.clear();
     }
 
-    static class Callback<T> {
-        private final CountDownLatch latch = new CountDownLatch(1);
-        private T objToSupply = null;
-        public void set(T r) {
-            objToSupply = r;
-            latch.countDown();
-        }
-        public T get() throws IOException {
-            try {
-                if (!latch.await(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                    throw new IOException("await elapsed");
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException(e);
-            }
-            LOGGER.debug("IN (callback) : {}", objToSupply);
-            return objToSupply;
-        }
-        public void cancel() {
-            latch.countDown();
-        }
-    }
 
     class Server implements Runnable {
         volatile boolean isConnectedToNetwork = true;
@@ -162,9 +138,9 @@ public class InVMTransport implements Transport {
 
         private void add(Message msg) throws IOException {
             if (!isRunning) {
-                Callback<Message> msgCallback = callbackMap.remove(msg.getCorrelationId());
-                if (msgCallback != null) {
-                    msgCallback.cancel();
+                Future<Message> msgFuture = callbackMap.remove(msg.getCorrelationId());
+                if (msgFuture != null) {
+                    msgFuture.cancel(true);
                 }
                 throw new IOException("server is closed, cannot accept new messages, msg=" + msg);
             }
@@ -177,7 +153,7 @@ public class InVMTransport implements Transport {
             while (isRunning) {
                 try {
                     Message message = messageQueue.take();
-                    LOGGER.debug("IN : {}", message);
+                    LOGGER.debug("IN (req) : {}", message);
                     String correlationId = message.getCorrelationId();
                     if (correlationId == null) {
                         LOGGER.error("correlationId must not be null");
@@ -192,9 +168,10 @@ public class InVMTransport implements Transport {
                     Message response = protoServer.apply(message);
 
                     // we send the response to the callback
-                    Callback<Message> msgCallback = callbackMap.remove(message.getCorrelationId());
-                    if (msgCallback != null) {
-                        msgCallback.set(response);
+                    CompletableFuture<Message> msgFuture = callbackMap.remove(message.getCorrelationId());
+                    if (msgFuture != null) {
+                        LOGGER.debug("OUT (resp) : {}", response);
+                        msgFuture.complete(response);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -211,38 +188,4 @@ public class InVMTransport implements Transport {
             messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
         }
     }
-
-    private static final class GetOnlyFuture<T> implements Future<T> {
-        private final T objToGet;
-
-        private GetOnlyFuture(T objToGet) {
-            this.objToGet = objToGet;
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isCancelled() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isDone() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public T get() {
-            return objToGet;
-        }
-
-        @Override
-        public T get(long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-    }
-
 }

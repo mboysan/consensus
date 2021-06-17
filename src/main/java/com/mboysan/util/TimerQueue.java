@@ -3,10 +3,7 @@ package com.mboysan.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 public class TimerQueue implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimerQueue.class);
@@ -21,6 +18,11 @@ public class TimerQueue implements Timers {
 
     @Override
     public synchronized void schedule(String taskName, Runnable task, long delay, long period) {
+        Objects.requireNonNull(taskName);
+        Objects.requireNonNull(task);
+        if (delay <= 0 || period <= 0) {
+            throw new IllegalArgumentException("delay or period must be greater than zero");
+        }
         if (!isRunning) {
             return;
         }
@@ -49,5 +51,15 @@ public class TimerQueue implements Timers {
         isRunning = false;
         taskMap.clear();
         queue.cancel();
+    }
+
+    @Override
+    public void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.error(e.getMessage());
+        }
     }
 }

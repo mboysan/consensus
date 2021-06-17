@@ -38,17 +38,7 @@ public class TimersForTesting implements Timers {
     public void shutdown() {
         currentTime = 0;
         taskMap.clear();
-    }
-
-    public void runNext() {
-        if (sortedTasks.size() == 0) {
-            return;
-        }
-        Task task = sortedTasks.pollFirst();
-        currentTime = task.timeToRun;
-        task.run();
-        task.timeToRun = currentTime + task.period;
-        sortedTasks.add(task);
+        sortedTasks.clear();
     }
 
     public void runAll() {
@@ -64,11 +54,36 @@ public class TimersForTesting implements Timers {
         }
     }
 
+    private void runNext() {
+        Task task = sortedTasks.pollFirst();
+        currentTime = task.timeToRun;
+        if (!task.isPaused) {
+            task.run();
+        }
+        task.timeToRun = currentTime + task.period;
+        sortedTasks.add(task);
+    }
+
+
+    public synchronized void pause(String taskName) {
+        taskMap.get(taskName).isPaused = true;
+    }
+
+    public synchronized void resume(String taskName) {
+        taskMap.get(taskName).isPaused = false;
+    }
+
+    @Override
+    public void sleep(long ms) {
+        // no action
+    }
+
     private static class Task implements Comparable<Task> {
         String name;
         long period;
         Runnable runnable;
         long timeToRun;
+        boolean isPaused = false;
 
         void run() {
             try {

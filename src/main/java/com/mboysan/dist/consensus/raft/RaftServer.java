@@ -9,10 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -20,7 +17,7 @@ import java.util.stream.IntStream;
 
 import static com.mboysan.dist.consensus.raft.State.Role.*;
 
-public class RaftServer implements Runnable, RaftRPC {
+public class RaftServer implements RaftRPC {
 
     private final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
 
@@ -28,13 +25,13 @@ public class RaftServer implements Runnable, RaftRPC {
     static {
         System.out.println("SEED=" + SEED);
     }
-    private final static Random RNG = new Random(SEED);
 
-    private final ExecutorService executorQueue;
+    private final ExecutorService peerExecutorQueue;
+    private final ExecutorService commandExecutorQueue;
     private final Lock updateLock = new ReentrantLock();
 
     private static final long ELECTION_TIMEOUT_MS = 5000;
-    private long electionTimeoutMs;
+    long electionTimeoutMs;
     private long electionTime;
     private final Timers timers;
 
@@ -51,10 +48,12 @@ public class RaftServer implements Runnable, RaftRPC {
         this.transport = transport;
         transport.addServer(nodeId, this);
         timers = createTimers();
-        executorQueue = Executors.newCachedThreadPool(
+        peerExecutorQueue = Executors.newCachedThreadPool(
                 new BasicThreadFactory.Builder().namingPattern("RaftServer-" + nodeId + "-%d").daemon(true).build()
         );
-        isRunning = true;
+        commandExecutorQueue = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
+                new BasicThreadFactory.Builder().namingPattern("RaftServer-" + nodeId + "-%d").daemon(true).build()
+        );
     }
 
     Timers createTimers() {
@@ -82,7 +81,7 @@ public class RaftServer implements Runnable, RaftRPC {
         List<Future<?>> futures = new ArrayList<>();
         peers.forEach((id, peer) -> {
             if (id != nodeId) {
-                futures.add(executorQueue.submit(() -> peerConsumer.accept(peer)));
+                futures.add(peerExecutorQueue.submit(() -> peerConsumer.accept(peer)));
             } else {
                 throw new UnsupportedOperationException();
                 // we don't send the request to self.
@@ -101,23 +100,36 @@ public class RaftServer implements Runnable, RaftRPC {
         }
     }
 
+    public synchronized Future<Void> start() {
+        isRunning = true;
+
+        electionTimeoutMs = new Random(SEED).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
+        electionTime = timers.currentTime() + electionTimeoutMs;
+        long updateTimeoutMs = electionTimeoutMs / 2;
+        timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
+
+        return CompletableFuture.supplyAsync(() -> {
+            while (true) {
+                synchronized (this) {
+                    if (state.leaderId != -1) {
+                        return null;
+                    }
+                }
+                timers.sleep(electionTimeoutMs);
+            }
+        });
+    }
+
     public synchronized void shutdown() {
         if (!isRunning) {
             return;
         }
         isRunning = false;
         timers.shutdown();
-        executorQueue.shutdown();
+        commandExecutorQueue.shutdown();
+        peerExecutorQueue.shutdown();
         transport.removeServer(nodeId);
         peers.clear();
-    }
-
-    @Override
-    public void run() {
-        electionTimeoutMs = RNG.nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
-        electionTime = timers.currentTime() + electionTimeoutMs;
-        long updateTimeoutMs = electionTimeoutMs / 2;
-        timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
     }
 
     /*----------------------------------------------------------------------------------
@@ -299,14 +311,19 @@ public class RaftServer implements Runnable, RaftRPC {
     }
 
     private void advanceStateMachine() {
-        if (state.role == LEADER) {
+//        if (state.role == LEADER) {
 //            LOG.info("node-{} advancing state machine", nodeId);
 
+            boolean isAdvanced = false;
             while (state.lastApplied < state.commitIndex) {
+                isAdvanced = true;
                 state.lastApplied++;
                 // apply on StateMachine
             }
-        }
+            if (isAdvanced) {
+                notifyAll();
+            }
+//        }
     }
 
     /*----------------------------------------------------------------------------------
@@ -372,13 +389,40 @@ public class RaftServer implements Runnable, RaftRPC {
                 state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
                 int entryIndex = state.raftLog.lastLogIndex();
                 update();
-                boolean isApplied = state.raftLog.logTerm(entryIndex) == state.currentTerm;
-                return new StateMachineResponse(isApplied).responseTo(request);
+                int term = state.currentTerm;
+                if (!isEntryApplied(entryIndex, term)) { // if not applied
+                    try {
+                        wait(); // after calling append(), the future returned can be cancelled, which will throw
+                                // the following exception
+                    } catch (Exception e) {
+                        LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
+                    }
+                }
+                return new StateMachineResponse(isEntryApplied(entryIndex, term)).responseTo(request);
             }
         }
 
         return getRPC(transport).stateMachineRequest(request.setReceiverId(state.leaderId).setSenderId(nodeId))
                 .responseTo(request);
+    }
+
+    private boolean isEntryApplied(int entryIndex, int term) {
+        return state.raftLog.logTerm(entryIndex) == term && state.lastApplied >= entryIndex;
+    }
+
+    public Future<Boolean> append(String command) {
+        return commandExecutorQueue.submit(() -> {
+            try {
+                return stateMachineRequest(new StateMachineRequest(command)).isApplied();
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+            return false;
+        });
+    }
+
+    synchronized void forceNotifyAll() {
+        notifyAll();
     }
 
     /*----------------------------------------------------------------------------------
