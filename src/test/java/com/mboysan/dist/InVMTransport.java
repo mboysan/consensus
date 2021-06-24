@@ -48,12 +48,12 @@ public class InVMTransport implements Transport {
         LOGGER.info("server-{} removed", nodeId);
     }
 
-    public synchronized void kill(int nodeId) {
+    public synchronized void disconnectNetwork(int nodeId) {
         serverMap.get(nodeId).isConnectedToNetwork = false;
         LOGGER.info("server-{} disconnected from network --------------------", nodeId);
     }
 
-    public synchronized void revive(int nodeId) {
+    public synchronized void connectNetwork(int nodeId) {
         serverMap.get(nodeId).isConnectedToNetwork = true;
         LOGGER.info("server-{} connected to network ++++++++++++++++++++", nodeId);
     }

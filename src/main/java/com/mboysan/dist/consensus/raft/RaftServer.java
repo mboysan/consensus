@@ -21,16 +21,11 @@ public class RaftServer implements RaftRPC {
 
     private final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
 
-    private static final long SEED = 1L;
-    static {
-        System.out.println("SEED=" + SEED);
-    }
-
-    private final ExecutorService peerExecutorQueue;
-    private final ExecutorService commandExecutorQueue;
+    private final ExecutorService peerExecutor;
+    private final ExecutorService commandExecutor;
     private final Lock updateLock = new ReentrantLock();
 
-    private static final long ELECTION_TIMEOUT_MS = 5000;
+    private static final long ELECTION_TIMEOUT_MS = 10000;
     long electionTimeoutMs;
     private long electionTime;
     private final Timers timers;
@@ -48,12 +43,18 @@ public class RaftServer implements RaftRPC {
         this.transport = transport;
         transport.addServer(nodeId, this);
         timers = createTimers();
-        peerExecutorQueue = Executors.newCachedThreadPool(
-                new BasicThreadFactory.Builder().namingPattern("RaftServer-" + nodeId + "-%d").daemon(true).build()
+        peerExecutor = Executors.newCachedThreadPool(
+                new BasicThreadFactory.Builder().namingPattern("RaftPeerExec-" + nodeId + "-%d").daemon(true).build()
         );
-        commandExecutorQueue = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("RaftServer-" + nodeId + "-%d").daemon(true).build()
+        commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
+                new BasicThreadFactory.Builder().namingPattern("RaftCmdExec-" + nodeId + "-%d").daemon(true).build()
         );
+    }
+
+    Random createRandom(long seed) {
+        System.out.println("node-" + nodeId + ", SEED=" + seed);
+        LOGGER.error("node-" + nodeId + ", SEED=" + seed);
+        return new Random(seed);
     }
 
     Timers createTimers() {
@@ -81,7 +82,7 @@ public class RaftServer implements RaftRPC {
         List<Future<?>> futures = new ArrayList<>();
         peers.forEach((id, peer) -> {
             if (id != nodeId) {
-                futures.add(peerExecutorQueue.submit(() -> peerConsumer.accept(peer)));
+                futures.add(peerExecutor.submit(() -> peerConsumer.accept(peer)));
             } else {
                 throw new UnsupportedOperationException();
                 // we don't send the request to self.
@@ -103,9 +104,9 @@ public class RaftServer implements RaftRPC {
     public synchronized Future<Void> start() {
         isRunning = true;
 
-        electionTimeoutMs = new Random(SEED).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
+        electionTimeoutMs = createRandom(1L).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
         electionTime = timers.currentTime() + electionTimeoutMs;
-        long updateTimeoutMs = electionTimeoutMs / 2;
+        long updateTimeoutMs = electionTimeoutMs / 4;
         timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
 
         return CompletableFuture.supplyAsync(() -> {
@@ -126,8 +127,8 @@ public class RaftServer implements RaftRPC {
         }
         isRunning = false;
         timers.shutdown();
-        commandExecutorQueue.shutdown();
-        peerExecutorQueue.shutdown();
+        commandExecutor.shutdown();
+        peerExecutor.shutdown();
         transport.removeServer(nodeId);
         peers.clear();
     }
@@ -139,7 +140,7 @@ public class RaftServer implements RaftRPC {
     private void onUpdateTimeout() {
         if (updateLock.tryLock()) {
             try {
-                LOGGER.debug("node-{} update timeout", nodeId);
+                LOGGER.debug("node-{} update timeout, time={}", nodeId, timers.currentTime());
                 update();
             } finally {
                 updateLock.unlock();
@@ -206,13 +207,11 @@ public class RaftServer implements RaftRPC {
                             stepDown(response.getTerm());
                         }
                         if (state.role == CANDIDATE && state.currentTerm == response.getTerm()) {
-                            peer.rpcDue = Long.MAX_VALUE; //TODO: revise
                             peer.voteGranted = response.isVoteGranted();
                         }
                     }
                 } catch (IOException e) {
                     LOGGER.error("peer-{} IO exception for request={}", peer.peerId, request);
-                    // TODO: add to retry queue?
                 }
             });
         }
@@ -242,7 +241,6 @@ public class RaftServer implements RaftRPC {
             int commitIndex = state.commitIndex;
             forEachPeerParallel((peer) -> {
                 if (peer.matchIndex < state.raftLog.size()) {
-                    peer.rpcDue = System.currentTimeMillis() + ELECTION_TIMEOUT_MS / 2;    //TODO: revise
                     int prevLogIndex = peer.nextIndex - 1;
                     int prevLogTerm = state.raftLog.logTerm(prevLogIndex);
                     List<LogEntry> entries = state.raftLog.getEntriesFrom(peer.nextIndex);
@@ -411,7 +409,7 @@ public class RaftServer implements RaftRPC {
     }
 
     public Future<Boolean> append(String command) {
-        return commandExecutorQueue.submit(() -> {
+        return commandExecutor.submit(() -> {
             try {
                 return stateMachineRequest(new StateMachineRequest(command)).isApplied();
             } catch (IOException e) {
@@ -443,7 +441,6 @@ public class RaftServer implements RaftRPC {
 
     private static class Peer {
         final int peerId;
-        long rpcDue;
         boolean voteGranted;
         /** for each server, index of highest log entry known to be replicated on server (initialized to 0,
          * increases monotonically) */
@@ -457,7 +454,6 @@ public class RaftServer implements RaftRPC {
             reset();
         }
         void reset() {
-            rpcDue = 0;
             voteGranted = false;
             matchIndex = -1;
             nextIndex = 0;

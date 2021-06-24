@@ -5,21 +5,30 @@ import com.mboysan.dist.Transport;
 import com.mboysan.util.Timers;
 import com.mboysan.util.TimersForTesting;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class RaftTestBase {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RaftTestBase.class);
+
+    private static final long SEED = 1L;
+    static {
+        LOGGER.info("RaftTestBase.SEED={}", SEED);
+        System.out.println("RaftTestBase.SEED=" + SEED);
+    }
 
     static boolean USE_REAL_TIMER = true;
     private static final TimersForTesting TIMER = new TimersForTesting();
+    private static Random RNG = new Random(SEED);
 
     RaftServer[] nodes;
     private InVMTransport transport;
@@ -65,19 +74,19 @@ public class RaftTestBase {
             Thread.sleep(advanceTimeInterval * 2);
         } else {
             // use fake timer
-//            TIMER.runAll();
-            TIMER.runAll();
-            TIMER.runAll();
-            TIMER.runAll(); // this should allow triggering election on the node with slowest electionTimer
+            // following loop should allow triggering election on the node with slowest electionTimer
+            for (int i = 0; i < 8; i++) {
+                TIMER.runAll();
+            }
         }
     }
 
     void disconnect(int nodeId) {
-        transport.kill(nodeId);
+        transport.disconnectNetwork(nodeId);
     }
 
     void connect(int nodeId) {
-        transport.revive(nodeId);
+        transport.connectNetwork(nodeId);
     }
 
     void kill(int nodeId) {
@@ -88,6 +97,12 @@ public class RaftTestBase {
     void revive(int nodeId) {
         TIMER.resume("updateTimer-node" + nodeId);
         connect(nodeId);
+    }
+
+    int findLeaderOfMajority() {
+        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.state.leaderId))
+                .collect(Collectors.toList())
+                .get(nodes.length/ 2).state.leaderId;
     }
 
     int assertLeaderChanged(int oldLeader, boolean isChangeVisibleOnOldLeader) {
@@ -150,12 +165,19 @@ public class RaftTestBase {
         Arrays.stream(nodes).forEach(RaftServer::shutdown);
         transport.shutdown();
         TIMER.shutdown();
+        RNG = new Random(SEED);
     }
 
     private static class RaftServerForTesting extends RaftServer {
         public RaftServerForTesting(int nodeId, Transport transport) {
             super(nodeId, transport);
         }
+
+        @Override
+        Random createRandom(long seed) {
+            return RNG;
+        }
+
         @Override
         Timers createTimers() {
             return TIMER;

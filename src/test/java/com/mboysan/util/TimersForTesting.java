@@ -5,12 +5,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TimersForTesting implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimersForTesting.class);
 
+    private static final long SEED = 1L;
+    static {
+        LOGGER.info("TimersForTesting.SEED={}", SEED);
+        System.out.println("TimersForTesting.SEED=" + SEED);
+    }
+
+    private Random random = new Random(SEED);
     private long currentTime = 0;
 
     private final Map<String, Task> taskMap = new ConcurrentHashMap<>();
@@ -39,6 +47,7 @@ public class TimersForTesting implements Timers {
         currentTime = 0;
         taskMap.clear();
         sortedTasks.clear();
+        random = new Random(SEED);
     }
 
     public void runAll() {
@@ -78,7 +87,7 @@ public class TimersForTesting implements Timers {
         // no action
     }
 
-    private static class Task implements Comparable<Task> {
+    private class Task implements Comparable<Task> {
         String name;
         long period;
         Runnable runnable;
@@ -96,7 +105,11 @@ public class TimersForTesting implements Timers {
 
         @Override
         public int compareTo(Task o) {
-            return timeToRun >= o.timeToRun ? 1 : -1;
+            if (timeToRun == o.timeToRun) {
+                // randomize insert order to simulate thread runs.
+                return random.nextBoolean() ? 1 : -1;
+            }
+            return timeToRun > o.timeToRun ? 1 : -1;
         }
 
         @Override

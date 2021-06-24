@@ -7,10 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -148,6 +145,27 @@ public class RaftServerTest extends RaftTestBase {
     }
 
     /**
+     * Tests cancellation of a command append event.
+     */
+    @Test
+    void testAppendFutureCancellation() throws Exception {
+        int numServers = 3;
+        init(numServers);
+        int leaderId = assertOneLeader();
+
+        disconnect((leaderId + 1) % numServers);
+        disconnect((leaderId + 2) % numServers);
+
+        // break the quorum and try to append a command, progress cannot be made hence, we need to cancel the
+        // future received.
+
+        Future<Boolean> result0 = nodes[leaderId].append("cmd0");
+        assertThrows(TimeoutException.class, () -> result0.get(1, TimeUnit.SECONDS));
+        result0.cancel(true);
+        assertThrows(CancellationException.class, result0::get);
+    }
+
+    /**
      * Tests if a follower node is down, the system is still operational.
      */
     @Test
@@ -196,6 +214,30 @@ public class RaftServerTest extends RaftTestBase {
     }
 
     /**
+     * Tests when a leader fails, a new leader will be elected and the old leader will sync with all the changes
+     * in the system state.
+     */
+    @Test
+    void testLeaderFailure2() throws Exception {
+        int numServers = 3;
+        init(numServers);
+        int oldLeaderId = assertOneLeader();
+
+        disconnect(oldLeaderId);
+        advanceTimeForElections(); // a new leader will be elected
+
+        int newLeaderId = assertLeaderChanged(oldLeaderId, false);
+
+        List<String> expectedCommands = Arrays.asList("cmd0");
+        assertTrue(nodes[newLeaderId].append(expectedCommands.get(0)).get());
+
+        connect(oldLeaderId);
+        advanceTimeForElections(); // sync changes
+
+        assertLogsEquals(expectedCommands);
+    }
+
+    /**
      * Tests append event during a broken quorum and the leader is changed after the quorum is reestablished.
      * Append will fail.
      */
@@ -215,16 +257,15 @@ public class RaftServerTest extends RaftTestBase {
         Future<Boolean> result0 = nodes[oldLeaderId].append(expectedCommands.get(0));
         assertThrows(TimeoutException.class, () -> result0.get(1, TimeUnit.SECONDS));
 
-        /* the nodes are actually running in the background and some of them will try to start a new election
-        *  as soon as their network connections are repaired, before waiting the leader
-        *  to sync the uncommitted command. */
-        advanceTimeForElections();
-
+        kill(oldLeaderId);
         connect((oldLeaderId + 1) % numServers);
         connect((oldLeaderId + 2) % numServers);
         connect((oldLeaderId + 3) % numServers);
-
         advanceTimeForElections();
+
+        revive(oldLeaderId);    // old leader will sync changes
+        advanceTimeForElections();
+
         assertLeaderChanged(oldLeaderId, true /* oldLeader is aware */);
 
         // since a new leader will be elected, the old leader will discard the uncommitted command
@@ -276,7 +317,7 @@ public class RaftServerTest extends RaftTestBase {
      * the new leader and this new entry (cmd1).
      */
     @Test
-    void testAppendWhenQuorumNotFormed4() throws Exception {
+    void testAppendWhenQuorumNotFormed3() throws Exception {
         int numServers = 5;
         init(numServers);
         int oldLeaderId = assertOneLeader();
