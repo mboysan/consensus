@@ -348,4 +348,44 @@ public class RaftServerTest extends RaftTestBase {
 
         assertLogsEquals(expectedCommands); // log item will be applied as soon as the quorum is formed again.
     }
+
+    @Test
+    void testFollowerDisconnectsDuringAppend() throws Exception {
+        int numServers = 5;
+        init(numServers);
+        int leaderId = assertOneLeader();
+
+        disableInbound((leaderId + 1) % numServers);
+        disableInbound((leaderId + 2) % numServers);
+        List<String> expectedCommands = Arrays.asList("cmd0");
+        nodes[leaderId].append(expectedCommands.get(0)).get();
+
+        advanceTimeForElections();
+        enableInbound((leaderId + 1) % numServers);
+        enableInbound((leaderId + 2) % numServers);
+        advanceTimeForElections();
+
+        assertLeaderNotChanged(leaderId);
+        assertLogsEquals(expectedCommands);
+    }
+
+    @Test
+    void testFollowerDisconnectsDuringAppend2() throws Exception {
+        int numServers = 5;
+        init(numServers);
+        int leaderId = assertOneLeader();
+
+        disconnect((leaderId + 1) % numServers);
+        disconnect((leaderId + 2) % numServers);
+        List<String> expectedCommands = Arrays.asList("cmd0");
+        nodes[leaderId].append(expectedCommands.get(0)).get();
+
+        advanceTimeForElections();
+        connect((leaderId + 1) % numServers);
+        connect((leaderId + 2) % numServers);
+        advanceTimeForElections();
+
+        assertLeaderNotChanged(leaderId);
+        assertLogsEquals(expectedCommands);
+    }
 }

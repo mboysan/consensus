@@ -48,14 +48,19 @@ public class InVMTransport implements Transport {
         LOGGER.info("server-{} removed", nodeId);
     }
 
-    public synchronized void disconnectNetwork(int nodeId) {
-        serverMap.get(nodeId).isConnectedToNetwork = false;
-        LOGGER.info("server-{} disconnected from network --------------------", nodeId);
+    public synchronized void connectedToNetwork(int nodeId, boolean isConnected) {
+        serverMap.get(nodeId).isConnectedToNetwork = isConnected;
+        LOGGER.info("server-{} network connected={} nnnnnnnnnnnnnnnn", nodeId, isConnected);
     }
 
-    public synchronized void connectNetwork(int nodeId) {
-        serverMap.get(nodeId).isConnectedToNetwork = true;
-        LOGGER.info("server-{} connected to network ++++++++++++++++++++", nodeId);
+    public synchronized void outboundEnabled(int nodeId, boolean isEnabled) {
+        serverMap.get(nodeId).isOutboundEnabled = isEnabled;
+        LOGGER.info("server-{} outbound enabled={} oooooooooooooooo", nodeId, isEnabled);
+    }
+
+    public synchronized void inboundEnabled(int nodeId, boolean isEnabled) {
+        serverMap.get(nodeId).isInboundEnabled = isEnabled;
+        LOGGER.info("server-{} inbound enabled={} iiiiiiiiiiiiiiii", nodeId, isEnabled);
     }
 
     @Override
@@ -128,6 +133,8 @@ public class InVMTransport implements Transport {
 
     class Server implements Runnable {
         volatile boolean isConnectedToNetwork = true;
+        volatile boolean isInboundEnabled = true;
+        volatile boolean isOutboundEnabled = true;
         volatile boolean isRunning = true;
         final BlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
         final RPCProtocol protoServer;
@@ -137,7 +144,7 @@ public class InVMTransport implements Transport {
         }
 
         private void add(Message msg) throws IOException {
-            if (!isRunning) {
+            if (!isRunning || !isInboundEnabled) {
                 Future<Message> msgFuture = callbackMap.remove(msg.getCorrelationId());
                 if (msgFuture != null) {
                     msgFuture.cancel(true);
@@ -170,8 +177,12 @@ public class InVMTransport implements Transport {
                     // we send the response to the callback
                     CompletableFuture<Message> msgFuture = callbackMap.remove(message.getCorrelationId());
                     if (msgFuture != null) {
-                        LOGGER.debug("OUT (resp) : {}", response);
-                        msgFuture.complete(response);
+                        if (isOutboundEnabled) {
+                            LOGGER.debug("OUT (resp) : {}", response);
+                            msgFuture.complete(response);
+                        } else {
+                            msgFuture.cancel(true);
+                        }
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -184,6 +195,8 @@ public class InVMTransport implements Transport {
 
         public synchronized void shutdown() {
             isConnectedToNetwork = false;
+            isInboundEnabled = false;
+            isOutboundEnabled = false;
             isRunning = false;
             messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
         }

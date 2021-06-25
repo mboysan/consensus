@@ -77,11 +77,11 @@ public class RaftTestBase {
     }
 
     void disconnect(int nodeId) {
-        transport.disconnectNetwork(nodeId);
+        transport.connectedToNetwork(nodeId, false);
     }
 
     void connect(int nodeId) {
-        transport.connectNetwork(nodeId);
+        transport.connectedToNetwork(nodeId, true);
     }
 
     void kill(int nodeId) {
@@ -92,6 +92,22 @@ public class RaftTestBase {
     void revive(int nodeId) {
         TIMER.resume("updateTimer-node" + nodeId);
         connect(nodeId);
+    }
+
+    void enableInbound(int nodeId) {
+        transport.inboundEnabled(nodeId, true);
+    }
+
+    void disableInbound(int nodeId) {
+        transport.inboundEnabled(nodeId, false);
+    }
+
+    void enableOutbound(int nodeId) {
+        transport.outboundEnabled(nodeId, true);
+    }
+
+    void disableOutbound(int nodeId) {
+        transport.outboundEnabled(nodeId, false);
     }
 
     int findLeaderOfMajority() {
