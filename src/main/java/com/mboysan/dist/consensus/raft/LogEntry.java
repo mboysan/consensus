@@ -1,8 +1,9 @@
 package com.mboysan.dist.consensus.raft;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class LogEntry {
+public class LogEntry implements Serializable {
 
     private final String command;
     private final int term;
