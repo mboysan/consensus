@@ -8,7 +8,7 @@ public final class SerializationTestUtil {
     private SerializationTestUtil() {
     }
 
-    public static <T extends Serializable> T serializeDeserialize(Serializable obj) throws IOException, ClassNotFoundException {
+    public static <T extends Serializable> T serializeDeserialize(T obj) throws IOException, ClassNotFoundException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectOutputStream oos = new ObjectOutputStream(baos)) {
             oos.writeObject(obj);
