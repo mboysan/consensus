@@ -349,28 +349,14 @@ public class RaftServerTest extends RaftTestBase {
         assertLogsEquals(expectedCommands); // log item will be applied as soon as the quorum is formed again.
     }
 
+    /**
+     * When a follower disconnects, it will not be able to receive the append event. Instead, it will try to start
+     * a new election (increasing term), and will reject all the AppendEntries requests with this new term. However,
+     * other nodes will not recognize its leadership because of log inconsistencies. Therefore, eventually (after
+     * enough time passes) all nodes will possibly elect a new leader and sync the logs.
+     */
     @Test
     void testFollowerDisconnectsDuringAppend() throws Exception {
-        int numServers = 5;
-        init(numServers);
-        int leaderId = assertOneLeader();
-
-        disableInbound((leaderId + 1) % numServers);
-        disableInbound((leaderId + 2) % numServers);
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        nodes[leaderId].append(expectedCommands.get(0)).get();
-
-        advanceTimeForElections();
-        enableInbound((leaderId + 1) % numServers);
-        enableInbound((leaderId + 2) % numServers);
-        advanceTimeForElections();
-
-        assertLeaderNotChanged(leaderId);
-        assertLogsEquals(expectedCommands);
-    }
-
-    @Test
-    void testFollowerDisconnectsDuringAppend2() throws Exception {
         int numServers = 5;
         init(numServers);
         int leaderId = assertOneLeader();
@@ -385,7 +371,7 @@ public class RaftServerTest extends RaftTestBase {
         connect((leaderId + 2) % numServers);
         advanceTimeForElections();
 
-        assertLeaderNotChanged(leaderId);
+        assertOneLeader();  // leader might've changed but there must still be only one leader.
         assertLogsEquals(expectedCommands);
     }
 }

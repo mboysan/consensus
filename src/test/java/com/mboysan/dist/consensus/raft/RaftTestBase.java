@@ -94,22 +94,6 @@ public class RaftTestBase {
         connect(nodeId);
     }
 
-    void enableInbound(int nodeId) {
-        transport.inboundEnabled(nodeId, true);
-    }
-
-    void disableInbound(int nodeId) {
-        transport.inboundEnabled(nodeId, false);
-    }
-
-    void enableOutbound(int nodeId) {
-        transport.outboundEnabled(nodeId, true);
-    }
-
-    void disableOutbound(int nodeId) {
-        transport.outboundEnabled(nodeId, false);
-    }
-
     int findLeaderOfMajority() {
         return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.state.leaderId))
                 .collect(Collectors.toList())
