@@ -54,11 +54,8 @@ public class RaftTestBase {
             nodes[i] = node;
             futures.add(node.start());
 
-            if (node.electionTimeoutMs > advanceTimeInterval) {
-                advanceTimeInterval = node.electionTimeoutMs;   // find max amount to wait
-            }
+            advanceTimeInterval = Math.max(advanceTimeInterval, node.electionTimeoutMs);
         }
-        advanceTimeInterval += 100; // add 100 ms just in case
 
         advanceTimeForElections();
         for (Future<Void> future : futures) {
@@ -75,9 +72,7 @@ public class RaftTestBase {
         } else {
             // use fake timer
             // following loop should allow triggering election on the node with slowest electionTimer
-            for (int i = 0; i < 8; i++) {
-                TIMER.runAll();
-            }
+            TIMER.advance(advanceTimeInterval * 2);
         }
     }
 

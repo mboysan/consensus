@@ -25,6 +25,7 @@ public class RaftServer implements RaftRPC {
     private final ExecutorService commandExecutor;
     private final Lock updateLock = new ReentrantLock();
 
+    private static final long UPDATE_INTERVAL_MS = 500;
     private static final long ELECTION_TIMEOUT_MS = 10000;
     long electionTimeoutMs;
     private long electionTime;
@@ -43,7 +44,7 @@ public class RaftServer implements RaftRPC {
         this.transport = transport;
         transport.addServer(nodeId, this);
         timers = createTimers();
-        peerExecutor = Executors.newCachedThreadPool(
+        peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
                 new BasicThreadFactory.Builder().namingPattern("RaftPeerExec-" + nodeId + "-%d").daemon(true).build()
         );
         commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
@@ -104,9 +105,9 @@ public class RaftServer implements RaftRPC {
     public synchronized Future<Void> start() {
         isRunning = true;
 
-        electionTimeoutMs = createRandom(1L).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000;
+        electionTimeoutMs = createRandom(System.currentTimeMillis()).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000 + UPDATE_INTERVAL_MS;
         electionTime = timers.currentTime() + electionTimeoutMs;
-        long updateTimeoutMs = electionTimeoutMs / 4;
+        long updateTimeoutMs = UPDATE_INTERVAL_MS;
         timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
 
         return CompletableFuture.supplyAsync(() -> {
@@ -211,7 +212,7 @@ public class RaftServer implements RaftRPC {
                         }
                     }
                 } catch (IOException e) {
-                    LOGGER.error("peer-{} IO exception for request={}", peer.peerId, request);
+                    LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
                 }
             });
         }
@@ -265,8 +266,7 @@ public class RaftServer implements RaftRPC {
                             }
                         }
                     } catch (IOException e) {
-                        LOGGER.error("peer-{} IO exception for request={}", peer.peerId, request);
-                        // TODO: add to retry queue?
+                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
                     }
                 }
             });

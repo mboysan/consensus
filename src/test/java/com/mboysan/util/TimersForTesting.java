@@ -63,6 +63,33 @@ public class TimersForTesting implements Timers {
         }
     }
 
+    /**
+     * Advances time to {@link #currentTime} + <tt>time</tt>
+     * @param time time to add to {@link #currentTime}.
+     */
+    public void advance(long time) {
+        if (sortedTasks.size() == 0) {
+            return;
+        }
+        long advanceTo = currentTime + time;
+        while (currentTime <= advanceTo) {
+            Task task = sortedTasks.pollFirst();
+            if (task.timeToRun <= advanceTo) {
+                currentTime = task.timeToRun;
+                if (!task.isPaused) {
+                    task.run();
+                }
+                task.timeToRun = currentTime + task.period;
+                sortedTasks.add(task);
+            } else {
+                // first task is ahead of given time
+                currentTime = advanceTo;
+                sortedTasks.add(task);  // put it back
+                break;
+            }
+        }
+    }
+
     private void runNext() {
         Task task = sortedTasks.pollFirst();
         currentTime = task.timeToRun;
