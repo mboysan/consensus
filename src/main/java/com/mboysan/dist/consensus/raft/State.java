@@ -26,38 +26,7 @@ public class State {
 
     int leaderId = -1;
     boolean seenLeader = false;
-    boolean isElectionNeeded = false;
     Role role = FOLLOWER;
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof State)) return false;
-
-        State state = (State) o;
-
-        if (currentTerm != state.currentTerm) return false;
-        if (votedFor != state.votedFor) return false;
-        if (commitIndex != state.commitIndex) return false;
-        if (lastApplied != state.lastApplied) return false;
-        if (leaderId != state.leaderId) return false;
-        if (seenLeader != state.seenLeader) return false;
-        if (!raftLog.equals(state.raftLog)) return false;
-        return role == state.role;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = currentTerm;
-        result = 31 * result + votedFor;
-        result = 31 * result + raftLog.hashCode();
-        result = 31 * result + commitIndex;
-        result = 31 * result + lastApplied;
-        result = 31 * result + leaderId;
-        result = 31 * result + (seenLeader ? 1 : 0);
-        result = 31 * result + role.hashCode();
-        return result;
-    }
 
     @Override
     public String toString() {

@@ -128,7 +128,7 @@ class RaftLogTest {
 
         // lets first test bounds
         assertThrows(IndexOutOfBoundsException.class, () -> log.getEntriesFrom(-1));
-        assertThrows(IllegalArgumentException.class, () -> log.getEntriesFrom(3));
+        assertThrows(IllegalArgumentException.class, () -> log.getEntriesFrom(4));
 
         List<LogEntry> actualEntries = log.getEntriesFrom(2);
         assertEquals(1, actualEntries.size());
