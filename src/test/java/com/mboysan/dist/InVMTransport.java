@@ -24,6 +24,9 @@ public class InVMTransport implements Transport {
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     @Override
+    public void start() {}
+
+    @Override
     public synchronized void addServer(int nodeId, RPCProtocol protoServer) {
         Server server = serverMap.get(nodeId);
         if (server == null) {

@@ -26,7 +26,7 @@ public class RaftServer implements RaftRPC {
     private final Lock updateLock = new ReentrantLock();
 
     private static final long UPDATE_INTERVAL_MS = 500;
-    private static final long ELECTION_TIMEOUT_MS = 10000;
+    private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 20;  //10000
     long electionTimeoutMs;
     private long electionTime;
     private final Timers timers;
@@ -105,7 +105,12 @@ public class RaftServer implements RaftRPC {
     public synchronized Future<Void> start() {
         isRunning = true;
 
-        electionTimeoutMs = createRandom(System.currentTimeMillis()).nextInt((int) (ELECTION_TIMEOUT_MS /1000) + 1) * 1000 + UPDATE_INTERVAL_MS;
+        Random random = createRandom(System.currentTimeMillis());
+        int max = (int) (ELECTION_TIMEOUT_MS / 1000);
+        int min = (int) ((UPDATE_INTERVAL_MS * 10) / 1000);
+
+        electionTimeoutMs = (random.nextInt((max - min) + 1) + min) * 1000;
+        LOGGER.info("node-{} electionTimeoutMs={}", nodeId, electionTimeoutMs);
         electionTime = timers.currentTime() + electionTimeoutMs;
         long updateTimeoutMs = UPDATE_INTERVAL_MS;
         timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);

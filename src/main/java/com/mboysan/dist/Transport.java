@@ -8,5 +8,6 @@ public interface Transport {
     void removeServer(int nodeId);
     Future<Message> sendRecvAsync(Message message) throws IOException;
     Message sendRecv(Message message) throws IOException;
+    void start() throws IOException;
     void shutdown();
 }

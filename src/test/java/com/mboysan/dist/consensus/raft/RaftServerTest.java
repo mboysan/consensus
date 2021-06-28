@@ -34,7 +34,7 @@ public class RaftServerTest extends RaftTestBase {
     }
 
     @Test
-    void testLeaderElected() throws InterruptedException, ExecutionException {
+    void testLeaderElected() throws Exception {
         init(3);
         int leaderId = assertOneLeader();
 
