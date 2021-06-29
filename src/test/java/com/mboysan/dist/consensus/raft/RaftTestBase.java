@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -39,7 +38,7 @@ public class RaftTestBase {
         skipTeardown = false;
     }
 
-    void init(int numServers) throws InterruptedException, ExecutionException {
+    void init(int numServers) throws Exception {
         List<Future<Void>> futures = new ArrayList<>();
         nodes = new RaftServer[numServers];
         transport = new InVMTransport();
@@ -150,7 +149,7 @@ public class RaftTestBase {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
         if (skipTeardown) {
             return;
         }
@@ -160,6 +159,10 @@ public class RaftTestBase {
         transport.shutdown();
         TIMER.shutdown();
         RNG = new Random(SEED);
+    }
+
+    static Random getRNG() {
+        return RNG;
     }
 
     private static class RaftServerForTesting extends RaftServer {

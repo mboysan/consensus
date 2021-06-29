@@ -38,6 +38,7 @@ public class RaftServer implements RaftRPC {
 
     final State state = new State();
     final Map<Integer, Peer> peers = new HashMap<>();
+    private Consumer<String> stateMachine = null;
 
     public RaftServer(int nodeId, Transport transport) {
         this.nodeId = nodeId;
@@ -50,6 +51,14 @@ public class RaftServer implements RaftRPC {
         commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
                 new BasicThreadFactory.Builder().namingPattern("RaftCmdExec-" + nodeId + "-%d").daemon(true).build()
         );
+    }
+
+    synchronized void registerStateMachine(Consumer<String> stateMachine) {
+        Objects.requireNonNull(stateMachine);
+        if (this.stateMachine != null) {
+            throw new IllegalArgumentException("stateMachine handler already registered");
+        }
+        this.stateMachine = stateMachine;
     }
 
     Random createRandom(long seed) {
@@ -113,7 +122,7 @@ public class RaftServer implements RaftRPC {
         LOGGER.info("node-{} electionTimeoutMs={}", nodeId, electionTimeoutMs);
         electionTime = timers.currentTime() + electionTimeoutMs;
         long updateTimeoutMs = UPDATE_INTERVAL_MS;
-        timers.schedule("updateTimer-node" + nodeId, this::onUpdateTimeout, updateTimeoutMs, updateTimeoutMs);
+        timers.schedule("updateTimer-node" + nodeId, this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -139,11 +148,16 @@ public class RaftServer implements RaftRPC {
         peers.clear();
     }
 
+    @Override
+    public boolean isRunning() {
+        return isRunning;
+    }
+
     /*----------------------------------------------------------------------------------
      * Rules for Servers
      * ----------------------------------------------------------------------------------*/
 
-    private void onUpdateTimeout() {
+    private void tryUpdate() {
         if (updateLock.tryLock()) {
             try {
                 LOGGER.debug("node-{} update timeout, time={}", nodeId, timers.currentTime());
@@ -321,6 +335,9 @@ public class RaftServer implements RaftRPC {
             while (state.lastApplied < state.commitIndex) {
                 isAdvanced = true;
                 state.lastApplied++;
+                if (stateMachine != null) {
+                    stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
+                }
                 // apply on StateMachine
             }
             if (isAdvanced) {
@@ -375,6 +392,7 @@ public class RaftServer implements RaftRPC {
                 state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
                 state.votedFor = request.getLeaderId();
 
+                advanceStateMachine();  // try syncing before leader update. TODO: check if this is okay.
                 return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex()).responseTo(request);
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
@@ -384,6 +402,7 @@ public class RaftServer implements RaftRPC {
 
     @Override
     public StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException {
+        int leaderId;
         synchronized (this) {
             if (state.leaderId == -1) {
                 throw new IllegalStateException("leader unresolved");
@@ -403,9 +422,10 @@ public class RaftServer implements RaftRPC {
                 }
                 return new StateMachineResponse(isEntryApplied(entryIndex, term)).responseTo(request);
             }
+            leaderId = state.leaderId;
         }
 
-        return getRPC(transport).stateMachineRequest(request.setReceiverId(state.leaderId).setSenderId(nodeId))
+        return getRPC(transport).stateMachineRequest(request.setReceiverId(leaderId).setSenderId(nodeId))
                 .responseTo(request);
     }
 

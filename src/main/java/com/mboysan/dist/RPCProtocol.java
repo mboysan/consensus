@@ -9,4 +9,5 @@ public interface RPCProtocol extends Function<Message, Message> {
     void onServerListChanged(Set<Integer> serverIds);
     Future<Void> start();
     void shutdown();
+    boolean isRunning();
 }
