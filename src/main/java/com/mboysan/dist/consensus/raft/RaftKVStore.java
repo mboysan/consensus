@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 public class RaftKVStore implements KVStore {
@@ -22,7 +24,6 @@ public class RaftKVStore implements KVStore {
     private final Map<String, String> store = new ConcurrentHashMap<>();
 
     private final Consumer<String> stateMachine = cmd -> {
-        LOGGER.debug("applying command={}", cmd);
         String[] split = cmd.split(CMD_SEP);
         String command = split[0];
         if (command.equals("put")) {
@@ -46,35 +47,26 @@ public class RaftKVStore implements KVStore {
 
     @Override
     public synchronized void start() throws Exception {
-        if (raft.isRunning()) {
-            return;
-        }
         raft.start().get();
     }
 
     @Override
     public synchronized void shutdown() throws IOException {
-        if (!raft.isRunning()) {
-            return;
-        }
         raft.shutdown();
     }
 
     @Override
     public boolean put(String key, String value) {
-        validateAction();
         return append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value));
     }
 
     @Override
     public String get(String key) {
-        validateAction();
         return store.get(key);
     }
 
     @Override
     public boolean remove(String key) {
-        validateAction();
         return append(String.format("rm%s%s", CMD_SEP, key));
     }
 
@@ -88,19 +80,13 @@ public class RaftKVStore implements KVStore {
 
     private boolean append(String command) {
         try {
-            return raft.append(command).get();
+            return raft.append(command).get(5, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage(), e);
             Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | TimeoutException e) {
             LOGGER.error(e.getMessage(), e);
         }
         return false;
-    }
-
-    private void validateAction() {
-        if (!raft.isRunning()) {
-            throw new IllegalStateException("raft not running");
-        }
     }
 }

@@ -15,10 +15,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RaftKVStoreTest extends RaftTestBase {
 
-    static {
-        USE_REAL_TIMER = false;
-    }
-
     RaftKVStore[] raftStores;
 
     @Override

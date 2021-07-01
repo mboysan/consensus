@@ -21,6 +21,7 @@
         <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
         <maven.war.plugin.version>3.3.1</maven.war.plugin.version>
         <maven.surefire.version>3.0.0-M5</maven.surefire.version>
+        <maven.failsafe.version>3.0.0-M5</maven.failsafe.version>
         <jacoco.version>0.8.6</jacoco.version>
         <mockito.version>1.10.19</mockito.version>
         <junit.jupiter.version>5.7.1</junit.jupiter.version>
@@ -78,6 +79,40 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.version}</version>
+                    <configuration>
+                        <excludes>
+                            <exclude>**/*IT.java</exclude>
+                            <exclude>**/*IntegrationTest.java</exclude>
+                        </excludes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>default-test</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>test</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven.failsafe.version}</version>
+                    <executions>
+                        <execution>
+                            <id>integration-tests</id>
+                            <goals>
+                                <goal>integration-test</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>verify</id>
+                            <goals>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

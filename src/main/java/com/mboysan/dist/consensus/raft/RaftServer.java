@@ -21,12 +21,12 @@ public class RaftServer implements RaftRPC {
 
     private final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
 
-    private final ExecutorService peerExecutor;
-    private final ExecutorService commandExecutor;
+    private ExecutorService peerExecutor;
+    private ExecutorService commandExecutor;
     private final Lock updateLock = new ReentrantLock();
 
     private static final long UPDATE_INTERVAL_MS = 500;
-    private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 20;  //10000
+    private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 10;  //5000
     long electionTimeoutMs;
     private long electionTime;
     private final Timers timers;
@@ -43,14 +43,7 @@ public class RaftServer implements RaftRPC {
     public RaftServer(int nodeId, Transport transport) {
         this.nodeId = nodeId;
         this.transport = transport;
-        transport.addServer(nodeId, this);
         timers = createTimers();
-        peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("RaftPeerExec-" + nodeId + "-%d").daemon(true).build()
-        );
-        commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("RaftCmdExec-" + nodeId + "-%d").daemon(true).build()
-        );
     }
 
     synchronized void registerStateMachine(Consumer<String> stateMachine) {
@@ -59,12 +52,6 @@ public class RaftServer implements RaftRPC {
             throw new IllegalArgumentException("stateMachine handler already registered");
         }
         this.stateMachine = stateMachine;
-    }
-
-    Random createRandom(long seed) {
-        System.out.println("node-" + nodeId + ", SEED=" + seed);
-        LOGGER.error("node-" + nodeId + ", SEED=" + seed);
-        return new Random(seed);
     }
 
     Timers createTimers() {
@@ -103,22 +90,34 @@ public class RaftServer implements RaftRPC {
             try {
                 future.get();
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
                 LOGGER.error(e.getMessage(), e);
+                Thread.currentThread().interrupt();
             } catch (ExecutionException e) {
                 LOGGER.error(e.getMessage(), e);
             }
         }
     }
 
-    public synchronized Future<Void> start() {
+    public synchronized Future<Void> start() throws IOException {
+        if (isRunning) {
+            return CompletableFuture.completedFuture(null); // ignore call to start
+        }
+        if (!transport.isShared()) {
+            transport.start();
+        }
+
         isRunning = true;
 
-        Random random = createRandom(System.currentTimeMillis());
-        int max = (int) (ELECTION_TIMEOUT_MS / 1000);
-        int min = (int) ((UPDATE_INTERVAL_MS * 10) / 1000);
+        transport.addServer(nodeId, this);
+        peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
+                new BasicThreadFactory.Builder().namingPattern("RaftPeerExec-" + nodeId + "-%d").daemon(true).build()
+        );
+        commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
+                new BasicThreadFactory.Builder().namingPattern("RaftCmdExec-" + nodeId + "-%d").daemon(true).build()
+        );
 
-        electionTimeoutMs = (random.nextInt((max - min) + 1) + min) * 1000;
+        int electId = (nodeId % (peers.size() + 1)) + 1;
+        electionTimeoutMs = ELECTION_TIMEOUT_MS * electId;
         LOGGER.info("node-{} electionTimeoutMs={}", nodeId, electionTimeoutMs);
         electionTime = timers.currentTime() + electionTimeoutMs;
         long updateTimeoutMs = UPDATE_INTERVAL_MS;
@@ -131,7 +130,7 @@ public class RaftServer implements RaftRPC {
                         return null;
                     }
                 }
-                timers.sleep(electionTimeoutMs);
+                timers.sleep(updateTimeoutMs);
             }
         });
     }
@@ -146,11 +145,9 @@ public class RaftServer implements RaftRPC {
         peerExecutor.shutdown();
         transport.removeServer(nodeId);
         peers.clear();
-    }
-
-    @Override
-    public boolean isRunning() {
-        return isRunning;
+        if (!transport.isShared()) {
+            transport.shutdown();
+        }
     }
 
     /*----------------------------------------------------------------------------------
@@ -434,6 +431,7 @@ public class RaftServer implements RaftRPC {
     }
 
     public Future<Boolean> append(String command) {
+        validateAction();
         return commandExecutor.submit(() -> {
             try {
                 return stateMachineRequest(new StateMachineRequest(command)).isApplied();
@@ -458,6 +456,13 @@ public class RaftServer implements RaftRPC {
         state.role = FOLLOWER;
         state.votedFor = -1;
         state.seenLeader = false;
+    }
+
+
+    private void validateAction() {
+        if (!isRunning) {
+            throw new IllegalStateException("raft node-" + nodeId + " not running");
+        }
     }
 
     /*----------------------------------------------------------------------------------

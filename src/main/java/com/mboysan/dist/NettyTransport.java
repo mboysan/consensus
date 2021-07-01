@@ -40,8 +40,8 @@ public class NettyTransport implements Transport {
     private final Map<Integer, String> destinations;
     private volatile boolean isRunning = false;
 
-    private final EventLoopGroup bossGroup;
-    private final EventLoopGroup workerGroup;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
     private Channel channel;
 
     private RPCProtocol requestProcessor;
@@ -52,12 +52,20 @@ public class NettyTransport implements Transport {
     public NettyTransport(int port, Map<Integer, String> destinations) {
         this.port = port;
         this.destinations = destinations;
-        this.bossGroup = new NioEventLoopGroup();
-        this.workerGroup = new NioEventLoopGroup();
+    }
+
+    @Override
+    public boolean isShared() {
+        return false;
     }
 
     @Override
     public synchronized void start() throws IOException {
+        if (isRunning) {
+            return;
+        }
+        this.bossGroup = new NioEventLoopGroup();
+        this.workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -105,9 +113,6 @@ public class NettyTransport implements Transport {
 
     @Override
     public void addServer(int nodeId, RPCProtocol requestProcessor) {
-        if (isRunning) {
-            throw new IllegalStateException("transport already running.");
-        }
         Objects.requireNonNull(destinations);
         Set<Integer> nodeIds = new HashSet<>();
         destinations.forEach((id, dest) -> {
@@ -172,6 +177,9 @@ public class NettyTransport implements Transport {
 
     @Override
     public synchronized void shutdown() {
+        if (!isRunning) {
+            return;
+        }
         isRunning = false;
         try {
             workerGroup.shutdownGracefully().sync();

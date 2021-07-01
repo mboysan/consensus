@@ -58,8 +58,8 @@ public class TimerQueue implements Timers {
         try {
             Thread.sleep(ms);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
             LOGGER.error(e.getMessage());
+            Thread.currentThread().interrupt();
         }
     }
 }

@@ -10,4 +10,5 @@ public interface Transport {
     Message sendRecv(Message message) throws IOException;
     void start() throws IOException;
     void shutdown();
+    boolean isShared();
 }

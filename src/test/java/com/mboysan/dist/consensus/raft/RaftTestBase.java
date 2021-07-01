@@ -24,7 +24,6 @@ public class RaftTestBase {
         System.out.println("RaftTestBase.SEED=" + SEED);
     }
 
-    static boolean USE_REAL_TIMER = true;
     private static final TimersForTesting TIMER = new TimersForTesting();
     private static Random RNG = new Random(SEED);
 
@@ -44,11 +43,7 @@ public class RaftTestBase {
         transport = new InVMTransport();
         for (int i = 0; i < numServers; i++) {
             RaftServer node;
-            if (USE_REAL_TIMER) {
-                node = new RaftServer(i, transport);
-            } else {
-                node = new RaftServerForTesting(i, transport);
-            }
+            node = new RaftServerForTesting(i, transport);
             nodes[i] = node;
             futures.add(node.start());
 
@@ -65,13 +60,9 @@ public class RaftTestBase {
      * Advances time to try triggering election on all nodes.
      */
     void advanceTimeForElections() throws InterruptedException {
-        if (USE_REAL_TIMER) {
-            Thread.sleep(advanceTimeInterval * 2);
-        } else {
-            // use fake timer
-            // following loop should allow triggering election on the node with slowest electionTimer
-            TIMER.advance(advanceTimeInterval * 2);
-        }
+        // use fake timer
+        // following loop should allow triggering election on the node with slowest electionTimer
+        TIMER.advance(advanceTimeInterval * 2);
     }
 
     void disconnect(int nodeId) {
@@ -168,11 +159,6 @@ public class RaftTestBase {
     private static class RaftServerForTesting extends RaftServer {
         public RaftServerForTesting(int nodeId, Transport transport) {
             super(nodeId, transport);
-        }
-
-        @Override
-        Random createRandom(long seed) {
-            return RNG;
         }
 
         @Override

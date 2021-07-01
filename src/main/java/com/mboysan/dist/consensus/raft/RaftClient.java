@@ -43,9 +43,4 @@ public class RaftClient implements RaftRPC {
     public void shutdown() {
         throw new UnsupportedOperationException("no shutdown() for client");
     }
-
-    @Override
-    public boolean isRunning() {
-        throw new UnsupportedOperationException("no isRunning() for client");
-    }
 }

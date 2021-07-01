@@ -26,6 +26,15 @@ public class InVMTransport implements Transport {
     @Override
     public void start() {}
 
+    /**
+     * A single instance of this type of transport will be shared among all the server nodes.
+     * @return true
+     */
+    @Override
+    public boolean isShared() {
+        return true;
+    }
+
     @Override
     public synchronized void addServer(int nodeId, RPCProtocol protoServer) {
         Server server = serverMap.get(nodeId);
@@ -172,8 +181,8 @@ public class InVMTransport implements Transport {
                         msgFuture.complete(response);
                     }
                 } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
                     LOGGER.error(e.getMessage(), e);
+                    Thread.currentThread().interrupt();
                 } catch (Exception e) {
                     LOGGER.error(e.getMessage(), e);
                 }
