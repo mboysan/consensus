@@ -34,4 +34,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          COV_PATH: "${{ GITHUB_WORKSPACE }}/consensus-distribution/target/site/jacoco-aggregate/jacoco.xml"
+        run: mvn -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }} -Dmaven.javadoc.skip=true -DcreateChecksum=true -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
