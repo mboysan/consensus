@@ -199,6 +199,7 @@ public class NettyTransport implements Transport {
         clientPools.forEach((i, pool) -> {
             pool.close();
         });
+        callbackMap.forEach((s, f) -> f.cancel(true));
         callbackMap.clear();
     }
 

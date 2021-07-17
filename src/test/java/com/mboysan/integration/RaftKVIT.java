@@ -70,7 +70,7 @@ public class RaftKVIT {
     void testShutdownAndStart() throws Exception {
         stores[0].shutdown();
         System.out.println("SHUTDOWN------------------------------");
-        Thread.sleep(10000);
+        Thread.sleep(20000);
 
         stores[1].put("k0", "v0");
         Thread.sleep(5000);
