@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class RaftKVStoreTest extends RaftTestBase {
 
@@ -31,6 +32,7 @@ class RaftKVStoreTest extends RaftTestBase {
 
     @Test
     void testPutGet() throws Exception {
+        fail();
         init(5);
 
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
