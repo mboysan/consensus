@@ -52,4 +52,3 @@ jobs:
         uses: wei/wget@v1
         with:
           args: --method PUT --body-file=tests.log https://transfer.sh/$LOGFILE -O - -nv
-        run: test
