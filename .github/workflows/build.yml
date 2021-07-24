@@ -39,6 +39,6 @@ jobs:
           COV_PATH: "../consensus-distribution/target/site/jacoco-aggregate/jacoco.xml"
         run: >
           mvn
-            -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
-            -Dmaven.javadoc.skip=true -DcreateChecksum=true
-            -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
+          -Dmaven.javadoc.skip=true -DcreateChecksum=true
+          -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
