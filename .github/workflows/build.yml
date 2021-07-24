@@ -34,7 +34,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # Jacoco reports are uploaded per module, hence the leading dots.
+          # see for more info: https://github.com/SonarSource/sonar-scanning-examples/blob/master/doc/jacoco.md
           COV_PATH: "../consensus-distribution/target/site/jacoco-aggregate/jacoco.xml"
-#        run: mvn -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }} -Dmaven.javadoc.skip=true -DcreateChecksum=true -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-        run: |
-          mvn -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }} -Dmaven.javadoc.skip=true -DcreateChecksum=true -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+        run: >
+          mvn
+            -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
+            -Dmaven.javadoc.skip=true -DcreateChecksum=true
+            -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
