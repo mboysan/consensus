@@ -44,7 +44,7 @@ public abstract class Message implements Serializable {
                 '}';
     }
 
-    public <REQ extends Message, RESP extends Message> RESP responseTo(REQ request) {
+    public <Q extends Message, S extends Message> S responseTo(Q request) {
         return this.setCorrelationId(request.getCorrelationId())
                 .setSenderId(request.getReceiverId())
                 .setReceiverId(request.getSenderId());

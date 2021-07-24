@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * {@link com.mboysan.consensus.RaftKVStore} Integration Test.
+ * TODO: improve this test
  */
 public class RaftKVIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIT.class);

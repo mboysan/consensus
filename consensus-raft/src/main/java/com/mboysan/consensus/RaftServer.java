@@ -30,7 +30,7 @@ import static com.mboysan.consensus.State.Role.LEADER;
 
 public class RaftServer implements RaftRPC {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
 
     private ExecutorService peerExecutor;
     private ExecutorService commandExecutor;
@@ -76,9 +76,7 @@ public class RaftServer implements RaftRPC {
     @Override
     public synchronized void onServerListChanged(Set<Integer> serverIds) {
         // first, we add new peers for each new serverId. (we do not add ourself as a peer)
-        serverIds.forEach(nodeId -> {
-            peers.computeIfAbsent(nodeId, id -> id != this.nodeId ? new Peer(nodeId) : null);
-        });
+        serverIds.forEach(nId -> peers.computeIfAbsent(nId, id -> id != this.nodeId ? new Peer(nId) : null));
 
         // next, we remove all peers who are not in the serverIds set.
         Set<Integer> difference = new HashSet<>(peers.keySet());
@@ -92,9 +90,8 @@ public class RaftServer implements RaftRPC {
             if (id != nodeId) {
                 futures.add(peerExecutor.submit(() -> peerConsumer.accept(peer)));
             } else {
-                throw new UnsupportedOperationException();
                 // we don't send the request to self.
-//                peerConsumer.accept(peer);
+                throw new UnsupportedOperationException();
             }
         });
         for (Future<?> future : futures) {
@@ -223,7 +220,7 @@ public class RaftServer implements RaftRPC {
             int currentTerm = state.currentTerm;
             int lastLogTerm = state.raftLog.lastLogTerm();
             int lastLogIndex = state.raftLog.lastLogIndex();
-            forEachPeerParallel((peer) -> {
+            forEachPeerParallel(peer -> {
                 RequestVoteRequest request = new RequestVoteRequest(currentTerm, nodeId, lastLogIndex, lastLogTerm)
                         .setSenderId(nodeId)
                         .setReceiverId(peer.peerId);
@@ -267,7 +264,7 @@ public class RaftServer implements RaftRPC {
             int leaderId = state.leaderId;
             int currentTerm = state.currentTerm;
             int commitIndex = state.commitIndex;
-            forEachPeerParallel((peer) -> {
+            forEachPeerParallel(peer -> {
                 if (peer.matchIndex < state.raftLog.size()) {
                     int prevLogIndex = peer.nextIndex - 1;
                     int prevLogTerm = state.raftLog.logTerm(prevLogIndex);
@@ -288,7 +285,7 @@ public class RaftServer implements RaftRPC {
                                     peer.matchIndex = response.getMatchIndex();
                                     peer.nextIndex = response.getMatchIndex() + 1;
                                 } else {
-                                    peer.nextIndex = Math.max(0, peer.nextIndex - 1);   // decrement peer.nextIndex, TODO: retry
+                                    peer.nextIndex = Math.max(0, peer.nextIndex - 1);   // retries with decremented index
                                 }
                             }
                         }
@@ -302,8 +299,6 @@ public class RaftServer implements RaftRPC {
 
     private void advanceCommitIndex() {
         if (state.role == LEADER) {
-//            LOG.info("node-{} advancing commit index", nodeId);
-
 /*            int majorityIdx = peers.size() / 2;
             int n = IntStream.concat(
                     peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
@@ -336,22 +331,20 @@ public class RaftServer implements RaftRPC {
     }
 
     private void advanceStateMachine() {
-//        if (state.role == LEADER) {
-//            LOG.info("node-{} advancing state machine", nodeId);
-
-            boolean isAdvanced = false;
-            while (state.lastApplied < state.commitIndex) {
-                isAdvanced = true;
-                state.lastApplied++;
-                if (stateMachine != null) {
-                    stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
-                }
-                // apply on StateMachine
+        boolean isAdvanced = false;
+        while (state.lastApplied < state.commitIndex) {
+            isAdvanced = true;
+            state.lastApplied++;
+            if (stateMachine != null) {
+                stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
             }
-            if (isAdvanced) {
+            // apply on StateMachine
+        }
+        if (isAdvanced) {
+            synchronized (this) {
                 notifyAll();
             }
-//        }
+        }
     }
 
     /*----------------------------------------------------------------------------------
@@ -424,8 +417,9 @@ public class RaftServer implements RaftRPC {
                     try {
                         wait(); // after calling append(), the future returned can be cancelled, which will throw
                                 // the following exception
-                    } catch (Exception e) {
+                    } catch (InterruptedException e) {
                         LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
+                        Thread.currentThread().interrupt();
                     }
                 }
                 return new StateMachineResponse(isEntryApplied(entryIndex, term)).responseTo(request);

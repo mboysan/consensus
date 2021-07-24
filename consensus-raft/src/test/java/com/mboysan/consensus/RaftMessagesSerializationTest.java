@@ -8,7 +8,7 @@ import java.util.List;
 import static com.mboysan.consensus.util.SerializationTestUtil.assertSerialized;
 import static com.mboysan.consensus.util.SerializationTestUtil.serializeDeserialize;
 
-public class RaftMessagesSerializationTest {
+class RaftMessagesSerializationTest {
 
     @Test
     void testSerializeAppendEntriesRequest() throws Exception {

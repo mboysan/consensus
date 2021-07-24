@@ -16,19 +16,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class RaftServerTest extends RaftTestBase {
+class RaftServerTest extends RaftTestBase {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
         RaftServer node = new RaftServer(0, transport);
-        assertThrows(IllegalStateException.class, () -> {
-            try {
-                node.append("some-command").get();
-            } catch (ExecutionException e) {
-                throw e.getCause();
-            }
-        });
+
+        assertThrows(IllegalStateException.class, () -> node.append("some-command"));
+
         node.shutdown();
         transport.shutdown();
         skipTeardown = true;

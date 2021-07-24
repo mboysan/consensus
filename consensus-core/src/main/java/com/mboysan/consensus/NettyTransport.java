@@ -133,7 +133,9 @@ public class NettyTransport implements Transport {
     }
 
     @Override
-    public void removeServer(int nodeId) {}
+    public void removeServer(int nodeId) {
+        // No need to implement this method for this transport at the moment.
+    }
 
     @Override
     public Future<Message> sendRecvAsync(Message message) {
@@ -176,7 +178,9 @@ public class NettyTransport implements Transport {
             if (client != null) {
                 try {
                     pool.returnObject(client);
-                } catch (Exception ignore) {}
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage());
+                }
             }
         }
     }
@@ -202,9 +206,7 @@ public class NettyTransport implements Transport {
         if (channel != null) {
             channel.close();
         }
-        clientPools.forEach((i, pool) -> {
-            pool.close();
-        });
+        clientPools.forEach((i, pool) -> pool.close());
         callbackMap.forEach((s, f) -> f.cancel(true));
         callbackMap.clear();
     }

@@ -29,9 +29,8 @@ class RaftLogTest {
         assertEquals(2, log.size());
         assertEquals(1, log.lastLogIndex());
 
-        assertThrows(IllegalArgumentException.class, () ->
-                log.push(new LogEntry("", 0))   // lastLogTerm > 0
-        );
+        LogEntry entry = new LogEntry("", 0); // lastLogTerm > 0
+        assertThrows(IllegalArgumentException.class, () -> log.push(entry));
     }
 
     @Test
@@ -166,9 +165,7 @@ class RaftLogTest {
             assertEquals(log.get(i++), copyOfElement);
         }
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            copyOfElements.add(new LogEntry("", 3));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> copyOfElements.add(entry3));
     }
 
     @Test
