@@ -32,7 +32,6 @@ class RaftKVStoreTest extends RaftTestBase {
 
     @Test
     void testPutGet() throws Exception {
-        fail();
         init(5);
 
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
