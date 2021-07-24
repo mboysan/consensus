@@ -42,13 +42,13 @@ jobs:
           -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
           -Dmaven.javadoc.skip=true -DcreateChecksum=true
           -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-       - name: Build failed uploading logs
-         if: ${{ failure() }}
-         run: |
-           touch tests.log
-           echo -e "\n----- RAFT LOGS -----" >> tests.log
-           cat consensus-raft/target/tests.log >> tests.log
-           curl --upload-file tests.log https://transfer.sh/tests.log
+      - name: Build failed uploading logs
+        if: ${{ failure() }}
+        run: |
+          touch tests.log
+          echo -e "\n----- RAFT LOGS -----" >> tests.log
+          cat consensus-raft/target/tests.log >> tests.log
+          curl --upload-file tests.log https://transfer.sh/tests.log
 #      - name: Merge Logs
 #        run: |
 #          touch tests.log
