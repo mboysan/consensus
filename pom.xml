@@ -9,9 +9,10 @@
     <packaging>pom</packaging>
     <version>${revision}</version>
     <modules>
+        <module>consensus-distribution</module>
         <module>consensus-core</module>
         <module>consensus-raft</module>
-        <module>consensus-distribution</module>
+        <module>consensus-bizur</module>
     </modules>
 
     <properties>
