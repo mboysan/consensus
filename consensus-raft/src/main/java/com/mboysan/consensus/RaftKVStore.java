@@ -18,7 +18,7 @@ public class RaftKVStore implements KVStore {
 
     private static final String CMD_SEP = "@@@";
 
-    private final RaftServer raft;
+    private final RaftNode raft;
     private final Map<String, String> store = new ConcurrentHashMap<>();
 
     private final Consumer<String> stateMachine = cmd -> {
@@ -35,10 +35,10 @@ public class RaftKVStore implements KVStore {
     };
 
     public RaftKVStore(int nodeId, Transport transport) {
-        this(new RaftServer(nodeId, transport));
+        this(new RaftNode(nodeId, transport));
     }
 
-    RaftKVStore(RaftServer raft) {
+    RaftKVStore(RaftNode raft) {
         this.raft = raft;
         raft.registerStateMachine(stateMachine);
     }

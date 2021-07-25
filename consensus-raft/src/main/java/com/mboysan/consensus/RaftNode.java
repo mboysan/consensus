@@ -2,22 +2,13 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.TimerQueue;
 import com.mboysan.consensus.util.Timers;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,12 +19,10 @@ import static com.mboysan.consensus.State.Role.CANDIDATE;
 import static com.mboysan.consensus.State.Role.FOLLOWER;
 import static com.mboysan.consensus.State.Role.LEADER;
 
-public class RaftServer implements RaftRPC {
+public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RaftServer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RaftNode.class);
 
-    private ExecutorService peerExecutor;
-    private ExecutorService commandExecutor;
     private final Lock updateLock = new ReentrantLock();
 
     private static final long UPDATE_INTERVAL_MS = 500;
@@ -42,19 +31,22 @@ public class RaftServer implements RaftRPC {
     private long electionTime;
     private final Timers timers;
 
-    private volatile boolean isRunning;
-
-    private final Transport transport;
-    private final int nodeId;
-
-    final State state = new State();
-    final Map<Integer, Peer> peers = new HashMap<>();
+    private final State state = new State();
     private Consumer<String> stateMachine = null;
 
-    public RaftServer(int nodeId, Transport transport) {
-        this.nodeId = nodeId;
-        this.transport = transport;
+    public RaftNode(int nodeId, Transport transport) {
+        super(nodeId, transport);
         timers = createTimers();
+    }
+
+    Timers createTimers() {
+        return new TimerQueue();
+    }
+
+    @Override
+    RaftPeer createPeer(int peerId) {
+        // we do not add ourself as a peer
+        return peerId != getNodeId() ? new RaftPeer(peerId) : null;
     }
 
     synchronized void registerStateMachine(Consumer<String> stateMachine) {
@@ -65,71 +57,14 @@ public class RaftServer implements RaftRPC {
         this.stateMachine = stateMachine;
     }
 
-    Timers createTimers() {
-        return new TimerQueue();
-    }
-
-    public int getNodeId() {
-        return nodeId;
-    }
-
     @Override
-    public synchronized void onServerListChanged(Set<Integer> serverIds) {
-        // first, we add new peers for each new serverId. (we do not add ourself as a peer)
-        serverIds.forEach(nId -> peers.computeIfAbsent(nId, id -> id != this.nodeId ? new Peer(nId) : null));
-
-        // next, we remove all peers who are not in the serverIds set.
-        Set<Integer> difference = new HashSet<>(peers.keySet());
-        difference.removeAll(serverIds);
-        peers.keySet().removeAll(difference);
-    }
-
-    private void forEachPeerParallel(Consumer<Peer> peerConsumer) {
-        List<Future<?>> futures = new ArrayList<>();
-        peers.forEach((id, peer) -> {
-            if (id != nodeId) {
-                futures.add(peerExecutor.submit(() -> peerConsumer.accept(peer)));
-            } else {
-                // we don't send the request to self.
-                throw new UnsupportedOperationException();
-            }
-        });
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException e) {
-                LOGGER.error(e.getMessage(), e);
-                Thread.currentThread().interrupt();
-            } catch (ExecutionException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
-        }
-    }
-
-    public synchronized Future<Void> start() throws IOException {
-        if (isRunning) {
-            return CompletableFuture.completedFuture(null); // ignore call to start
-        }
-        if (!transport.isShared()) {
-            transport.start();
-        }
-
-        isRunning = true;
-
-        transport.addServer(nodeId, this);
-        peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("RaftPeerExec-" + nodeId + "-%d").daemon(true).build()
-        );
-        commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("RaftCmdExec-" + nodeId + "-%d").daemon(true).build()
-        );
-
-        int electId = (nodeId % (peers.size() + 1)) + 1;
+    Future<Void> startNode() {
+        int electId = (getNodeId() % (peers.size() + 1)) + 1;
         electionTimeoutMs = ELECTION_TIMEOUT_MS * electId;
-        LOGGER.info("node-{} electionTimeoutMs={}", nodeId, electionTimeoutMs);
+        LOGGER.info("node-{} electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
         electionTime = timers.currentTime() + electionTimeoutMs;
         long updateTimeoutMs = UPDATE_INTERVAL_MS;
-        timers.schedule("updateTimer-node" + nodeId, this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
+        timers.schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -143,19 +78,9 @@ public class RaftServer implements RaftRPC {
         });
     }
 
-    public synchronized void shutdown() {
-        if (!isRunning) {
-            return;
-        }
-        isRunning = false;
+    @Override
+    void shutdownNode() {
         timers.shutdown();
-        commandExecutor.shutdown();
-        peerExecutor.shutdown();
-        transport.removeServer(nodeId);
-        peers.clear();
-        if (!transport.isShared()) {
-            transport.shutdown();
-        }
     }
 
     /*----------------------------------------------------------------------------------
@@ -165,7 +90,7 @@ public class RaftServer implements RaftRPC {
     private void tryUpdate() {
         if (updateLock.tryLock()) {
             try {
-                LOGGER.debug("node-{} update timeout, time={}", nodeId, timers.currentTime());
+                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), timers.currentTime());
                 update();
             } finally {
                 updateLock.unlock();
@@ -186,10 +111,10 @@ public class RaftServer implements RaftRPC {
 
     private void startNewElection() {
         if ((state.role == FOLLOWER || state.role == CANDIDATE) && isElectionNeeded()) {
-            LOGGER.info("node-{} starting new election", nodeId);
+            LOGGER.info("node-{} starting new election", getNodeId());
 
             state.currentTerm++;
-            state.votedFor = nodeId;
+            state.votedFor = getNodeId();
             state.role = CANDIDATE;
 
             // reset all state for peers
@@ -204,7 +129,7 @@ public class RaftServer implements RaftRPC {
             boolean isElectionNeeded = state.role != LEADER && !state.seenLeader;
             state.seenLeader = false;
             if (isElectionNeeded) {
-                LOGGER.info("node-{} needs a new election", nodeId);
+                LOGGER.info("node-{} needs a new election", getNodeId());
             }
             return isElectionNeeded;
         }
@@ -213,7 +138,7 @@ public class RaftServer implements RaftRPC {
 
     private void sendRequestVoteToPeers() {
         if (state.role == CANDIDATE) {
-            LOGGER.info("node-{} sending RequestVote to peers", nodeId);
+            LOGGER.info("node-{} sending RequestVote to peers", getNodeId());
 
             final Object lock = new Object();
 
@@ -221,11 +146,11 @@ public class RaftServer implements RaftRPC {
             int lastLogTerm = state.raftLog.lastLogTerm();
             int lastLogIndex = state.raftLog.lastLogIndex();
             forEachPeerParallel(peer -> {
-                RequestVoteRequest request = new RequestVoteRequest(currentTerm, nodeId, lastLogIndex, lastLogTerm)
-                        .setSenderId(nodeId)
+                RequestVoteRequest request = new RequestVoteRequest(currentTerm, getNodeId(), lastLogIndex, lastLogTerm)
+                        .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    RequestVoteResponse response = getRPC(transport).requestVote(request);
+                    RequestVoteResponse response = getRPC(getTransport()).requestVote(request);
 
                     synchronized (lock) {
                         if (state.currentTerm < response.getTerm()) {
@@ -247,17 +172,17 @@ public class RaftServer implements RaftRPC {
             int voteCount = peers.values().stream().mapToInt(peer -> peer.voteGranted ? 1 : 0).sum();
             if (voteCount + 1 > peers.size() / 2) {
                 state.role = LEADER;
-                state.leaderId = nodeId;
+                state.leaderId = getNodeId();
                 state.seenLeader = true;
                 peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
-                LOGGER.info("node-{} thinks it's leader", nodeId);
+                LOGGER.info("node-{} thinks it's leader", getNodeId());
             }
         }
     }
 
     private void sendAppendEntriesToPeers() {
         if (state.role == LEADER) {
-            LOGGER.info("node-{} sending AppendEntries to peers", nodeId);
+            LOGGER.info("node-{} sending AppendEntries to peers", getNodeId());
 
             final Object lock = new Object();
 
@@ -272,10 +197,10 @@ public class RaftServer implements RaftRPC {
 
                     AppendEntriesRequest request = new AppendEntriesRequest(
                             currentTerm, leaderId, prevLogIndex, prevLogTerm, entries, commitIndex)
-                            .setSenderId(nodeId)
+                            .setSenderId(getNodeId())
                             .setReceiverId(peer.peerId);
                     try {
-                        AppendEntriesResponse response = getRPC(transport).appendEntries(request);
+                        AppendEntriesResponse response = getRPC(getTransport()).appendEntries(request);
 
                         synchronized (lock) {
                             if (state.currentTerm < response.getTerm()) {
@@ -317,7 +242,7 @@ public class RaftServer implements RaftRPC {
                     .max().orElseThrow();
             if (N > state.commitIndex) {
                 int countGreaterEquals = state.raftLog.lastLogIndex() >= N ? 1 : 0;
-                for (Peer peer : peers.values()) {
+                for (RaftPeer peer : peers.values()) {
                     if (peer.matchIndex >= N) {
                         countGreaterEquals++;
                     }
@@ -427,7 +352,7 @@ public class RaftServer implements RaftRPC {
             leaderId = state.leaderId;
         }
 
-        return getRPC(transport).stateMachineRequest(request.setReceiverId(leaderId).setSenderId(nodeId))
+        return getRPC(getTransport()).stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 
@@ -447,52 +372,19 @@ public class RaftServer implements RaftRPC {
         });
     }
 
-    synchronized void forceNotifyAll() {
-        notifyAll();
-    }
-
     /*----------------------------------------------------------------------------------
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
 
     private void stepDown(int newTerm) {
-        LOGGER.info("node-{} stepped down at term={} because of newTerm={}", nodeId, state.currentTerm, newTerm);
+        LOGGER.info("node-{} stepped down at term={} because of newTerm={}", getNodeId(), state.currentTerm, newTerm);
         state.currentTerm = newTerm;
         state.role = FOLLOWER;
         state.votedFor = -1;
         state.seenLeader = false;
     }
 
-
-    private void validateAction() {
-        if (!isRunning) {
-            throw new IllegalStateException("raft node-" + nodeId + " not running");
-        }
+    public State getState() {
+        return state;
     }
-
-    /*----------------------------------------------------------------------------------
-     * Inner Enum(s) / Class(es)
-     * ----------------------------------------------------------------------------------*/
-
-    private static class Peer {
-        final int peerId;
-        boolean voteGranted;
-        /** for each server, index of highest log entry known to be replicated on server (initialized to 0,
-         * increases monotonically) */
-        int matchIndex;
-        /** for each server, index of the next log entry to send to that server (initialized to leader last
-         * log index, i.e. unlike Raft paper states which is last log index + 1) */
-        int nextIndex;
-
-        private Peer(int peerId) {
-            this.peerId = peerId;
-            reset();
-        }
-        void reset() {
-            voteGranted = false;
-            matchIndex = -1;
-            nextIndex = 0;
-        }
-    }
-
 }

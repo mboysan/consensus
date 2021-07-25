@@ -1,12 +1,12 @@
 package com.mboysan.consensus;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RaftServerTest extends RaftTestBase {
+class RaftNodeTest extends RaftTestBase {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
-        RaftServer node = new RaftServer(0, transport);
+        RaftNode node = new RaftNode(0, transport);
 
         assertThrows(IllegalStateException.class, () -> node.append("some-command"));
 
@@ -266,7 +266,9 @@ class RaftServerTest extends RaftTestBase {
         assertLeaderChanged(oldLeaderId, true /* oldLeader is aware */);
 
         // since a new leader will be elected, the old leader will discard the uncommitted command
-        nodes[oldLeaderId].forceNotifyAll();
+        synchronized (nodes[oldLeaderId]) {
+            nodes[oldLeaderId].notifyAll();
+        }
         assertFalse(result0.get());
         expectedCommands = new ArrayList<>();
         assertLogsEquals(expectedCommands);
@@ -276,7 +278,8 @@ class RaftServerTest extends RaftTestBase {
      * Tests append event during a broken quorum and the leader is not changed after the quorum is reestablished.
      * Append will succeed.
      */
-//    @Test
+    @Disabled
+    @Test
     void testAppendWhenQuorumNotFormed2() throws Exception {
         int numServers = 5;
         init(numServers);

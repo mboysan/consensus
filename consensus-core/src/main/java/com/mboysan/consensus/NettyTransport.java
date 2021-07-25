@@ -118,7 +118,7 @@ public class NettyTransport implements Transport {
     }
 
     @Override
-    public void addServer(int nodeId, RPCProtocol requestProcessor) {
+    public void addNode(int nodeId, RPCProtocol requestProcessor) {
         Objects.requireNonNull(destinations);
         Set<Integer> nodeIds = new HashSet<>();
         destinations.forEach((id, dest) -> {
@@ -129,11 +129,11 @@ public class NettyTransport implements Transport {
             }
         });
         this.requestProcessor = requestProcessor;
-        requestProcessor.onServerListChanged(nodeIds);
+        requestProcessor.onNodeListChanged(nodeIds);
     }
 
     @Override
-    public void removeServer(int nodeId) {
+    public void removeNode(int nodeId) {
         // No need to implement this method for this transport at the moment.
     }
 

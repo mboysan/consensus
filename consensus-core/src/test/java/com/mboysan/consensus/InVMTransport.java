@@ -43,25 +43,25 @@ public class InVMTransport implements Transport {
     }
 
     @Override
-    public synchronized void addServer(int nodeId, RPCProtocol protoServer) {
+    public synchronized void addNode(int nodeId, RPCProtocol protoServer) {
         Server server = serverMap.get(nodeId);
         if (server == null) {
             server = new Server(protoServer);
             // add this server to map and start processing
             serverMap.put(nodeId, server);
-            serverMap.forEach((i, s) -> s.protoServer.onServerListChanged(Set.copyOf(serverMap.keySet())));
+            serverMap.forEach((i, s) -> s.protoServer.onNodeListChanged(Set.copyOf(serverMap.keySet())));
             serverExecutor.execute(server);
         }
         LOGGER.info("server-{} added", nodeId);
     }
 
     @Override
-    public synchronized void removeServer(int nodeId) {
+    public synchronized void removeNode(int nodeId) {
         Server server = serverMap.get(nodeId);
         if (server != null) {
             Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());
             idsTmp.remove(nodeId);
-            serverMap.forEach((i, s) -> s.protoServer.onServerListChanged(Set.copyOf(idsTmp)));
+            serverMap.forEach((i, s) -> s.protoServer.onNodeListChanged(Set.copyOf(idsTmp)));
             serverMap.remove(nodeId);
         }
         LOGGER.info("server-{} removed", nodeId);
