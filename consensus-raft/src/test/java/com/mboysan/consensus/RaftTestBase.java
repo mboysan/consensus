@@ -31,7 +31,7 @@ public class RaftTestBase {
     private static final TimersForTesting TIMER = new TimersForTesting();
     private static Random RNG = new Random(SEED);
 
-    RaftServer[] nodes;
+    RaftNode[] nodes;
     private InVMTransport transport;
     private long advanceTimeInterval = -1;
     boolean skipTeardown = false;
@@ -43,11 +43,11 @@ public class RaftTestBase {
 
     void init(int numServers) throws Exception {
         List<Future<Void>> futures = new ArrayList<>();
-        nodes = new RaftServer[numServers];
+        nodes = new RaftNode[numServers];
         transport = new InVMTransport();
         for (int i = 0; i < numServers; i++) {
-            RaftServer node;
-            node = new RaftServerForTesting(i, transport);
+            RaftNode node;
+            node = new RaftNodeForTesting(i, transport);
             nodes[i] = node;
             futures.add(node.start());
 
@@ -88,9 +88,9 @@ public class RaftTestBase {
     }
 
     int findLeaderOfMajority() {
-        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.state.leaderId))
+        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.getState().leaderId))
                 .collect(Collectors.toList())
-                .get(nodes.length/ 2).state.leaderId;
+                .get(nodes.length/ 2).getState().leaderId;
     }
 
     int assertLeaderChanged(int oldLeader, boolean isChangeVisibleOnOldLeader) {
@@ -99,15 +99,15 @@ public class RaftTestBase {
             newLeaderId = assertOneLeader();
         } else {
             newLeaderId = -1;
-            for (RaftServer node : nodes) {
+            for (RaftNode node : nodes) {
                 if (node.getNodeId() == oldLeader) {
                     // the old leader should still think its the leader
-                    assertEquals(oldLeader, node.state.leaderId);
+                    assertEquals(oldLeader, node.getState().leaderId);
                 } else {
                     if (newLeaderId == -1) {
-                        newLeaderId = node.state.leaderId;
+                        newLeaderId = node.getState().leaderId;
                     }
-                    assertEquals(newLeaderId, node.state.leaderId);
+                    assertEquals(newLeaderId, node.getState().leaderId);
                 }
             }
             assertNotEquals(-1, newLeaderId);
@@ -122,24 +122,24 @@ public class RaftTestBase {
 
     int assertOneLeader() {
         int leaderId = -1;
-        for (RaftServer node : nodes) {
+        for (RaftNode node : nodes) {
             if (leaderId == -1) {
-                leaderId = node.state.leaderId;
+                leaderId = node.getState().leaderId;
             }
-            assertEquals(leaderId, node.state.leaderId);
+            assertEquals(leaderId, node.getState().leaderId);
         }
         assertNotEquals(-1, leaderId);
         return leaderId;
     }
 
     void assertLogsEquals(List<String> commands) {
-        RaftLog log0 = nodes[0].state.raftLog;
+        RaftLog log0 = nodes[0].getState().raftLog;
         assertEquals(commands.size(), log0.size());
-        for (int i = 0; i < nodes[0].state.raftLog.size(); i++) {
+        for (int i = 0; i < nodes[0].getState().raftLog.size(); i++) {
             assertEquals(commands.get(i), log0.get(i).getCommand());
         }
-        for (RaftServer server : nodes) {
-            assertEquals(log0, server.state.raftLog);
+        for (RaftNode server : nodes) {
+            assertEquals(log0, server.getState().raftLog);
         }
     }
 
@@ -150,7 +150,7 @@ public class RaftTestBase {
         }
         assertNotNull(transport);
         assertNotNull(nodes);
-        Arrays.stream(nodes).forEach(RaftServer::shutdown);
+        Arrays.stream(nodes).forEach(RaftNode::shutdown);
         transport.shutdown();
         TIMER.shutdown();
         RNG = new Random(SEED);
@@ -160,8 +160,8 @@ public class RaftTestBase {
         return RNG;
     }
 
-    private static class RaftServerForTesting extends RaftServer {
-        public RaftServerForTesting(int nodeId, Transport transport) {
+    private static class RaftNodeForTesting extends RaftNode {
+        public RaftNodeForTesting(int nodeId, Transport transport) {
             super(nodeId, transport);
         }
 

@@ -28,7 +28,7 @@ public class RaftClient implements RaftRPC {
     }
 
     @Override
-    public void onServerListChanged(Set<Integer> serverIds) {
+    public void onNodeListChanged(Set<Integer> serverIds) {
         throw new UnsupportedOperationException("this is relevant to only the RaftServer");
     }
 
