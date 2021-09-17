@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.util.TimerQueue;
+import com.mboysan.consensus.util.Timers;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     private final int nodeId;
     private final Transport transport;
+    private final Timers timers;
 
     ExecutorService peerExecutor;
     ExecutorService commandExecutor;
@@ -35,6 +38,11 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     AbstractNode(int nodeId, Transport transport) {
         this.nodeId = nodeId;
         this.transport = transport;
+        this.timers = createTimers();
+    }
+
+    Timers createTimers() {
+        return new TimerQueue();
     }
 
     @Override
@@ -66,6 +74,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             return;
         }
         isRunning = false;
+        timers.shutdown();
         commandExecutor.shutdown();
         peerExecutor.shutdown();
         peers.clear();
@@ -118,15 +127,19 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
     }
 
+    Transport getTransport() {
+        return transport;
+    }
+
+    Timers getTimers() {
+        return timers;
+    }
+
     public int getNodeId() {
         return nodeId;
     }
 
     public boolean isRunning() {
         return isRunning;
-    }
-
-    public Transport getTransport() {
-        return transport;
     }
 }

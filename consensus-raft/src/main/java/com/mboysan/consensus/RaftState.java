@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-public class State {
+class RaftState {
 
     enum Role {
         CANDIDATE, FOLLOWER, LEADER
