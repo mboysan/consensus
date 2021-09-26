@@ -14,18 +14,12 @@ class Bucket implements Comparable<Bucket> {
 
     private final ReentrantLock bucketLock = new ReentrantLock();
 
-    private int leaderId;
+    private final int index;
 
-    private int electId = 0;
-    private int votedElectId = 0;
-
-    private boolean seenLeader = false;
-
-    private Map<String, String> bucketMap = new HashMap<>();
     private int verElectId = 0;
     private int verCounter = 0;
 
-    private final int index;
+    private Map<String, String> bucketMap = new HashMap<>();
 
     Bucket(int index) {
         this.index = index;
@@ -66,32 +60,6 @@ class Bucket implements Comparable<Bucket> {
         return this;
     }
 
-    public int getLeaderId() {
-        return leaderId;
-    }
-
-    public Bucket setLeaderId(int leaderId) {
-        this.leaderId = leaderId;
-        return this;
-    }
-
-    public int incrementAndGetElectId() {
-        return ++electId;
-    }
-
-    public int getElectId() {
-        return electId;
-    }
-
-    public int getVotedElectId() {
-        return votedElectId;
-    }
-
-    public Bucket setVotedElectId(int votedElectId) {
-        this.votedElectId = votedElectId;
-        return this;
-    }
-
     public int getVerElectId() {
         return verElectId;
     }
@@ -110,17 +78,8 @@ class Bucket implements Comparable<Bucket> {
         return this;
     }
 
-    public int incrementAndGetVerCounter() {
-        return ++verCounter;
-    }
-
-    public boolean seenLeader() {
-        return seenLeader;
-    }
-
-    public Bucket setSeenLeader(boolean seenLeader) {
-        this.seenLeader = seenLeader;
-        return this;
+    public void incrementVerCounter() {
+        ++verCounter;
     }
 
     public int getIndex() {
@@ -132,11 +91,10 @@ class Bucket implements Comparable<Bucket> {
      *----------------------------------------------------------------------------------*/
     BucketView createView() {
         return new BucketView()
-                .setBucketMap(Map.copyOf(bucketMap))
+                .setBucketMap(new HashMap<>(bucketMap))
                 .setIndex(getIndex())
                 .setVerElectId(getVerElectId())
-                .setVerCounter(getVerCounter())
-                .setLeaderId(getLeaderId());
+                .setVerCounter(getVerCounter());
     }
 
     /*----------------------------------------------------------------------------------
@@ -165,5 +123,15 @@ class Bucket implements Comparable<Bucket> {
         } else {
             return -1;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Bucket{" +
+                "index=" + index +
+                ", verElectId=" + verElectId +
+                ", verCounter=" + verCounter +
+                ", bucketMap=" + bucketMap +
+                '}';
     }
 }

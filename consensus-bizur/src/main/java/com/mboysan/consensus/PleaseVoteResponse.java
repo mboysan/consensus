@@ -14,7 +14,7 @@ public class PleaseVoteResponse extends Message {
 
     @Override
     public String toString() {
-        return "com.mboysan.consensus.PleaseVoteResponse{" +
+        return "PleaseVoteResponse{" +
                 "acked=" + acked +
                 "} " + super.toString();
     }

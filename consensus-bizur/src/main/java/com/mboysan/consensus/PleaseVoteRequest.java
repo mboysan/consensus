@@ -2,11 +2,9 @@ package com.mboysan.consensus;
 
 public class PleaseVoteRequest extends Message {
 
-    private final int bucketIndex;
     private final int electId;
 
-    public PleaseVoteRequest(int bucketIndex, int electId) {
-        this.bucketIndex = bucketIndex;
+    public PleaseVoteRequest(int electId) {
         this.electId = electId;
     }
 
@@ -14,15 +12,10 @@ public class PleaseVoteRequest extends Message {
         return electId;
     }
 
-    public int getBucketIndex() {
-        return bucketIndex;
-    }
-
     @Override
     public String toString() {
         return "PleaseVoteRequest{" +
-                "bucketIndex=" + bucketIndex +
-                ", electId=" + electId +
+                "electId=" + electId +
                 "} " + super.toString();
     }
 }

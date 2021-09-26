@@ -1,16 +1,11 @@
 package com.mboysan.consensus;
 
-public class KVGetResponse extends Message {
-    private final boolean success;
+public class KVGetResponse extends KVOperationResponse {
     private final String value;
 
-    public KVGetResponse(boolean success, String value) {
-        this.success = success;
+    public KVGetResponse(boolean success, Exception exception, String value) {
+        super(success, exception);
         this.value = value;
-    }
-
-    public boolean isSuccess() {
-        return success;
     }
 
     public String getValue() {
@@ -20,8 +15,7 @@ public class KVGetResponse extends Message {
     @Override
     public String toString() {
         return "KVGetResponse{" +
-                "success=" + success +
-                ", value='" + value + '\'' +
+                "value='" + value + '\'' +
                 "} " + super.toString();
     }
 }

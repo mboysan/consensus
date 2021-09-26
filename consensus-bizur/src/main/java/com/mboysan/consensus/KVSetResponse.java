@@ -1,20 +1,12 @@
 package com.mboysan.consensus;
 
-public class KVSetResponse extends Message {
-    private final boolean success;
-
-    public KVSetResponse(boolean success) {
-        this.success = success;
-    }
-
-    public boolean isSuccess() {
-        return success;
+public class KVSetResponse extends KVOperationResponse {
+    public KVSetResponse(boolean success, Exception exception) {
+        super(success, exception);
     }
 
     @Override
     public String toString() {
-        return "KVSetResponse{" +
-                "success=" + success +
-                "} " + super.toString();
+        return "KVSetResponse{} " + super.toString();
     }
 }
