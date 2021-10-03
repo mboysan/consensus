@@ -2,26 +2,20 @@ package com.mboysan.consensus;
 
 public class BizurState {
 
-    private int leaderId;
-    private int electId;
-    private int votedElectId;
+    private int leaderId = -1;
+    private int electId = 0;
+    private int votedElectId = 0;
 
     public int getLeaderId() {
         return leaderId;
     }
 
-    public BizurState setLeaderId(int leaderId) {
+    public void setLeaderId(int leaderId) {
         this.leaderId = leaderId;
-        return this;
     }
 
     public int getElectId() {
         return electId;
-    }
-
-    public BizurState setElectId(int electId) {
-        this.electId = electId;
-        return this;
     }
 
     public int incrementAndGetElectId() {
@@ -32,8 +26,7 @@ public class BizurState {
         return votedElectId;
     }
 
-    public BizurState setVotedElectId(int votedElectId) {
+    public void setVotedElectId(int votedElectId) {
         this.votedElectId = votedElectId;
-        return this;
     }
 }

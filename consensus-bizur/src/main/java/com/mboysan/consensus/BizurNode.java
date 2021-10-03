@@ -146,11 +146,13 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
             }
         });
-        if (isMajorityAcked(ackCount.get())) {
-            synchronized (state) {
+        synchronized (state) {
+            if (isMajorityAcked(ackCount.get())) {
                 state.setLeaderId(getNodeId());
+                LOGGER.info("node-{} thinks it's leader", getNodeId());
+            } else {
+                state.setLeaderId(-1);
             }
-            LOGGER.info("node-{} thinks it's leader", getNodeId());
         }
     }
 
@@ -203,6 +205,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
 
         if (!ensureRecovery(index, electId)) {
+            LOGGER.error("node-{} could not ensure recovery of bucket index={}, electId={}", getNodeId(), index, electId);
             return null;
         }
         AtomicInteger ackCount = new AtomicInteger(0);
@@ -375,7 +378,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                     return new ReplicaWriteResponse(false);
                 } else {
                     state.setVotedElectId(bucketView.getVerElectId());
-                    state.setElectId(request.getSenderId());    // "update" vote
+                    state.setLeaderId(request.getSenderId());    // "update" vote
                     bucket.setBucketMap(bucketView.getBucketMap());
                     return new ReplicaWriteResponse(true);
                 }

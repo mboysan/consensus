@@ -2,14 +2,15 @@ package com.mboysan.consensus;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BizurNodeTest extends BizurTestBase {
 
@@ -204,6 +205,42 @@ public class BizurNodeTest extends BizurTestBase {
         nodes[leaderId].set("k1", "v1").get();
 
         assertLeaderNotChanged(leaderId);
+        assertBucketMapsEquals(expectedKVs);
+    }
+
+    @Test
+    void testLeaderChangedAndOldLeaderSyncs() throws Exception {
+        init(3);
+        int oldLeaderId = assertOneLeader();
+
+        kill(oldLeaderId);
+
+        // wait a while and check if the leader has changed
+        advanceTimeForElections();
+        int newLeaderId = assertLeaderChanged(oldLeaderId, false /* oldLeader is not aware */);
+
+        Map<String, String> expectedKVs = new HashMap<>() {
+            {put("k0", "v0");}
+            {put("k1", "v1");}
+        };
+
+        nodes[newLeaderId].set("k0", "v0").get();
+
+        advanceTimeForElections();
+        assertLeaderOfMajority(newLeaderId);    // new leader is still the leader of majority
+
+        revive(oldLeaderId);
+
+        assertThrows(ExecutionException.class, () -> nodes[oldLeaderId].set("some-key", "some-value").get());
+        // at this point, the old leader recovered the bucket.
+
+        advanceTimeForElections();
+        /* old leader will claim leadership because no new writes have been performed during old leader's
+           attempt at starting a new election.*/
+        assertEquals(oldLeaderId, assertOneLeader());
+
+        nodes[oldLeaderId].set("k1", "v1").get();
+
         assertBucketMapsEquals(expectedKVs);
     }
 }
