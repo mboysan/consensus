@@ -36,4 +36,14 @@ class BizurClient extends AbstractClient implements BizurRPC {
     public KVSetResponse set(KVSetRequest request) throws IOException {
         return (KVSetResponse) getTransport().sendRecv(request);
     }
+
+    @Override
+    public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
+        return (KVDeleteResponse) getTransport().sendRecv(request);
+    }
+
+    @Override
+    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
+        return (KVIterateKeysResponse) getTransport().sendRecv(request);
+    }
 }

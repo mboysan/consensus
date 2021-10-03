@@ -5,8 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -324,6 +326,41 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         throw new BizurException(String.format("set failed on node-%d for key=%s", getNodeId(), key));
     }
 
+    private boolean apiDelete(String key) throws BizurException {
+        Objects.requireNonNull(key);
+
+        int index = hashKey(key);
+        Bucket bucket = read(index);
+        if (bucket != null) {
+            bucket.lock();
+            try {
+                bucket.removeOp(key);
+                return write(bucket); // TODO: investigate if we need to revert if write fails
+            } finally {
+                bucket.unlock();
+            }
+        }
+        throw new BizurException(String.format("delete failed on node-%d for key=%s", getNodeId(), key));
+    }
+
+    private Set<String> apiIterateKeys() throws BizurException {
+        Set<String> keys = new HashSet<>();
+        for (int index = 0; index < numBuckets; index++) {
+            Bucket bucket = read(index);
+            if (bucket != null) {
+                bucket.lock();
+                try {
+                    keys.addAll(bucket.getKeySetOp());
+                } finally {
+                    bucket.unlock();
+                }
+            } else {
+                throw new BizurException(String.format("iterateKeys failed on node-%d", getNodeId()));
+            }
+        }
+        return keys;
+    }
+
     /*----------------------------------------------------------------------------------
      * Internal RPC Commands
      * ----------------------------------------------------------------------------------*/
@@ -434,6 +471,48 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .responseTo(request);
     }
 
+    @Override
+    public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
+        validateAction();
+        int leaderId;
+        synchronized (state) {
+            leaderId = state.getLeaderId();
+        }
+        if (leaderId == getNodeId()) {  // I am the leader
+            try {
+                boolean success = apiDelete(request.getKey());
+                return new KVDeleteResponse(success, null).responseTo(request);
+            } catch (Exception e) {
+                logErrorForRequest(e, request);
+                return new KVDeleteResponse(false, e).responseTo(request);
+            }
+        }
+        // route to leader
+        return getRPC(getTransport()).delete(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+                .responseTo(request);
+    }
+
+    @Override
+    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
+        validateAction();
+        int leaderId;
+        synchronized (state) {
+            leaderId = state.getLeaderId();
+        }
+        if (leaderId == getNodeId()) {  // I am the leader
+            try {
+                Set<String> keys = apiIterateKeys();
+                return new KVIterateKeysResponse(true, null, keys).responseTo(request);
+            } catch (Exception e) {
+                logErrorForRequest(e, request);
+                return new KVIterateKeysResponse(false, e, null).responseTo(request);
+            }
+        }
+        // route to leader
+        return getRPC(getTransport()).iterateKeys(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+                .responseTo(request);
+    }
+
     public Future<String> get(String key) {
         return exec(() -> {
             KVGetRequest request = new KVGetRequest(key);
@@ -449,6 +528,24 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             KVSetResponse response = set(request);
             validateResponse(response, request);
             return null;
+        });
+    }
+
+    public Future<Void> delete(String key) {
+        return exec(() -> {
+            KVDeleteRequest request = new KVDeleteRequest(key);
+            KVDeleteResponse response = delete(request);
+            validateResponse(response, request);
+            return null;
+        });
+    }
+
+    public Future<Set<String>> iterateKeys() {
+        return exec(() -> {
+            KVIterateKeysRequest request = new KVIterateKeysRequest();
+            KVIterateKeysResponse response = iterateKeys(request);
+            validateResponse(response, request);
+            return response.getKeys();
         });
     }
 

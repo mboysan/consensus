@@ -12,6 +12,8 @@ public interface BizurRPC extends RPCProtocol {
 
     KVGetResponse get(KVGetRequest request) throws IOException;
     KVSetResponse set(KVSetRequest request) throws IOException;
+    KVDeleteResponse delete(KVDeleteRequest request) throws IOException;
+    KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
 
     @Override
     default Message apply(Message message) {
@@ -28,6 +30,10 @@ public interface BizurRPC extends RPCProtocol {
                 return get((KVGetRequest) message);
             } else if (message instanceof KVSetRequest) {
                 return set((KVSetRequest) message);
+            } else if (message instanceof KVDeleteRequest) {
+                return delete((KVDeleteRequest) message);
+            } else if (message instanceof KVIterateKeysRequest) {
+                return iterateKeys((KVIterateKeysRequest) message);
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);

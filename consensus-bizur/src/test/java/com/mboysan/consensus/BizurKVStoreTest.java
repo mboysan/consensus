@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,17 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RaftKVStoreTest extends RaftTestBase {
+class BizurKVStoreTest extends BizurTestBase {
 
-    RaftKVStore[] raftStores;
+    BizurKVStore[] bizurStores;
 
     @Override
     void init(int numServers) throws Exception {
         super.init(numServers);
-        raftStores = new RaftKVStore[numServers];
+        bizurStores = new BizurKVStore[numServers];
         for (int i = 0; i < numServers; i++) {
-            raftStores[i] = new RaftKVStore(nodes[i]);
-            raftStores[i].start();
+            bizurStores[i] = new BizurKVStore(nodes[i]);
+            bizurStores[i].start();
         }
     }
 
@@ -37,7 +38,7 @@ class RaftKVStoreTest extends RaftTestBase {
         for (int i = 0; i < 100; i++) {
             String key = "testKey" + i;
             String val = "testVal" + i;
-            assertTrue(raftStores[randomNodeId()].put(key, val));
+            assertTrue(bizurStores[randomNodeId()].put(key, val));
             expectedEntries.put(key, val);
         }
         advanceTimeForElections();  // sync
@@ -50,13 +51,14 @@ class RaftKVStoreTest extends RaftTestBase {
 
         for (int i = 0; i < 100; i++) {
             String key = "testKey" + i;
-            assertTrue(raftStores[randomNodeId()].put(key, "testVal" + i));
-            assertTrue(raftStores[randomNodeId()].remove(key));
+            assertTrue(bizurStores[randomNodeId()].put(key, "testVal" + i));
+            assertTrue(bizurStores[randomNodeId()].remove(key));
         }
         advanceTimeForElections();  // sync
         assertStoreSizeForAll(0);
     }
 
+    @Disabled
     @Test
     void multiThreadTest() throws Exception {
         init(5);
@@ -69,9 +71,9 @@ class RaftKVStoreTest extends RaftTestBase {
             Future<?> f = exec.submit(() -> {
                 String key = "testKey" + finalI;
                 String val = "testVal" + finalI;
-                assertTrue(raftStores[randomNodeId()].put(key, val));
+                assertTrue(bizurStores[randomNodeId()].put(key, val));
                 if (getRNG().nextBoolean()) {   // in some cases, remove the entry
-                    assertTrue(raftStores[randomNodeId()].remove(key));
+                    assertTrue(bizurStores[randomNodeId()].remove(key));
                 } else {    // in other cases, just leave it inserted.
                     expectedEntries.put(key, val);
                 }
@@ -85,6 +87,7 @@ class RaftKVStoreTest extends RaftTestBase {
         assertEntriesForAll(expectedEntries);
     }
 
+    @Disabled
     @Test
     void testFollowerFailure() throws Exception {
         int numServers = 5;
@@ -106,14 +109,14 @@ class RaftKVStoreTest extends RaftTestBase {
                 if (getRNG().nextBoolean() && killedNodes.size() != totalAllowedKills) {   //kill node
                     if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
                         kill(followerId);
-                        assertFalse(raftStores[followerId].put(key, val));
-                        assertTrue(raftStores[leaderId].put(key, val)); // this shall never fail in this test
+                        assertFalse(bizurStores[followerId].put(key, val));
+                        assertTrue(bizurStores[leaderId].put(key, val)); // this shall never fail in this test
                         expectedEntries.put(key, val);
                         revive(followerId);
                         killedNodes.remove(followerId);
                     }
                 } else {
-                    assertTrue(raftStores[leaderId].put(key, val));
+                    assertTrue(bizurStores[leaderId].put(key, val));
                     expectedEntries.put(key, val);
                 }
             });
@@ -127,7 +130,7 @@ class RaftKVStoreTest extends RaftTestBase {
     }
 
     private int randomNodeId() {
-        return getRNG().nextInt(raftStores.length);
+        return getRNG().nextInt(bizurStores.length);
     }
 
     private int randomFollowerId(int leaderId) {
@@ -138,15 +141,15 @@ class RaftKVStoreTest extends RaftTestBase {
     private void assertEntriesForAll(Map<String, String> expectedEntries) {
         assertStoreSizeForAll(expectedEntries.size());
         for (String expKey : expectedEntries.keySet()) {
-            for (RaftKVStore raftStore : raftStores) {
-                assertEquals(expectedEntries.get(expKey), raftStore.get(expKey));
+            for (BizurKVStore bizurStore : bizurStores) {
+                assertEquals(expectedEntries.get(expKey), bizurStore.get(expKey));
             }
         }
     }
 
     private void assertStoreSizeForAll(int size) {
-        for (RaftKVStore raftStore : raftStores) {
-            assertEquals(size, raftStore.keySet().size());
+        for (BizurKVStore bizurStore : bizurStores) {
+            assertEquals(size, bizurStore.keySet().size());
         }
     }
 
@@ -154,8 +157,8 @@ class RaftKVStoreTest extends RaftTestBase {
     @Override
     void tearDown() throws Exception {
         super.tearDown();
-        for (RaftKVStore raftStore : raftStores) {
-            raftStore.shutdown();
+        for (BizurKVStore bizurStore : bizurStores) {
+            bizurStore.shutdown();
         }
     }
 

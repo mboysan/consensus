@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,7 +34,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     ExecutorService peerExecutor;
     ExecutorService commandExecutor;
 
-    final Map<Integer, P> peers = new HashMap<>();
+    final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
     AbstractNode(int nodeId, Transport transport) {
         this.nodeId = nodeId;

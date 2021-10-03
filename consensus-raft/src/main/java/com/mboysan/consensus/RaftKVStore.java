@@ -49,7 +49,7 @@ public class RaftKVStore implements KVStore {
     }
 
     @Override
-    public synchronized void shutdown() throws IOException {
+    public synchronized void shutdown() {
         raft.shutdown();
     }
 
@@ -66,10 +66,6 @@ public class RaftKVStore implements KVStore {
     @Override
     public boolean remove(String key) {
         return append(String.format("rm%s%s", CMD_SEP, key));
-    }
-
-    public int size() {
-        return store.size();
     }
 
     public Set<String> keySet() {

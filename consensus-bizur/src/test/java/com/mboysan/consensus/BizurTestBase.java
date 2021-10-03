@@ -153,7 +153,7 @@ public class BizurTestBase {
 
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
         if (skipTeardown) {
             return;
         }
