@@ -8,9 +8,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BizurNodeTest extends BizurTestBase {
 
@@ -90,11 +88,11 @@ public class BizurNodeTest extends BizurTestBase {
         init(3);
         int leaderId = assertOneLeader();
 
-        Map<String, String> expectedKVs = new HashMap<>() {
-            {put("k0", "v0");}
-            {put("k1", "v1");}
-            {put("k2", "v2");}
-        };
+        Map<String, String> expectedKVs = new HashMap<>() {{
+            put("k0", "v0");
+            put("k1", "v1");
+            put("k2", "v2");
+        }};
 
         for (String expKey : expectedKVs.keySet()) {
             String expVal = expectedKVs.get(expKey);
@@ -120,11 +118,11 @@ public class BizurNodeTest extends BizurTestBase {
 
         int leaderId = assertOneLeader();
 
-        Map<String, String> expectedKVs = new HashMap<>() {
-            {put("k0", "v0");}
-            {put("k1", "v1");}
-            {put("k2", "v2");}
-        };
+        Map<String, String> expectedKVs = new HashMap<>() {{
+            put("k0", "v0");
+            put("k1", "v1");
+            put("k2", "v2");
+        }};
 
         // non-leader nodes will route the command to the leader
         nodes[(leaderId + 1) % numServers].set("k0", "v0").get();
@@ -194,10 +192,10 @@ public class BizurNodeTest extends BizurTestBase {
 
         kill((leaderId + 1) % numServers);
 
-        Map<String, String> expectedKVs = new HashMap<>() {
-            {put("k0", "v0");}
-            {put("k1", "v1");}
-        };
+        Map<String, String> expectedKVs = new HashMap<>() {{
+            put("k0", "v0");
+            put("k1", "v1");
+        }};
         nodes[leaderId].set("k0", "v0").get();
 
         revive((leaderId + 1) % numServers);
@@ -219,10 +217,10 @@ public class BizurNodeTest extends BizurTestBase {
         advanceTimeForElections();
         int newLeaderId = assertLeaderChanged(oldLeaderId, false /* oldLeader is not aware */);
 
-        Map<String, String> expectedKVs = new HashMap<>() {
-            {put("k0", "v0");}
-            {put("k1", "v1");}
-        };
+        Map<String, String> expectedKVs = new HashMap<>() {{
+            put("k0", "v0");
+            put("k1", "v1");
+        }};
 
         nodes[newLeaderId].set("k0", "v0").get();
 
@@ -232,14 +230,15 @@ public class BizurNodeTest extends BizurTestBase {
         revive(oldLeaderId);
 
         assertThrows(ExecutionException.class, () -> nodes[oldLeaderId].set("some-key", "some-value").get());
-        // at this point, the old leader recovered the bucket.
+        // at this point, the old leader will understand that it's no longer the leader.
 
-        advanceTimeForElections();
-        /* old leader will claim leadership because no new writes have been performed during old leader's
-           attempt at starting a new election.*/
-        assertEquals(oldLeaderId, assertOneLeader());
+        nodes[newLeaderId].set("k1", "v1").get();
+        // Bizur propagates the leader changes after a write operation. Therefore, the old leader will update its vote
+        // for new leader after this operation.
 
-        nodes[oldLeaderId].set("k1", "v1").get();
+        assertOneLeader();
+        advanceTimeForElections();  // let some time pass
+        assertOneLeader();
 
         assertBucketMapsEquals(expectedKVs);
     }

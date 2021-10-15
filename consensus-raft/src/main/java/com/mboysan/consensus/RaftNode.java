@@ -13,9 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static com.mboysan.consensus.RaftState.Role.CANDIDATE;
-import static com.mboysan.consensus.RaftState.Role.FOLLOWER;
-import static com.mboysan.consensus.RaftState.Role.LEADER;
+import static com.mboysan.consensus.RaftState.Role.*;
 
 public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
@@ -229,8 +227,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             /* If there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N,
                and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).*/
             int N = IntStream.concat(
-                    peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
-                    IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
+                            peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
+                            IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
                     .max().orElseThrow();
             if (N > state.commitIndex) {
                 int countGreaterEquals = state.raftLog.lastLogIndex() >= N ? 1 : 0;
@@ -333,7 +331,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {
                         wait(); // after calling append(), the future returned can be cancelled, which will throw
-                                // the following exception
+                        // the following exception
                     } catch (InterruptedException e) {
                         LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
                         Thread.currentThread().interrupt();

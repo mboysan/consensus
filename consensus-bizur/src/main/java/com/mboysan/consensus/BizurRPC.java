@@ -7,12 +7,17 @@ public interface BizurRPC extends RPCProtocol {
     HeartbeatResponse heartbeat(HeartbeatRequest request) throws IOException;
 
     PleaseVoteResponse pleaseVote(PleaseVoteRequest request) throws IOException;
+
     ReplicaReadResponse replicaRead(ReplicaReadRequest request) throws IOException;
+
     ReplicaWriteResponse replicaWrite(ReplicaWriteRequest request) throws IOException;
 
     KVGetResponse get(KVGetRequest request) throws IOException;
+
     KVSetResponse set(KVSetRequest request) throws IOException;
+
     KVDeleteResponse delete(KVDeleteRequest request) throws IOException;
+
     KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
 
     @Override

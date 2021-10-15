@@ -30,17 +30,17 @@ class Bucket implements Comparable<Bucket> {
      *----------------------------------------------------------------------------------*/
 
     public String putOp(String key, String val) {
-        LOGGER.debug("put key={},val={} in bucket={}", key, val, this);
+        LOGGER.trace("put key={},val={} in bucket={}", key, val, this);
         return bucketMap.put(key, val);
     }
 
     public String getOp(String key) {
-        LOGGER.debug("get key={} from bucket={}", key, this);
+        LOGGER.trace("get key={} from bucket={}", key, this);
         return bucketMap.get(key);
     }
 
     public String removeOp(String key) {
-        LOGGER.debug("remove key={} from bucket={}", key, this);
+        LOGGER.trace("remove key={} from bucket={}", key, this);
         return bucketMap.remove(key);
     }
 
@@ -53,8 +53,8 @@ class Bucket implements Comparable<Bucket> {
      *----------------------------------------------------------------------------------*/
 
     public Bucket setBucketMap(Map<String, String> bucketMap) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("replacing bucketMap={} with map={} in bucket={}", this.bucketMap, bucketMap, this);
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("replacing bucketMap={} with map={} in bucket={}", this.bucketMap, bucketMap, this);
         }
         this.bucketMap = bucketMap;
         return this;

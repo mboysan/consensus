@@ -8,18 +8,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BizurTestBase {
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurTestBase.class);
 
     private static final long SEED = 1L;
+
     static {
         LOGGER.info("RaftTestBase.SEED={}", SEED);
         System.out.println("RaftTestBase.SEED=" + SEED);
@@ -92,9 +90,9 @@ public class BizurTestBase {
         int leaderId = -1;
         for (BizurNode node : nodes) {
             if (leaderId == -1) {
-                leaderId = node.getState().getLeaderId();
+                leaderId = node.getBizurStateUnprotected().getLeaderId();
             }
-            assertEquals(leaderId, node.getState().getLeaderId());
+            assertEquals(leaderId, node.getBizurStateUnprotected().getLeaderId());
         }
         assertNotEquals(-1, leaderId);
         return leaderId;
@@ -109,12 +107,12 @@ public class BizurTestBase {
             for (BizurNode node : nodes) {
                 if (node.getNodeId() == oldLeader) {
                     // the old leader should still think its the leader
-                    assertEquals(oldLeader, node.getState().getLeaderId());
+                    assertEquals(oldLeader, node.getBizurStateUnprotected().getLeaderId());
                 } else {
                     if (newLeaderId == -1) {
-                        newLeaderId = node.getState().getLeaderId();
+                        newLeaderId = node.getBizurStateUnprotected().getLeaderId();
                     }
-                    assertEquals(newLeaderId, node.getState().getLeaderId());
+                    assertEquals(newLeaderId, node.getBizurStateUnprotected().getLeaderId());
                 }
             }
             assertNotEquals(-1, newLeaderId);
@@ -124,9 +122,9 @@ public class BizurTestBase {
     }
 
     int findLeaderOfMajority() {
-        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.getState().getLeaderId()))
+        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.getBizurStateUnprotected().getLeaderId()))
                 .collect(Collectors.toList())
-                .get(nodes.length/ 2).getState().getLeaderId();
+                .get(nodes.length / 2).getBizurStateUnprotected().getLeaderId();
     }
 
     void assertLeaderOfMajority(int majorityLeaderId) {

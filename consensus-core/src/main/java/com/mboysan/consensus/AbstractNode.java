@@ -7,18 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -36,6 +26,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
+    // TODO: add optional Properties or something like that
     AbstractNode(int nodeId, Transport transport) {
         this.nodeId = nodeId;
         this.transport = transport;

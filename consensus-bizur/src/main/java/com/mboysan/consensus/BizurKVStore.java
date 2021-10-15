@@ -68,7 +68,7 @@ public class BizurKVStore implements KVStore {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new RuntimeException(e);
+            throw new RuntimeException(e);  //TODO: convert to a specific exception?
         }
     }
 }

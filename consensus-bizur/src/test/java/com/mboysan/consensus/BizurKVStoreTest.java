@@ -1,7 +1,6 @@
 package com.mboysan.consensus;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -11,10 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class BizurKVStoreTest extends BizurTestBase {
 
@@ -58,7 +56,6 @@ class BizurKVStoreTest extends BizurTestBase {
         assertStoreSizeForAll(0);
     }
 
-    @Disabled
     @Test
     void multiThreadTest() throws Exception {
         init(5);
@@ -87,7 +84,7 @@ class BizurKVStoreTest extends BizurTestBase {
         assertEntriesForAll(expectedEntries);
     }
 
-    @Disabled
+    // fixme: this test fails sometimes, need investigation
     @Test
     void testFollowerFailure() throws Exception {
         int numServers = 5;
@@ -95,7 +92,8 @@ class BizurKVStoreTest extends BizurTestBase {
         int leaderId = assertOneLeader();
 
         int totalAllowedKills = numServers / 2;
-        Map<Integer, Object> killedNodes = new ConcurrentHashMap<>();
+        AtomicInteger totalKilled = new AtomicInteger(0);
+        ConcurrentHashMap<Integer, Object> killedNodes = new ConcurrentHashMap<>();
         ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
         List<Future<?>> results = new ArrayList<>();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
@@ -106,14 +104,18 @@ class BizurKVStoreTest extends BizurTestBase {
                 String val = "testVal" + finalI;
 
                 int followerId = randomFollowerId(leaderId);
-                if (getRNG().nextBoolean() && killedNodes.size() != totalAllowedKills) {   //kill node
-                    if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
-                        kill(followerId);
-                        assertFalse(bizurStores[followerId].put(key, val));
-                        assertTrue(bizurStores[leaderId].put(key, val)); // this shall never fail in this test
-                        expectedEntries.put(key, val);
-                        revive(followerId);
-                        killedNodes.remove(followerId);
+                if (getRNG().nextBoolean()) {
+                    if (totalKilled.incrementAndGet() < totalAllowedKills) {
+                        // try killing node
+                        if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
+                            kill(followerId);
+                            assertThrows(RuntimeException.class, () -> bizurStores[followerId].put(key, val));
+                            assertTrue(bizurStores[leaderId].put(key, val)); // this shall never fail in this test
+                            expectedEntries.put(key, val);
+                            revive(followerId);
+                            killedNodes.remove(followerId);
+                        }
+                        totalKilled.decrementAndGet();
                     }
                 } else {
                     assertTrue(bizurStores[leaderId].put(key, val));

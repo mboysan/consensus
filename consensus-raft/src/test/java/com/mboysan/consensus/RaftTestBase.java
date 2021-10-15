@@ -7,22 +7,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RaftTestBase {
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftTestBase.class);
 
     private static final long SEED = 1L;
+
     static {
         LOGGER.info("RaftTestBase.SEED={}", SEED);
         System.out.println("RaftTestBase.SEED=" + SEED);
@@ -90,7 +85,7 @@ public class RaftTestBase {
     int findLeaderOfMajority() {
         return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.getState().leaderId))
                 .collect(Collectors.toList())
-                .get(nodes.length/ 2).getState().leaderId;
+                .get(nodes.length / 2).getState().leaderId;
     }
 
     int assertLeaderChanged(int oldLeader, boolean isChangeVisibleOnOldLeader) {

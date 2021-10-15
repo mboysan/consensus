@@ -5,15 +5,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,7 +31,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     private final int numBuckets;
     private final Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>();
 
-    private final BizurState state = new BizurState();
+    private final BizurState bizurState = new BizurState();
 
     BizurNode(int nodeId, Transport transport) {
         this(nodeId, transport, DEFAULT_NUM_BUCKETS);
@@ -60,8 +58,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
-                synchronized (state) {
-                    if (state.getLeaderId() != -1) {
+                synchronized (bizurState) {
+                    if (bizurState.getLeaderId() != -1) {
                         return null;
                     }
                 }
@@ -94,12 +92,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private synchronized void update() {
         int leaderId;
-        synchronized (state) {
-            leaderId = state.getLeaderId();
+        synchronized (bizurState) {
+            leaderId = bizurState.getLeaderId();
         }
         if (leaderId == -1) {   // if no leader, try to become leader
             getTimers().sleep(electionTimeoutMs);
-            startElection();
+            new BizurRun(this).startElection();
             update();
             return;
         }
@@ -112,253 +110,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .setReceiverId(leaderId);
         try {
             HeartbeatResponse response = getRPC(getTransport()).heartbeat(request);
-            if (LOGGER.isDebugEnabled()) {
+            if (LOGGER.isTraceEnabled()) {
                 long elapsed = response.getSendTimeMs() - request.getSendTimeMs();
-                LOGGER.debug("peer-{} heartbeat elapsed={}", leaderId, elapsed);
+                LOGGER.trace("peer-{} heartbeat elapsed={}", leaderId, elapsed);
             }
         } catch (IOException e) {
             LOGGER.error("peer-{} IO exception for request={}, cause={}", leaderId, request, e.getMessage());
             // leader is dead, lets start the election.
             getTimers().sleep(electionTimeoutMs);
-            startElection();
+            new BizurRun(this).startElection();
         }
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Algorithm 1: Leader Election
-     * ----------------------------------------------------------------------------------*/
-
-    private void startElection() {
-        LOGGER.info("node-{} starting new election", getNodeId());
-        int electId;
-        synchronized (state) {
-            electId = state.incrementAndGetElectId();
-        }
-        AtomicInteger ackCount = new AtomicInteger(0);
-        forEachPeerParallel(peer -> {
-            PleaseVoteRequest request = new PleaseVoteRequest(electId)
-                    .setSenderId(getNodeId())
-                    .setReceiverId(peer.peerId);
-            try {
-                PleaseVoteResponse response = getRPC(getTransport()).pleaseVote(request);
-                if (response.isAcked()) {
-                    ackCount.incrementAndGet();
-                }
-            } catch (IOException e) {
-                LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
-            }
-        });
-        synchronized (state) {
-            if (isMajorityAcked(ackCount.get())) {
-                state.setLeaderId(getNodeId());
-                LOGGER.info("node-{} thinks it's leader", getNodeId());
-            } else {
-                state.setLeaderId(-1);
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Algorithm 2: Bucket Replication: Write
-     * ----------------------------------------------------------------------------------*/
-
-    private boolean write(Bucket lockedBucket) throws BizurException {
-        int electId;
-        synchronized (state) {
-            validateLeader(state.getLeaderId());
-            electId = state.getElectId();
-        }
-        lockedBucket.setVerElectId(electId);
-        lockedBucket.incrementVerCounter();
-
-        AtomicInteger ackCount = new AtomicInteger(0);
-        forEachPeerParallel(peer -> {
-            ReplicaWriteRequest request = new ReplicaWriteRequest(lockedBucket.getIndex(), lockedBucket.createView())
-                    .setSenderId(getNodeId())
-                    .setReceiverId(peer.peerId);
-            try {
-                ReplicaWriteResponse response = getRPC(getTransport()).replicaWrite(request);
-                if (response.isAcked()) {
-                    ackCount.incrementAndGet();
-                }
-            } catch (IOException e) {
-                LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
-            }
-        });
-        if (isMajorityAcked(ackCount.get())) {
-            return true;
-        } else {
-            synchronized (state) {
-                state.setLeaderId(-1);  // step down
-            }
-            return false;
-        }
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Algorithm 3: Bucket Replication: Read
-     * ----------------------------------------------------------------------------------*/
-
-    private Bucket read(int index) throws BizurException {
-        int electId;
-        synchronized (state) {
-            validateLeader(state.getLeaderId());
-            electId = state.getElectId();
-        }
-
-        if (!ensureRecovery(index, electId)) {
-            LOGGER.error("node-{} could not ensure recovery of bucket index={}, electId={}", getNodeId(), index, electId);
-            return null;
-        }
-        AtomicInteger ackCount = new AtomicInteger(0);
-        forEachPeerParallel(peer -> {
-            ReplicaReadRequest request = new ReplicaReadRequest(index, electId)
-                    .setSenderId(getNodeId())
-                    .setReceiverId(peer.peerId);
-            try {
-                ReplicaReadResponse response = getRPC(getTransport()).replicaRead(request);
-                if (response.isAcked()) {
-                    ackCount.incrementAndGet();
-                }
-            } catch (IOException e) {
-                LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
-            }
-        });
-        if (!isMajorityAcked(ackCount.get())) {
-            synchronized (state) {
-                state.setLeaderId(-1);   // step down
-            }
-            return null;
-        }
-        return getBucket(index);
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Algorithm 4: Bucket Replication: Recovery
-     * ----------------------------------------------------------------------------------*/
-
-    private boolean ensureRecovery(int index, int electId) throws BizurException {
-        Bucket bucket = getBucket(index).lock();
-        try {
-            if (electId == bucket.getVerElectId()) {
-                return true;
-            }
-        } finally {
-            bucket.unlock();
-        }
-        AtomicReference<BucketView> maxVerBucketView = new AtomicReference<>(null);
-        AtomicInteger ackCount = new AtomicInteger(0);
-        forEachPeerParallel(peer -> {
-            ReplicaReadRequest request = new ReplicaReadRequest(index, electId)
-                    .setSenderId(getNodeId())
-                    .setReceiverId(peer.peerId);
-            try {
-                ReplicaReadResponse response = getRPC(getTransport()).replicaRead(request);
-                if (response.isAcked()) {
-                    BucketView bucketView = response.getBucketView();
-                    synchronized (maxVerBucketView) {
-                        if (!maxVerBucketView.compareAndSet(null, bucketView)) {
-                            if (bucketView.compareTo(maxVerBucketView.get()) > 0) {
-                                maxVerBucketView.set(bucketView);
-                            }
-                        }
-                    }
-                    ackCount.incrementAndGet();
-                }
-            } catch (IOException e) {
-                LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
-            }
-        });
-        if (isMajorityAcked(ackCount.get())) {
-            BucketView bucketView = maxVerBucketView.get();
-            bucket.lock();
-            try {
-                bucket.setVerElectId(electId)
-                        .setVerCounter(0)
-                        .setBucketMap(bucketView.getBucketMap());
-                return write(bucket);
-            } finally {
-                bucket.unlock();
-            }
-        } else {
-            synchronized (state) {
-                state.setLeaderId(-1);
-            }
-            return false;
-        }
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Algorithm 5: Key-Value API
-     * ----------------------------------------------------------------------------------*/
-
-    private String apiGet(String key) throws BizurException {
-        Objects.requireNonNull(key);
-
-        int index = hashKey(key);
-        Bucket bucket = read(index);
-        if (bucket != null) {
-            bucket.lock();
-            try {
-                return bucket.getOp(key);
-            } finally {
-                bucket.unlock();
-            }
-        }
-        throw new BizurException(String.format("get failed on node-%d for key=%s", getNodeId(), key));
-    }
-
-    private boolean apiSet(String key, String value) throws BizurException {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(value);
-
-        int index = hashKey(key);
-        Bucket bucket = read(index);
-        if (bucket != null) {
-            bucket.lock();
-            try {
-                bucket.putOp(key, value);
-                return write(bucket); // TODO: investigate if we need to revert if write fails
-            } finally {
-                bucket.unlock();
-            }
-        }
-        throw new BizurException(String.format("set failed on node-%d for key=%s", getNodeId(), key));
-    }
-
-    private boolean apiDelete(String key) throws BizurException {
-        Objects.requireNonNull(key);
-
-        int index = hashKey(key);
-        Bucket bucket = read(index);
-        if (bucket != null) {
-            bucket.lock();
-            try {
-                bucket.removeOp(key);
-                return write(bucket); // TODO: investigate if we need to revert if write fails
-            } finally {
-                bucket.unlock();
-            }
-        }
-        throw new BizurException(String.format("delete failed on node-%d for key=%s", getNodeId(), key));
-    }
-
-    private Set<String> apiIterateKeys() throws BizurException {
-        Set<String> keys = new HashSet<>();
-        for (int index = 0; index < numBuckets; index++) {
-            Bucket bucket = read(index);
-            if (bucket != null) {
-                bucket.lock();
-                try {
-                    keys.addAll(bucket.getKeySetOp());
-                } finally {
-                    bucket.unlock();
-                }
-            } else {
-                throw new BizurException(String.format("iterateKeys failed on node-%d", getNodeId()));
-            }
-        }
-        return keys;
     }
 
     /*----------------------------------------------------------------------------------
@@ -372,12 +133,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public PleaseVoteResponse pleaseVote(PleaseVoteRequest request) {
-        synchronized (state) {
-            if (request.getElectId() > state.getVotedElectId()) {
-                state.setVotedElectId(request.getElectId());
-                state.setLeaderId(request.getSenderId()); // "update" vote
+        synchronized (bizurState) {
+            if (request.getElectId() > bizurState.getVotedElectId()) {
+                bizurState.setVotedElectId(request.getElectId())
+                        .setLeaderId(request.getSenderId());     // "update" vote
                 return new PleaseVoteResponse(true).responseTo(request);
-            } else if (request.getElectId() == state.getVotedElectId() && request.getSenderId() == state.getLeaderId()) {
+            } else if (request.getElectId() == bizurState.getVotedElectId() && request.getSenderId() == bizurState.getLeaderId()) {
                 return new PleaseVoteResponse(true).responseTo(request);
             }
             return new PleaseVoteResponse(false).responseTo(request);
@@ -389,39 +150,39 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         int index = request.getBucketIndex();
         int electId = request.getElectId();
         int source = request.getSenderId();
-        synchronized (state) {
-            Bucket bucket = getBucket(index).lock();
-            try {
-                if (electId < state.getVotedElectId()) {
+        Bucket bucket = getBucket(index).lock();
+        try {
+            synchronized (bizurState) {
+                if (electId < bizurState.getVotedElectId()) {
                     return new ReplicaReadResponse(false, null).responseTo(request);
                 } else {
-                    state.setVotedElectId(electId);
-                    state.setLeaderId(source);  // "update" vote
+                    bizurState.setVotedElectId(electId)
+                            .setLeaderId(source);    // "update" vote
                     return new ReplicaReadResponse(true, bucket.createView()).responseTo(request);
                 }
-            } finally {
-                bucket.unlock();
             }
+        } finally {
+            bucket.unlock();
         }
     }
 
     @Override
     public ReplicaWriteResponse replicaWrite(ReplicaWriteRequest request) {
         BucketView bucketView = request.getBucketView();
-        synchronized (state) {
-            Bucket bucket = getBucket(request.getBucketIndex()).lock();
-            try {
-                if (bucketView.getVerElectId() < state.getVotedElectId()) {
+        Bucket bucket = getBucket(request.getBucketIndex()).lock();
+        try {
+            synchronized (bizurState) {
+                if (bucketView.getVerElectId() < bizurState.getVotedElectId()) {
                     return new ReplicaWriteResponse(false);
                 } else {
-                    state.setVotedElectId(bucketView.getVerElectId());
-                    state.setLeaderId(request.getSenderId());    // "update" vote
+                    bizurState.setVotedElectId(bucketView.getVerElectId())
+                            .setLeaderId(request.getSenderId());     // "update" vote
                     bucket.setBucketMap(bucketView.getBucketMap());
                     return new ReplicaWriteResponse(true);
                 }
-            } finally {
-                bucket.unlock();
             }
+        } finally {
+            bucket.unlock();
         }
     }
 
@@ -432,20 +193,18 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVGetResponse get(KVGetRequest request) throws IOException {
         validateAction();
-        int leaderId;
-        synchronized (state) {
-            leaderId = state.getLeaderId();
-        }
+        int leaderId = getLeaderId().orElse(getRandomPeerId());
         if (leaderId == getNodeId()) {  // I am the leader
             try {
-                String value = apiGet(request.getKey());
+                String value = new BizurRun(request.getCorrelationId(), this).apiGet(request.getKey());
                 return new KVGetResponse(true, null, value).responseTo(request);
             } catch (Exception e) {
                 logErrorForRequest(e, request);
                 return new KVGetResponse(false, e, null).responseTo(request);
             }
         }
-        // route to leader
+        // route to leader/peer
+        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
         return getRPC(getTransport()).get(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -453,20 +212,18 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVSetResponse set(KVSetRequest request) throws IOException {
         validateAction();
-        int leaderId;
-        synchronized (state) {
-            leaderId = state.getLeaderId();
-        }
+        int leaderId = getLeaderId().orElse(getRandomPeerId());
         if (leaderId == getNodeId()) {  // I am the leader
             try {
-                boolean success = apiSet(request.getKey(), request.getValue());
-                return new KVSetResponse(success, null).responseTo(request);
+                new BizurRun(request.getCorrelationId(), this).apiSet(request.getKey(), request.getValue());
+                return new KVSetResponse(true, null).responseTo(request);
             } catch (Exception e) {
                 logErrorForRequest(e, request);
                 return new KVSetResponse(false, e).responseTo(request);
             }
         }
-        // route to leader
+        // route to leader/peer
+        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
         return getRPC(getTransport()).set(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -474,20 +231,18 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
         validateAction();
-        int leaderId;
-        synchronized (state) {
-            leaderId = state.getLeaderId();
-        }
+        int leaderId = getLeaderId().orElse(getRandomPeerId());
         if (leaderId == getNodeId()) {  // I am the leader
             try {
-                boolean success = apiDelete(request.getKey());
-                return new KVDeleteResponse(success, null).responseTo(request);
+                new BizurRun(request.getCorrelationId(), this).apiDelete(request.getKey());
+                return new KVDeleteResponse(true, null).responseTo(request);
             } catch (Exception e) {
                 logErrorForRequest(e, request);
                 return new KVDeleteResponse(false, e).responseTo(request);
             }
         }
-        // route to leader
+        // route to leader/peer
+        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
         return getRPC(getTransport()).delete(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -495,23 +250,23 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
         validateAction();
-        int leaderId;
-        synchronized (state) {
-            leaderId = state.getLeaderId();
-        }
+        int leaderId = getLeaderId().orElse(getRandomPeerId());
         if (leaderId == getNodeId()) {  // I am the leader
             try {
-                Set<String> keys = apiIterateKeys();
+                Set<String> keys = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
                 return new KVIterateKeysResponse(true, null, keys).responseTo(request);
             } catch (Exception e) {
                 logErrorForRequest(e, request);
                 return new KVIterateKeysResponse(false, e, null).responseTo(request);
             }
         }
-        // route to leader
+        // route to leader/peer
+        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
         return getRPC(getTransport()).iterateKeys(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
+
+    // TODO: refactor and get rid of these
 
     public Future<String> get(String key) {
         return exec(() -> {
@@ -556,26 +311,28 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
     }
 
+
     /*----------------------------------------------------------------------------------
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
 
-    private void validateLeader(int leaderId) throws BizurException {
-        if (leaderId != getNodeId()) {
-            throw new BizurException(String.format("node-%d is not the leader", getNodeId()));
+    private Optional<Integer> getLeaderId() {
+        int leaderId;
+        synchronized (bizurState) {
+            leaderId = bizurState.getLeaderId();
         }
+        return leaderId != -1
+                ? Optional.of(leaderId)
+                : Optional.empty();
     }
 
-    private Bucket getBucket(int index) {
+    private int getRandomPeerId() {
+        int randPeerId = ThreadLocalRandom.current().nextInt(0, getPeerSize());
+        return randPeerId == getNodeId() ? (randPeerId + 1) % getPeerSize() : randPeerId;
+    }
+
+    Bucket getBucket(int index) {
         return bucketMap.computeIfAbsent(index, Bucket::new);
-    }
-
-    private boolean isMajorityAcked(int voteCount) {
-        return voteCount > peers.size() / 2;
-    }
-
-    private int hashKey(String key) {
-        return key.hashCode() % numBuckets;
     }
 
     private void logErrorForRequest(Exception exception, Message request) {
@@ -594,17 +351,21 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         });
     }
 
-    /*----------------------------------------------------------------------------------
-     * For testing
-     * ----------------------------------------------------------------------------------*/
+    BizurState getBizurStateUnprotected() {
+        return bizurState;
+    }
 
-    BizurState getState() {
-        return state;
+    int getPeerSize() {
+        return peers.size();
     }
 
     int getNumBuckets() {
         return numBuckets;
     }
+
+    /*----------------------------------------------------------------------------------
+     * For testing
+     * ----------------------------------------------------------------------------------*/
 
     Map<Integer, Bucket> getBucketMap() {
         return bucketMap;
