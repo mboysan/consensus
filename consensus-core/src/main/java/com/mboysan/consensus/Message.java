@@ -91,6 +91,6 @@ public abstract class Message implements Serializable {
     }
 
     public static String generateId() {
-        return Math.abs(RNG.nextInt()) + "";
+        return RNG.nextInt(Integer.MAX_VALUE) + "";
     }
 }
