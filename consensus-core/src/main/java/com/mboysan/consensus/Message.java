@@ -4,17 +4,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Random;
 
 public abstract class Message implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Message.class);
-    private static final long SEED = System.currentTimeMillis();
+    private static final String SEED = System.currentTimeMillis() + "";
 
     static {
         LOGGER.info("message RNG seed = {}", SEED);
     }
 
-    private static final Random RNG = new Random(SEED);
+    private static final SecureRandom RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
 
     /**
      * Unique id of a request and response message pair.

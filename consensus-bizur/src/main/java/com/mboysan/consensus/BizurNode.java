@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -16,6 +17,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
+
+    private static final SecureRandom RNG = new SecureRandom();
 
     static final int DEFAULT_NUM_BUCKETS = 1;
 
@@ -327,7 +330,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     private int getRandomPeerId() {
-        int randPeerId = ThreadLocalRandom.current().nextInt(0, getPeerSize());
+        int randPeerId = RNG.nextInt(getPeerSize());
         return randPeerId == getNodeId() ? (randPeerId + 1) % getPeerSize() : randPeerId;
     }
 
