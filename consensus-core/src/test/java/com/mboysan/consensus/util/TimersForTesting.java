@@ -13,6 +13,7 @@ public class TimersForTesting implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimersForTesting.class);
 
     private static final long SEED = 1L;
+
     static {
         LOGGER.info("TimersForTesting.SEED={}", SEED);
         System.out.println("TimersForTesting.SEED=" + SEED);
@@ -55,7 +56,7 @@ public class TimersForTesting implements Timers {
             return;
         }
         long lastToRunTime = sortedTasks.last().timeToRun;
-        while(currentTime <= lastToRunTime) {
+        while (currentTime <= lastToRunTime) {
             runNext();
             if (sortedTasks.first().timeToRun > lastToRunTime) {
                 break;
@@ -65,6 +66,7 @@ public class TimersForTesting implements Timers {
 
     /**
      * Advances time to {@link #currentTime} + <tt>time</tt>
+     *
      * @param time time to add to {@link #currentTime}.
      */
     public void advance(long time) {

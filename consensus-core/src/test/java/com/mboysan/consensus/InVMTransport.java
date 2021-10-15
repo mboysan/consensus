@@ -8,14 +8,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class InVMTransport implements Transport {
 
@@ -31,10 +24,12 @@ public class InVMTransport implements Transport {
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     @Override
-    public void start() {}
+    public void start() {
+    }
 
     /**
      * A single instance of this type of transport will be shared among all the server nodes.
+     *
      * @return true
      */
     @Override
@@ -74,22 +69,16 @@ public class InVMTransport implements Transport {
 
     @Override
     public Message sendRecv(Message message) throws IOException {
-        verifySenderAlive(message);
-        verifyReceiverAlive(message);
-
-        LOGGER.debug("OUT (sendRecv) : {}", message);
-        if (message.getSenderId() == message.getReceiverId()) {
-            return sendRecvSelf(message);
-        }
-        CompletableFuture<Message> msgFuture = new CompletableFuture<>();
-        callbackMap.put(message.getCorrelationId(), msgFuture);
-        serverMap.get(message.getReceiverId()).add(message);
+        Future<Message> msgFuture = sendRecvAsync(message);
         try {
+
+            // fixme: possible memory leak due to msgFuture not being removed from callbackMap in case of Exception
             return msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
         } catch (Exception e) {
+            LOGGER.error("sendRecv failed for message={}", message, e);
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new IOException(e);
         }
     }
@@ -99,12 +88,13 @@ public class InVMTransport implements Transport {
         verifySenderAlive(message);
         verifyReceiverAlive(message);
 
+        LOGGER.debug("OUT : {}", message);
         if (message.getSenderId() == message.getReceiverId()) {
             return CompletableFuture.completedFuture(sendRecvSelf(message));
         }
 
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
-        callbackMap.put(message.getCorrelationId(), msgFuture);
+        callbackMap.put(message.getId(), msgFuture);
         serverMap.get(message.getReceiverId()).add(message);
         return msgFuture;
     }
@@ -152,7 +142,7 @@ public class InVMTransport implements Transport {
 
         private void add(Message msg) throws IOException {
             if (!isRunning) {
-                Future<Message> msgFuture = callbackMap.remove(msg.getCorrelationId());
+                Future<Message> msgFuture = callbackMap.remove(msg.getId());
                 if (msgFuture != null) {
                     msgFuture.cancel(true);
                 }
@@ -168,7 +158,7 @@ public class InVMTransport implements Transport {
                 try {
                     Message message = messageQueue.take();
                     LOGGER.debug("IN (req) : {}", message);
-                    String correlationId = message.getCorrelationId();
+                    String correlationId = message.getId();
                     if (correlationId == null) {
                         LOGGER.error("correlationId must not be null");
                         continue;
@@ -182,7 +172,7 @@ public class InVMTransport implements Transport {
                     Message response = protoServer.apply(message);
 
                     // we send the response to the callback
-                    CompletableFuture<Message> msgFuture = callbackMap.remove(message.getCorrelationId());
+                    CompletableFuture<Message> msgFuture = callbackMap.remove(message.getId());
                     if (msgFuture != null) {
                         LOGGER.debug("OUT (resp) : {}", response);
                         msgFuture.complete(response);
@@ -199,7 +189,8 @@ public class InVMTransport implements Transport {
         public synchronized void shutdown() {
             isConnectedToNetwork = false;
             isRunning = false;
-            messageQueue.offer(new Message(){}.setCorrelationId("closingServer"));
+            messageQueue.offer(new Message() {
+            }.setCorrelationId("closingServer"));
         }
     }
 }

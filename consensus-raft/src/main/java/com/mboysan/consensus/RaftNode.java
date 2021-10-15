@@ -1,7 +1,5 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.util.TimerQueue;
-import com.mboysan.consensus.util.Timers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,9 +13,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static com.mboysan.consensus.State.Role.CANDIDATE;
-import static com.mboysan.consensus.State.Role.FOLLOWER;
-import static com.mboysan.consensus.State.Role.LEADER;
+import static com.mboysan.consensus.RaftState.Role.*;
 
 public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
@@ -29,18 +25,12 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 10;  //5000
     long electionTimeoutMs;
     private long electionTime;
-    private final Timers timers;
 
-    private final State state = new State();
+    private final RaftState state = new RaftState();
     private Consumer<String> stateMachine = null;
 
     public RaftNode(int nodeId, Transport transport) {
         super(nodeId, transport);
-        timers = createTimers();
-    }
-
-    Timers createTimers() {
-        return new TimerQueue();
     }
 
     @Override
@@ -62,9 +52,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
         electionTimeoutMs = ELECTION_TIMEOUT_MS * electId;
         LOGGER.info("node-{} electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
-        electionTime = timers.currentTime() + electionTimeoutMs;
+        electionTime = getTimers().currentTime() + electionTimeoutMs;
         long updateTimeoutMs = UPDATE_INTERVAL_MS;
-        timers.schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
+        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -73,14 +63,14 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         return null;
                     }
                 }
-                timers.sleep(updateTimeoutMs);
+                getTimers().sleep(updateTimeoutMs);
             }
         });
     }
 
     @Override
     void shutdownNode() {
-        timers.shutdown();
+        // no special logic needed
     }
 
     /*----------------------------------------------------------------------------------
@@ -90,7 +80,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     private void tryUpdate() {
         if (updateLock.tryLock()) {
             try {
-                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), timers.currentTime());
+                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
                 update();
             } finally {
                 updateLock.unlock();
@@ -123,7 +113,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     private boolean isElectionNeeded() {
-        long currentTime = timers.currentTime();
+        long currentTime = getTimers().currentTime();
         if (currentTime >= electionTime) {
             electionTime = currentTime + electionTimeoutMs;
             boolean isElectionNeeded = state.role != LEADER && !state.seenLeader;
@@ -237,8 +227,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             /* If there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N,
                and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).*/
             int N = IntStream.concat(
-                    peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
-                    IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
+                            peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
+                            IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
                     .max().orElseThrow();
             if (N > state.commitIndex) {
                 int countGreaterEquals = state.raftLog.lastLogIndex() >= N ? 1 : 0;
@@ -341,7 +331,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {
                         wait(); // after calling append(), the future returned can be cancelled, which will throw
-                                // the following exception
+                        // the following exception
                     } catch (InterruptedException e) {
                         LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
                         Thread.currentThread().interrupt();
@@ -384,7 +374,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         state.seenLeader = false;
     }
 
-    public State getState() {
+    public RaftState getState() {
         return state;
     }
 }

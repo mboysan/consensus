@@ -5,7 +5,9 @@ import java.io.UncheckedIOException;
 
 public interface RaftRPC extends RPCProtocol {
     AppendEntriesResponse appendEntries(AppendEntriesRequest request) throws IOException;
+
     RequestVoteResponse requestVote(RequestVoteRequest request) throws IOException;
+
     StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException;
 
     @Override

@@ -2,13 +2,7 @@ package com.mboysan.consensus;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -101,7 +95,7 @@ public class NettyTransport implements Transport {
         if (!isRunning) {
             throw new IllegalStateException("server is not running (1)");
         }
-        CompletableFuture<Message> msgFuture = callbackMap.remove(message.getCorrelationId());
+        CompletableFuture<Message> msgFuture = callbackMap.remove(message.getId());
         if (msgFuture != null) {
             // this is a response
             LOGGER.debug("IN (response) : {}", message);
@@ -147,12 +141,12 @@ public class NettyTransport implements Transport {
         if (!isRunning) {
             throw new IllegalStateException("server is not running (2)");
         }
-        if (message.getCorrelationId() == null) {
+        if (message.getId() == null) {
             throw new IllegalArgumentException("correlationId must not be null");
         }
         LOGGER.debug("OUT (sendRecv) : {}", message);
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
-        callbackMap.put(message.getCorrelationId(), msgFuture);
+        callbackMap.put(message.getId(), msgFuture);
         try {
             sendUsingClientPool(message);
 

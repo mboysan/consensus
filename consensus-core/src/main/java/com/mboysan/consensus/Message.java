@@ -1,12 +1,46 @@
 package com.mboysan.consensus;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
-import java.util.UUID;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Random;
 
 public abstract class Message implements Serializable {
-    private String correlationId = UUID.randomUUID().toString();
+    private static final Logger LOGGER = LoggerFactory.getLogger(Message.class);
+    private static final String SEED = System.currentTimeMillis() + "";
+
+    static {
+        LOGGER.info("message RNG seed = {}", SEED);
+    }
+
+    private static final SecureRandom RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
+
+    /**
+     * Unique id of a request and response message pair.
+     * This value can only be modified with {@link #responseTo(Message)} method, i.e. in response to a certain request.
+     */
+    private String id = generateId();
+    /**
+     * id of a group of messages related to each other or a certain context.
+     */
+    private String correlationId = generateId();
+    /**
+     * id of the sender node.
+     */
     private int senderId;
+    /**
+     * id of the receiver node.
+     */
     private int receiverId;
+
+    private <T extends Message> T setId(String id) {
+        this.id = id;
+        return (T) this;
+    }
 
     public <T extends Message> T setCorrelationId(String correlationId) {
         this.correlationId = correlationId;
@@ -21,6 +55,10 @@ public abstract class Message implements Serializable {
     public <T extends Message> T setReceiverId(int receiverId) {
         this.receiverId = receiverId;
         return (T) this;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getCorrelationId() {
@@ -38,15 +76,21 @@ public abstract class Message implements Serializable {
     @Override
     public String toString() {
         return "Message{" +
-                "correlationId='" + correlationId + '\'' +
+                "id='" + id + '\'' +
+                ", correlationId='" + correlationId + '\'' +
                 ", senderId=" + senderId +
                 ", receiverId=" + receiverId +
                 '}';
     }
 
     public <Q extends Message, S extends Message> S responseTo(Q request) {
-        return this.setCorrelationId(request.getCorrelationId())
+        return this.setId(request.getId())
+                .setCorrelationId(request.getCorrelationId())
                 .setSenderId(request.getReceiverId())
                 .setReceiverId(request.getSenderId());
+    }
+
+    public static String generateId() {
+        return RNG.nextInt(Integer.MAX_VALUE) + "";
     }
 }

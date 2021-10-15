@@ -1,21 +1,14 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.util.TimerQueue;
+import com.mboysan.consensus.util.Timers;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -26,15 +19,22 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     private final int nodeId;
     private final Transport transport;
+    private final Timers timers;
 
     ExecutorService peerExecutor;
     ExecutorService commandExecutor;
 
-    final Map<Integer, P> peers = new HashMap<>();
+    final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
+    // TODO: add optional Properties or something like that
     AbstractNode(int nodeId, Transport transport) {
         this.nodeId = nodeId;
         this.transport = transport;
+        this.timers = createTimers();
+    }
+
+    Timers createTimers() {
+        return new TimerQueue();
     }
 
     @Override
@@ -66,6 +66,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             return;
         }
         isRunning = false;
+        timers.shutdown();
         commandExecutor.shutdown();
         peerExecutor.shutdown();
         peers.clear();
@@ -118,15 +119,19 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
     }
 
+    Transport getTransport() {
+        return transport;
+    }
+
+    Timers getTimers() {
+        return timers;
+    }
+
     public int getNodeId() {
         return nodeId;
     }
 
     public boolean isRunning() {
         return isRunning;
-    }
-
-    public Transport getTransport() {
-        return transport;
     }
 }

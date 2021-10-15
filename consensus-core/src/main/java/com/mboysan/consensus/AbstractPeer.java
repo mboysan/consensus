@@ -7,5 +7,6 @@ abstract class AbstractPeer {
         this.peerId = peerId;
         reset();
     }
+
     abstract void reset();
 }

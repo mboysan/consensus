@@ -10,11 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RaftKVStoreTest extends RaftTestBase {
 
@@ -93,6 +91,7 @@ class RaftKVStoreTest extends RaftTestBase {
         int leaderId = assertOneLeader();
 
         int totalAllowedKills = numServers / 2;
+        AtomicInteger totalKilled = new AtomicInteger(0);
         Map<Integer, Object> killedNodes = new ConcurrentHashMap<>();
         ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
         List<Future<?>> results = new ArrayList<>();
@@ -104,14 +103,18 @@ class RaftKVStoreTest extends RaftTestBase {
                 String val = "testVal" + finalI;
 
                 int followerId = randomFollowerId(leaderId);
-                if (getRNG().nextBoolean() && killedNodes.size() != totalAllowedKills) {   //kill node
-                    if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
-                        kill(followerId);
-                        assertFalse(raftStores[followerId].put(key, val));
-                        assertTrue(raftStores[leaderId].put(key, val)); // this shall never fail in this test
-                        expectedEntries.put(key, val);
-                        revive(followerId);
-                        killedNodes.remove(followerId);
+                if (getRNG().nextBoolean()) {
+                    if (totalKilled.incrementAndGet() < totalAllowedKills) {
+                        // try killing node
+                        if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
+                            kill(followerId);
+                            assertFalse(raftStores[followerId].put(key, val));
+                            assertTrue(raftStores[leaderId].put(key, val)); // this shall never fail in this test
+                            expectedEntries.put(key, val);
+                            revive(followerId);
+                            killedNodes.remove(followerId);
+                        }
+                        totalKilled.decrementAndGet();
                     }
                 } else {
                     assertTrue(raftStores[leaderId].put(key, val));
@@ -147,7 +150,7 @@ class RaftKVStoreTest extends RaftTestBase {
 
     private void assertStoreSizeForAll(int size) {
         for (RaftKVStore raftStore : raftStores) {
-            assertEquals(size, raftStore.size());
+            assertEquals(size, raftStore.keySet().size());
         }
     }
 
