@@ -1,18 +1,16 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RaftKVStoreTest extends RaftTestBase {
 
@@ -60,12 +58,11 @@ class RaftKVStoreTest extends RaftTestBase {
     void multiThreadTest() throws Exception {
         init(5);
 
-        ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
-        List<Future<?>> results = new ArrayList<>();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
+        MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 100; i++) {
             int finalI = i;
-            Future<?> f = exec.submit(() -> {
+            exec.execute(() -> {
                 String key = "testKey" + finalI;
                 String val = "testVal" + finalI;
                 assertTrue(raftStores[randomNodeId()].put(key, val));
@@ -75,11 +72,8 @@ class RaftKVStoreTest extends RaftTestBase {
                     expectedEntries.put(key, val);
                 }
             });
-            results.add(f);
         }
-        for (Future<?> result : results) {
-            result.get();
-        }
+        exec.endExecution();
         advanceTimeForElections();  // sync
         assertEntriesForAll(expectedEntries);
     }
@@ -93,12 +87,11 @@ class RaftKVStoreTest extends RaftTestBase {
         int totalAllowedKills = numServers / 2;
         AtomicInteger totalKilled = new AtomicInteger(0);
         Map<Integer, Object> killedNodes = new ConcurrentHashMap<>();
-        ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
-        List<Future<?>> results = new ArrayList<>();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
+        MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 100; i++) {
             int finalI = i;
-            Future<?> f = exec.submit(() -> {
+            exec.execute(() -> {
                 String key = "testKey" + finalI;
                 String val = "testVal" + finalI;
 
@@ -121,11 +114,8 @@ class RaftKVStoreTest extends RaftTestBase {
                     expectedEntries.put(key, val);
                 }
             });
-            results.add(f);
         }
-        for (Future<?> result : results) {
-            result.get();
-        }
+        exec.endExecution();
         advanceTimeForElections();  // sync
         assertEntriesForAll(expectedEntries);
     }

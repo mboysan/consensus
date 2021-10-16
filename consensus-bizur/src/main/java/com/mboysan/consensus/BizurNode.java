@@ -36,13 +36,18 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private final BizurState bizurState = new BizurState();
 
-    BizurNode(int nodeId, Transport transport) {
+    public BizurNode(int nodeId, Transport transport) {
         this(nodeId, transport, DEFAULT_NUM_BUCKETS);
     }
 
-    BizurNode(int nodeId, Transport transport, int numBuckets) {
+    public BizurNode(int nodeId, Transport transport, int numBuckets) {
         super(nodeId, transport);
         this.numBuckets = numBuckets;
+    }
+
+    @Override
+    BizurRPC getRPC() {
+        return new BizurClient(getTransport());
     }
 
     @Override
@@ -112,7 +117,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .setSenderId(getNodeId())
                 .setReceiverId(leaderId);
         try {
-            HeartbeatResponse response = getRPC(getTransport()).heartbeat(request);
+            HeartbeatResponse response = getRPC().heartbeat(request);
             if (LOGGER.isTraceEnabled()) {
                 long elapsed = response.getSendTimeMs() - request.getSendTimeMs();
                 LOGGER.trace("peer-{} heartbeat elapsed={}", leaderId, elapsed);
@@ -208,7 +213,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
         // route to leader/peer
         LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
-        return getRPC(getTransport()).get(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+        return getRPC().get(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 
@@ -227,7 +232,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
         // route to leader/peer
         LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
-        return getRPC(getTransport()).set(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+        return getRPC().set(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 
@@ -246,7 +251,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
         // route to leader/peer
         LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
-        return getRPC(getTransport()).delete(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+        return getRPC().delete(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 
@@ -265,7 +270,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
         // route to leader/peer
         LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
-        return getRPC(getTransport()).iterateKeys(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+        return getRPC().iterateKeys(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 

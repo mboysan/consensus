@@ -3,7 +3,7 @@ package com.mboysan.consensus;
 import java.io.IOException;
 
 class BizurClient extends AbstractClient implements BizurRPC {
-    public BizurClient(Transport transport) {
+    BizurClient(Transport transport) {
         super(transport);
     }
 

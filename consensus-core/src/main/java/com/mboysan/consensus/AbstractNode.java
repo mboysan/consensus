@@ -7,8 +7,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -22,7 +31,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     private final Timers timers;
 
     ExecutorService peerExecutor;
-    ExecutorService commandExecutor;
+    ExecutorService commandExecutor;    // TODO: move this to KVStore
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
@@ -37,7 +46,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         return new TimerQueue();
     }
 
-    @Override
     public synchronized Future<Void> start() throws IOException {
         if (isRunning) {
             return CompletableFuture.completedFuture(null); // ignore call to start
@@ -60,7 +68,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     abstract Future<Void> startNode();
 
-    @Override
     public synchronized void shutdown() {
         if (!isRunning) {
             return;
@@ -118,6 +125,8 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             throw new IllegalStateException("raft node-" + nodeId + " not running");
         }
     }
+
+    abstract RPCProtocol getRPC();
 
     Transport getTransport() {
         return transport;

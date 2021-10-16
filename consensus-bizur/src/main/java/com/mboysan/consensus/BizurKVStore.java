@@ -35,7 +35,7 @@ public class BizurKVStore implements KVStore {
     }
 
     @Override
-    public boolean put(String key, String value) {
+    public boolean put(String key, String value) throws KVOperationException {
         return exec(() -> {
             bizur.set(key, value).get();
             return true;
@@ -43,12 +43,12 @@ public class BizurKVStore implements KVStore {
     }
 
     @Override
-    public String get(String key) {
+    public String get(String key) throws KVOperationException {
         return exec(() -> bizur.get(key).get());
     }
 
     @Override
-    public boolean remove(String key) {
+    public boolean remove(String key) throws KVOperationException {
         return exec(() -> {
             bizur.delete(key).get();
             return true;
@@ -56,11 +56,11 @@ public class BizurKVStore implements KVStore {
     }
 
     @Override
-    public Set<String> keySet() {
+    public Set<String> keySet() throws KVOperationException {
         return exec(() -> bizur.iterateKeys().get());
     }
 
-    private <T> T exec(CheckedSupplier<T> supplier) {
+    private <T> T exec(CheckedSupplier<T> supplier) throws KVOperationException {
         try {
             return supplier.get();
         } catch (Exception e) {
@@ -68,7 +68,7 @@ public class BizurKVStore implements KVStore {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new RuntimeException(e);  //TODO: convert to a specific exception?
+            throw new KVOperationException(e);
         }
     }
 }

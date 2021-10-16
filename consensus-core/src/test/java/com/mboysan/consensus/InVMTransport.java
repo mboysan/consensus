@@ -8,7 +8,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 public class InVMTransport implements Transport {
 
@@ -99,13 +106,13 @@ public class InVMTransport implements Transport {
         return msgFuture;
     }
 
-    private Message sendRecvSelf(Message message) {
+    private Message sendRecvSelf(Message message) throws IOException {
         if (message.getSenderId() != message.getReceiverId()) {
             throw new IllegalArgumentException("sender is not the receiver");
         }
         // this is the local server, no need to create a separate thread/task, so we do the processing
         // on the current thread.
-        Message resp = serverMap.get(message.getReceiverId()).protoServer.apply(message);
+        Message resp = serverMap.get(message.getReceiverId()).protoServer.processRequest(message);
         LOGGER.debug("IN (self) : {}", resp);
         return resp;
     }
@@ -122,6 +129,7 @@ public class InVMTransport implements Transport {
         }
     }
 
+    @Override
     public synchronized void shutdown() {
         serverExecutor.shutdown();
         callbackMap.clear();
@@ -169,7 +177,7 @@ public class InVMTransport implements Transport {
                     }
 
                     // we first process the message
-                    Message response = protoServer.apply(message);
+                    Message response = protoServer.processRequest(message);
 
                     // we send the response to the callback
                     CompletableFuture<Message> msgFuture = callbackMap.remove(message.getId());

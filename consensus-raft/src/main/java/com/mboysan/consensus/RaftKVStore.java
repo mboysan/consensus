@@ -67,6 +67,7 @@ public class RaftKVStore implements KVStore {
         return append(String.format("rm%s%s", CMD_SEP, key));
     }
 
+    @Override
     public Set<String> keySet() {
         return store.keySet();
     }

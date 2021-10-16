@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Index of the log entries start from 0 unlike described in Raft paper which starts from 1.
  */
-public class RaftLog implements Comparable<RaftLog> {
+class RaftLog implements Comparable<RaftLog> {
     private final List<LogEntry> entries = new ArrayList<>();
 
     int lastLogIndex() {

@@ -13,7 +13,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static com.mboysan.consensus.RaftState.Role.*;
+import static com.mboysan.consensus.RaftState.Role.CANDIDATE;
+import static com.mboysan.consensus.RaftState.Role.FOLLOWER;
+import static com.mboysan.consensus.RaftState.Role.LEADER;
 
 public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
@@ -31,6 +33,11 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     public RaftNode(int nodeId, Transport transport) {
         super(nodeId, transport);
+    }
+
+    @Override
+    RaftRPC getRPC() {
+        return new RaftClient(getTransport());
     }
 
     @Override
@@ -140,7 +147,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    RequestVoteResponse response = getRPC(getTransport()).requestVote(request);
+                    RequestVoteResponse response = getRPC().requestVote(request);
 
                     synchronized (lock) {
                         if (state.currentTerm < response.getTerm()) {
@@ -190,7 +197,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                             .setSenderId(getNodeId())
                             .setReceiverId(peer.peerId);
                     try {
-                        AppendEntriesResponse response = getRPC(getTransport()).appendEntries(request);
+                        AppendEntriesResponse response = getRPC().appendEntries(request);
 
                         synchronized (lock) {
                             if (state.currentTerm < response.getTerm()) {
@@ -342,7 +349,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             leaderId = state.leaderId;
         }
 
-        return getRPC(getTransport()).stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()))
+        return getRPC().stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
 
@@ -374,7 +381,11 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         state.seenLeader = false;
     }
 
-    public RaftState getState() {
+    /*----------------------------------------------------------------------------------
+     * For testing
+     * ----------------------------------------------------------------------------------*/
+
+    RaftState getState() {
         return state;
     }
 }

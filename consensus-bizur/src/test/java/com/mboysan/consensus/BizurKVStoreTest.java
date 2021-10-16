@@ -1,18 +1,16 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BizurKVStoreTest extends BizurTestBase {
 
@@ -60,12 +58,11 @@ class BizurKVStoreTest extends BizurTestBase {
     void multiThreadTest() throws Exception {
         init(5);
 
-        ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
-        List<Future<?>> results = new ArrayList<>();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
+        MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 100; i++) {
             int finalI = i;
-            Future<?> f = exec.submit(() -> {
+            exec.execute(() -> {
                 String key = "testKey" + finalI;
                 String val = "testVal" + finalI;
                 assertTrue(bizurStores[randomNodeId()].put(key, val));
@@ -75,16 +72,12 @@ class BizurKVStoreTest extends BizurTestBase {
                     expectedEntries.put(key, val);
                 }
             });
-            results.add(f);
         }
-        for (Future<?> result : results) {
-            result.get();
-        }
+        exec.endExecution();
         advanceTimeForElections();  // sync
         assertEntriesForAll(expectedEntries);
     }
 
-    // fixme: this test fails sometimes, need investigation
     @Test
     void testFollowerFailure() throws Exception {
         int numServers = 5;
@@ -94,12 +87,11 @@ class BizurKVStoreTest extends BizurTestBase {
         int totalAllowedKills = numServers / 2;
         AtomicInteger totalKilled = new AtomicInteger(0);
         ConcurrentHashMap<Integer, Object> killedNodes = new ConcurrentHashMap<>();
-        ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
-        List<Future<?>> results = new ArrayList<>();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
+        MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 100; i++) {
             int finalI = i;
-            Future<?> f = exec.submit(() -> {
+            exec.execute(() -> {
                 String key = "testKey" + finalI;
                 String val = "testVal" + finalI;
 
@@ -109,7 +101,7 @@ class BizurKVStoreTest extends BizurTestBase {
                         // try killing node
                         if (killedNodes.putIfAbsent(followerId, new Object()) == null) {
                             kill(followerId);
-                            assertThrows(RuntimeException.class, () -> bizurStores[followerId].put(key, val));
+                            assertThrows(KVOperationException.class, () -> bizurStores[followerId].put(key, val));
                             assertTrue(bizurStores[leaderId].put(key, val)); // this shall never fail in this test
                             expectedEntries.put(key, val);
                             revive(followerId);
@@ -122,11 +114,8 @@ class BizurKVStoreTest extends BizurTestBase {
                     expectedEntries.put(key, val);
                 }
             });
-            results.add(f);
         }
-        for (Future<?> result : results) {
-            result.get();
-        }
+        exec.endExecution();
         advanceTimeForElections();  // sync
         assertEntriesForAll(expectedEntries);
     }
@@ -140,7 +129,7 @@ class BizurKVStoreTest extends BizurTestBase {
         return id != leaderId ? id : randomFollowerId(leaderId);
     }
 
-    private void assertEntriesForAll(Map<String, String> expectedEntries) {
+    private void assertEntriesForAll(Map<String, String> expectedEntries) throws KVOperationException {
         assertStoreSizeForAll(expectedEntries.size());
         for (String expKey : expectedEntries.keySet()) {
             for (BizurKVStore bizurStore : bizurStores) {
@@ -149,7 +138,7 @@ class BizurKVStoreTest extends BizurTestBase {
         }
     }
 
-    private void assertStoreSizeForAll(int size) {
+    private void assertStoreSizeForAll(int size) throws KVOperationException {
         for (BizurKVStore bizurStore : bizurStores) {
             assertEquals(size, bizurStore.keySet().size());
         }
