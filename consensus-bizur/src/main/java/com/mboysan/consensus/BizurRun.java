@@ -40,7 +40,7 @@ class BizurRun {
     }
 
     private BizurRPC getRPC() {
-        return bizurNode.getRPC(bizurNode.getTransport());
+        return bizurNode.getRPC();
     }
 
     private void validateIAmTheLeader() throws BizurException {

@@ -4,7 +4,7 @@ import java.io.IOException;
 
 class RaftClient extends AbstractClient implements RaftRPC {
 
-    public RaftClient(Transport transport) {
+    RaftClient(Transport transport) {
         super(transport);
     }
 

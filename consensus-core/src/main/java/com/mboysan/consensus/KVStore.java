@@ -7,11 +7,11 @@ public interface KVStore {
 
     void shutdown() throws Exception;
 
-    boolean put(String key, String value);
+    boolean put(String key, String value) throws KVOperationException;
 
-    String get(String key);
+    String get(String key) throws KVOperationException;
 
-    boolean remove(String key);
+    boolean remove(String key) throws KVOperationException;
 
-    Set<String> keySet();
+    Set<String> keySet() throws KVOperationException;
 }

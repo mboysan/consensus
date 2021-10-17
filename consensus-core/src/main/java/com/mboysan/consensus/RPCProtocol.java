@@ -2,15 +2,8 @@ package com.mboysan.consensus;
 
 import java.io.IOException;
 import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.function.Function;
 
-public interface RPCProtocol extends Function<Message, Message> {
-    RPCProtocol getRPC(Transport transport);
-
+interface RPCProtocol {
     void onNodeListChanged(Set<Integer> serverIds);
-
-    Future<Void> start() throws IOException;
-
-    void shutdown();
+    Message processRequest(Message request) throws IOException;
 }

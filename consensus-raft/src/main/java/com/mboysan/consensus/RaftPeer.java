@@ -13,7 +13,7 @@ class RaftPeer extends AbstractPeer {
      */
     int nextIndex;
 
-    public RaftPeer(int peerId) {
+    RaftPeer(int peerId) {
         super(peerId);
     }
 

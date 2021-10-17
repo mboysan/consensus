@@ -11,9 +11,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RaftNodeTest extends RaftTestBase {
+class RaftNodeTest extends LeaderBasedNodeTestBase<RaftNode> implements RaftInternals {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
@@ -91,9 +94,9 @@ class RaftNodeTest extends RaftTestBase {
         int leaderId = assertOneLeader();
 
         List<String> expectedCommands = Arrays.asList("cmd0", "cmd1", "cmd3");
-        assertTrue(nodes[leaderId].append(expectedCommands.get(0)).get());
-        assertTrue(nodes[leaderId].append(expectedCommands.get(1)).get());
-        assertTrue(nodes[leaderId].append(expectedCommands.get(2)).get());
+        assertTrue(getNode(leaderId).append(expectedCommands.get(0)).get());
+        assertTrue(getNode(leaderId).append(expectedCommands.get(1)).get());
+        assertTrue(getNode(leaderId).append(expectedCommands.get(2)).get());
         assertLeaderNotChanged(leaderId);
         assertLogsEquals(expectedCommands);
 
@@ -113,7 +116,7 @@ class RaftNodeTest extends RaftTestBase {
         int leaderId = assertOneLeader();
 
         disconnect(leaderId);
-        assertFalse(nodes[(leaderId + 1) % numServers].append("some-command").get());
+        assertFalse(getNode((leaderId + 1) % numServers).append("some-command").get());
     }
 
     /**
@@ -127,9 +130,9 @@ class RaftNodeTest extends RaftTestBase {
 
         List<String> expectedCommands = Arrays.asList("cmd0", "cmd1", "cmd2");
         // if any of the following node is a follower, command will be routed to leader
-        assertTrue(nodes[(leaderId + 1) % numServers].append(expectedCommands.get(0)).get());
-        assertTrue(nodes[(leaderId + 2) % numServers].append(expectedCommands.get(1)).get());
-        assertTrue(nodes[(leaderId + 3) % numServers].append(expectedCommands.get(2)).get());
+        assertTrue(getNode((leaderId + 1) % numServers).append(expectedCommands.get(0)).get());
+        assertTrue(getNode((leaderId + 2) % numServers).append(expectedCommands.get(1)).get());
+        assertTrue(getNode((leaderId + 3) % numServers).append(expectedCommands.get(2)).get());
         assertLeaderNotChanged(leaderId);
         assertLogsEquals(expectedCommands);
 
@@ -153,7 +156,7 @@ class RaftNodeTest extends RaftTestBase {
         // break the quorum and try to append a command, progress cannot be made hence, we need to cancel the
         // future received.
 
-        Future<Boolean> result0 = nodes[leaderId].append("cmd0");
+        Future<Boolean> result0 = getNode(leaderId).append("cmd0");
         assertThrows(TimeoutException.class, () -> result0.get(1, TimeUnit.SECONDS));
         result0.cancel(true);
         assertThrows(CancellationException.class, result0::get);
@@ -170,8 +173,8 @@ class RaftNodeTest extends RaftTestBase {
 
         kill((leaderId + 1) % numServers);
 
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        assertTrue(nodes[leaderId].append(expectedCommands.get(0)).get());
+        List<String> expectedCommands = List.of("cmd0");
+        assertTrue(getNode(leaderId).append(expectedCommands.get(0)).get());
 
         revive((leaderId + 1) % numServers);
         advanceTimeForElections();  // allow sync time
@@ -196,11 +199,11 @@ class RaftNodeTest extends RaftTestBase {
         int newLeaderId = assertLeaderChanged(oldLeaderId, false);
 
         List<String> expectedCommands = Arrays.asList("cmd0", "cmd1");
-        assertTrue(nodes[newLeaderId].append(expectedCommands.get(0)).get());
+        assertTrue(getNode(newLeaderId).append(expectedCommands.get(0)).get());
 
         revive(oldLeaderId);
 
-        assertTrue(nodes[newLeaderId].append(expectedCommands.get(1)).get());
+        assertTrue(getNode(newLeaderId).append(expectedCommands.get(1)).get());
         // old leader will pick up all the changes during the above command update
 
         assertLeaderNotChanged(newLeaderId);
@@ -222,8 +225,8 @@ class RaftNodeTest extends RaftTestBase {
 
         int newLeaderId = assertLeaderChanged(oldLeaderId, false);
 
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        assertTrue(nodes[newLeaderId].append(expectedCommands.get(0)).get());
+        List<String> expectedCommands = List.of("cmd0");
+        assertTrue(getNode(newLeaderId).append(expectedCommands.get(0)).get());
 
         connect(oldLeaderId);
         advanceTimeForElections(); // sync changes
@@ -247,8 +250,8 @@ class RaftNodeTest extends RaftTestBase {
 
         advanceTimeForElections();
 
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        Future<Boolean> result0 = nodes[oldLeaderId].append(expectedCommands.get(0));
+        List<String> expectedCommands = List.of("cmd0");
+        Future<Boolean> result0 = getNode(oldLeaderId).append(expectedCommands.get(0));
         assertThrows(TimeoutException.class, () -> result0.get(1, TimeUnit.SECONDS));
 
         kill(oldLeaderId);
@@ -263,8 +266,8 @@ class RaftNodeTest extends RaftTestBase {
         assertLeaderChanged(oldLeaderId, true /* oldLeader is aware */);
 
         // since a new leader will be elected, the old leader will discard the uncommitted command
-        synchronized (nodes[oldLeaderId]) {
-            nodes[oldLeaderId].notifyAll();
+        synchronized (getNode(oldLeaderId)) {
+            getNode(oldLeaderId).notifyAll();
         }
         assertFalse(result0.get());
         expectedCommands = new ArrayList<>();
@@ -288,8 +291,8 @@ class RaftNodeTest extends RaftTestBase {
 
         advanceTimeForElections();
 
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        Future<Boolean> result0 = nodes[leaderId].append(expectedCommands.get(0));
+        List<String> expectedCommands = List.of("cmd0");
+        Future<Boolean> result0 = getNode(leaderId).append(expectedCommands.get(0));
         assertThrows(TimeoutException.class, () -> result0.get(1, TimeUnit.SECONDS));
 
         // new leader won't be elected
@@ -326,7 +329,7 @@ class RaftNodeTest extends RaftTestBase {
         advanceTimeForElections();
 
         List<String> expectedCommands = Arrays.asList("cmd0", "cmd1");
-        Future<Boolean> future0 = nodes[oldLeaderId].append(expectedCommands.get(0));
+        Future<Boolean> future0 = getNode(oldLeaderId).append(expectedCommands.get(0));
         assertThrows(TimeoutException.class, () -> future0.get(1, TimeUnit.SECONDS));
 
         connect((oldLeaderId + 2) % numServers);
@@ -334,14 +337,14 @@ class RaftNodeTest extends RaftTestBase {
 
         advanceTimeForElections();  // the "cmd0" entry will not be applied at all
         int newLeaderId = assertLeaderChanged(oldLeaderId, false /* oldLeader is not aware */);
-        Future<Boolean> future1 = nodes[newLeaderId].append(expectedCommands.get(1));
+        Future<Boolean> future1 = getNode(newLeaderId).append(expectedCommands.get(1));
         assertTrue(future1.get()); // append a new entry to log. oldLeader's entry will not be synced.
 
         connect(oldLeaderId);  // connect old leader and discover new one
         advanceTimeForElections();
         assertLeaderNotChanged(newLeaderId);    // oldLeader should not be able to become the leader at this point.
         assertFalse(future0.get()); // this entry is long gone
-        expectedCommands = Arrays.asList("cmd1");
+        expectedCommands = List.of("cmd1");
 
         assertLogsEquals(expectedCommands); // log item will be applied as soon as the quorum is formed again.
     }
@@ -360,8 +363,8 @@ class RaftNodeTest extends RaftTestBase {
 
         disconnect((leaderId + 1) % numServers);
         disconnect((leaderId + 2) % numServers);
-        List<String> expectedCommands = Arrays.asList("cmd0");
-        nodes[leaderId].append(expectedCommands.get(0)).get();
+        List<String> expectedCommands = List.of("cmd0");
+        getNode(leaderId).append(expectedCommands.get(0)).get();
 
         advanceTimeForElections();
         connect((leaderId + 1) % numServers);
@@ -370,5 +373,16 @@ class RaftNodeTest extends RaftTestBase {
 
         assertOneLeader();  // leader might've changed but there must still be only one leader.
         assertLogsEquals(expectedCommands);
+    }
+
+    void assertLogsEquals(List<String> commands) {
+        RaftLog log0 = getNode(0).getState().raftLog;
+        assertEquals(commands.size(), log0.size());
+        for (int i = 0; i < getNode(0).getState().raftLog.size(); i++) {
+            assertEquals(commands.get(i), log0.get(i).getCommand());
+        }
+        for (RaftNode server : getNodes()) {
+            assertEquals(log0, server.getState().raftLog);
+        }
     }
 }

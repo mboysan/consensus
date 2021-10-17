@@ -2,7 +2,13 @@ package com.mboysan.consensus;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -101,9 +107,9 @@ public class NettyTransport implements Transport {
             LOGGER.debug("IN (response) : {}", message);
             msgFuture.complete(message);
         } else {
-            // this is a request
-            Message response = requestProcessor.apply(message);
             try {
+                // this is a request
+                Message response = requestProcessor.processRequest(message);
                 sendUsingClientPool(response);
             } catch (IOException e) {
                 LOGGER.error(e.getMessage(), e);
@@ -211,21 +217,21 @@ public class NettyTransport implements Transport {
         private final InetAddress ip;
         private final int port;
 
-        public NettyClient(String destAddress) throws UnknownHostException {
+        NettyClient(String destAddress) throws UnknownHostException {
             String[] dest = destAddress.split(":");
             this.ip = InetAddress.getByName(dest[0]);
             this.port = Integer.parseInt(dest[1]);
             this.group = new NioEventLoopGroup(1);
         }
 
-        public synchronized void connect() throws IOException {
+        synchronized void connect() throws IOException {
             try {
                 Bootstrap b = new Bootstrap();
                 b.group(group)
                         .channel(NioSocketChannel.class)
                         .handler(new ChannelInitializer<SocketChannel>() {
                             @Override
-                            protected void initChannel(SocketChannel ch) throws Exception {
+                            protected void initChannel(SocketChannel ch) {
                                 ch.pipeline().addLast(new ObjectEncoder());
                             }
                         });
@@ -237,19 +243,19 @@ public class NettyTransport implements Transport {
             }
         }
 
-        public boolean isValid() {
+        boolean isValid() {
             return channel != null && isConnected();
         }
 
-        public boolean isConnected() {
+        boolean isConnected() {
             return channel.isActive();
         }
 
-        public void send(Message message) {
+        void send(Message message) {
             channel.writeAndFlush(message);
         }
 
-        public synchronized void shutdown() {
+        synchronized void shutdown() {
             group.shutdownGracefully();
         }
     }

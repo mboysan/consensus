@@ -29,22 +29,28 @@ class Bucket implements Comparable<Bucket> {
      * Map Operations
      *----------------------------------------------------------------------------------*/
 
-    public String putOp(String key, String val) {
-        LOGGER.trace("put key={},val={} in bucket={}", key, val, this);
+    String putOp(String key, String val) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("put key={},val={} in bucket={}", key, val, this);
+        }
         return bucketMap.put(key, val);
     }
 
-    public String getOp(String key) {
-        LOGGER.trace("get key={} from bucket={}", key, this);
+    String getOp(String key) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("get key={} from bucket={}", key, this);
+        }
         return bucketMap.get(key);
     }
 
-    public String removeOp(String key) {
-        LOGGER.trace("remove key={} from bucket={}", key, this);
+    String removeOp(String key) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("remove key={} from bucket={}", key, this);
+        }
         return bucketMap.remove(key);
     }
 
-    public Set<String> getKeySetOp() {
+    Set<String> getKeySetOp() {
         return bucketMap.keySet();
     }
 
@@ -52,7 +58,7 @@ class Bucket implements Comparable<Bucket> {
      * Getters/Setters
      *----------------------------------------------------------------------------------*/
 
-    public Bucket setBucketMap(Map<String, String> bucketMap) {
+    Bucket setBucketMap(Map<String, String> bucketMap) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("replacing bucketMap={} with map={} in bucket={}", this.bucketMap, bucketMap, this);
         }
@@ -60,29 +66,29 @@ class Bucket implements Comparable<Bucket> {
         return this;
     }
 
-    public int getVerElectId() {
+    int getVerElectId() {
         return verElectId;
     }
 
-    public Bucket setVerElectId(int verElectId) {
+    Bucket setVerElectId(int verElectId) {
         this.verElectId = verElectId;
         return this;
     }
 
-    public int getVerCounter() {
+    int getVerCounter() {
         return verCounter;
     }
 
-    public Bucket setVerCounter(int verCounter) {
+    Bucket setVerCounter(int verCounter) {
         this.verCounter = verCounter;
         return this;
     }
 
-    public void incrementVerCounter() {
+    void incrementVerCounter() {
         ++verCounter;
     }
 
-    public int getIndex() {
+    int getIndex() {
         return index;
     }
 
@@ -100,10 +106,6 @@ class Bucket implements Comparable<Bucket> {
     /*----------------------------------------------------------------------------------
      * Utils
      *----------------------------------------------------------------------------------*/
-
-    boolean isLocked() {
-        return bucketLock.isLocked();
-    }
 
     Bucket lock() {
         bucketLock.lock();
