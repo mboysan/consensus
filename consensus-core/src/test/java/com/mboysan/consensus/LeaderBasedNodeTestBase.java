@@ -1,20 +1,27 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.util.Timers;
 import com.mboysan.consensus.util.TimersForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class RaftTestBase {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RaftTestBase.class);
+abstract class LeaderBasedNodeTestBase<N extends AbstractNode<?>> implements NodeInternals<N> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(LeaderBasedNodeTestBase.class);
 
     private static final long SEED = 1L;
 
@@ -26,7 +33,7 @@ public class RaftTestBase {
     private static final TimersForTesting TIMER = new TimersForTesting();
     private static Random RNG = new Random(SEED);
 
-    RaftNode[] nodes;
+    private N[] nodes;
     private InVMTransport transport;
     private long advanceTimeInterval = -1;
     boolean skipTeardown = false;
@@ -36,17 +43,18 @@ public class RaftTestBase {
         skipTeardown = false;
     }
 
+    @SuppressWarnings("unchecked")
     void init(int numServers) throws Exception {
         List<Future<Void>> futures = new ArrayList<>();
-        nodes = new RaftNode[numServers];
+        nodes = (N[]) Array.newInstance(getNodeType(), numServers);
         transport = new InVMTransport();
         for (int i = 0; i < numServers; i++) {
-            RaftNode node;
-            node = new RaftNodeForTesting(i, transport);
+            N node;
+            node = createNode(i, transport, TIMER);
             nodes[i] = node;
             futures.add(node.start());
 
-            advanceTimeInterval = Math.max(advanceTimeInterval, node.electionTimeoutMs);
+            advanceTimeInterval = Math.max(advanceTimeInterval, getElectionTimeoutMsOf(node));
         }
 
         advanceTimeForElections();
@@ -55,10 +63,17 @@ public class RaftTestBase {
         }
     }
 
+    N getNode(int index) {
+        return nodes[index];
+    }
+    N[] getNodes() {
+        return nodes;
+    }
+
     /**
      * Advances time to try triggering election on all nodes.
      */
-    void advanceTimeForElections() throws InterruptedException {
+    void advanceTimeForElections() {
         // use fake timer
         // following loop should allow triggering election on the node with slowest electionTimer
         TIMER.advance(advanceTimeInterval * 2);
@@ -82,10 +97,20 @@ public class RaftTestBase {
         connect(nodeId);
     }
 
-    int findLeaderOfMajority() {
-        return Arrays.stream(nodes).sorted(Comparator.comparingInt(n -> n.getState().leaderId))
-                .collect(Collectors.toList())
-                .get(nodes.length / 2).getState().leaderId;
+    void assertLeaderNotChanged(int currentLeaderId) {
+        assertEquals(currentLeaderId, assertOneLeader());
+    }
+
+    int assertOneLeader() {
+        int leaderId = -1;
+        for (N node : nodes) {
+            if (leaderId == -1) {
+                leaderId = getLeaderIdOf(node);
+            }
+            assertEquals(leaderId, getLeaderIdOf(node));
+        }
+        assertNotEquals(-1, leaderId);
+        return leaderId;
     }
 
     int assertLeaderChanged(int oldLeader, boolean isChangeVisibleOnOldLeader) {
@@ -94,15 +119,15 @@ public class RaftTestBase {
             newLeaderId = assertOneLeader();
         } else {
             newLeaderId = -1;
-            for (RaftNode node : nodes) {
+            for (N node : nodes) {
                 if (node.getNodeId() == oldLeader) {
                     // the old leader should still think its the leader
-                    assertEquals(oldLeader, node.getState().leaderId);
+                    assertEquals(oldLeader, getLeaderIdOf(node));
                 } else {
                     if (newLeaderId == -1) {
-                        newLeaderId = node.getState().leaderId;
+                        newLeaderId = getLeaderIdOf(node);
                     }
-                    assertEquals(newLeaderId, node.getState().leaderId);
+                    assertEquals(newLeaderId, getLeaderIdOf(node));
                 }
             }
             assertNotEquals(-1, newLeaderId);
@@ -111,31 +136,15 @@ public class RaftTestBase {
         return newLeaderId;
     }
 
-    void assertLeaderNotChanged(int currentLeaderId) {
-        assertEquals(currentLeaderId, assertOneLeader());
+    int findLeaderOfMajority() {
+        N node = Arrays.stream(nodes).sorted(Comparator.comparingInt(this::getLeaderIdOf))
+                .collect(Collectors.toList())
+                .get(nodes.length / 2);
+        return getLeaderIdOf(node);
     }
 
-    int assertOneLeader() {
-        int leaderId = -1;
-        for (RaftNode node : nodes) {
-            if (leaderId == -1) {
-                leaderId = node.getState().leaderId;
-            }
-            assertEquals(leaderId, node.getState().leaderId);
-        }
-        assertNotEquals(-1, leaderId);
-        return leaderId;
-    }
-
-    void assertLogsEquals(List<String> commands) {
-        RaftLog log0 = nodes[0].getState().raftLog;
-        assertEquals(commands.size(), log0.size());
-        for (int i = 0; i < nodes[0].getState().raftLog.size(); i++) {
-            assertEquals(commands.get(i), log0.get(i).getCommand());
-        }
-        for (RaftNode server : nodes) {
-            assertEquals(log0, server.getState().raftLog);
-        }
+    void assertLeaderOfMajority(int majorityLeaderId) {
+        assertEquals(majorityLeaderId, findLeaderOfMajority());
     }
 
     @AfterEach
@@ -145,7 +154,7 @@ public class RaftTestBase {
         }
         assertNotNull(transport);
         assertNotNull(nodes);
-        Arrays.stream(nodes).forEach(RaftNode::shutdown);
+        Arrays.stream(nodes).forEach(N::shutdown);
         transport.shutdown();
         TIMER.shutdown();
         RNG = new Random(SEED);
@@ -155,14 +164,5 @@ public class RaftTestBase {
         return RNG;
     }
 
-    private static class RaftNodeForTesting extends RaftNode {
-        public RaftNodeForTesting(int nodeId, Transport transport) {
-            super(nodeId, transport);
-        }
 
-        @Override
-        Timers createTimers() {
-            return TIMER;
-        }
-    }
 }

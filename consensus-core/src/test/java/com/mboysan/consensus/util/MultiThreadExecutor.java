@@ -1,6 +1,5 @@
 package com.mboysan.consensus.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

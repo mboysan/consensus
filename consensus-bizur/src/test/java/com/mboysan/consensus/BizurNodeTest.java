@@ -8,9 +8,11 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class BizurNodeTest extends BizurTestBase {
+public class BizurNodeTest extends LeaderBasedNodeTestBase<BizurNode> implements BizurInternals {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
@@ -63,10 +65,10 @@ public class BizurNodeTest extends BizurTestBase {
         init(3);
         int leaderId = assertOneLeader();
 
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].set("key", null).get());
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].set(null, "value").get());
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].set(null, null).get());
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].get((String) null).get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).set("key", null).get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).set(null, "value").get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).set(null, null).get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).get((String) null).get());
     }
 
     /**
@@ -77,7 +79,7 @@ public class BizurNodeTest extends BizurTestBase {
         init(3);
         int leaderId = assertOneLeader();
 
-        assertNull(nodes[leaderId].get("some-non-existing-key").get());
+        assertNull(getNode(leaderId).get("some-non-existing-key").get());
     }
 
     /**
@@ -96,8 +98,8 @@ public class BizurNodeTest extends BizurTestBase {
 
         for (String expKey : expectedKVs.keySet()) {
             String expVal = expectedKVs.get(expKey);
-            nodes[leaderId].set(expKey, expVal).get();
-            assertEquals(expVal, nodes[leaderId].get(expKey).get());
+            getNode(leaderId).set(expKey, expVal).get();
+            assertEquals(expVal, getNode(leaderId).get(expKey).get());
         }
 
         assertLeaderNotChanged(leaderId);
@@ -125,9 +127,9 @@ public class BizurNodeTest extends BizurTestBase {
         }};
 
         // non-leader nodes will route the command to the leader
-        nodes[(leaderId + 1) % numServers].set("k0", "v0").get();
-        nodes[(leaderId + 2) % numServers].set("k1", "v1").get();
-        nodes[(leaderId + 3) % numServers].set("k2", "v2").get();
+        getNode((leaderId + 1) % numServers).set("k0", "v0").get();
+        getNode((leaderId + 2) % numServers).set("k1", "v1").get();
+        getNode((leaderId + 3) % numServers).set("k2", "v2").get();
         assertLeaderNotChanged(leaderId);
         assertBucketMapsEquals(expectedKVs);
 
@@ -145,7 +147,7 @@ public class BizurNodeTest extends BizurTestBase {
         init(numServers);
         int leaderId = assertOneLeader();
 
-        Future<Void> result0 = nodes[leaderId].set("key", "val");
+        Future<Void> result0 = getNode(leaderId).set("key", "val");
         result0.cancel(true);
         assertThrows(CancellationException.class, result0::get);
     }
@@ -161,8 +163,8 @@ public class BizurNodeTest extends BizurTestBase {
 
         kill(leaderId);
 
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].set("testKey", "testVal").get());
-        assertThrows(ExecutionException.class, () -> nodes[leaderId].get("testKey").get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).set("testKey", "testVal").get());
+        assertThrows(ExecutionException.class, () -> getNode(leaderId).get("testKey").get());
     }
 
     /**
@@ -177,8 +179,8 @@ public class BizurNodeTest extends BizurTestBase {
 
         kill(leaderId);
 
-        assertThrows(ExecutionException.class, () -> nodes[(leaderId + 1) % numServers].set("testKey", "testVal").get());
-        assertThrows(ExecutionException.class, () -> nodes[(leaderId + 2) % numServers].get("testKey").get());
+        assertThrows(ExecutionException.class, () -> getNode((leaderId + 1) % numServers).set("testKey", "testVal").get());
+        assertThrows(ExecutionException.class, () -> getNode((leaderId + 2) % numServers).get("testKey").get());
     }
 
     /**
@@ -196,11 +198,11 @@ public class BizurNodeTest extends BizurTestBase {
             put("k0", "v0");
             put("k1", "v1");
         }};
-        nodes[leaderId].set("k0", "v0").get();
+        getNode(leaderId).set("k0", "v0").get();
 
         revive((leaderId + 1) % numServers);
         // sync: Bizur triggers bucket sync as soon as a set operation is performed by the leader.
-        nodes[leaderId].set("k1", "v1").get();
+        getNode(leaderId).set("k1", "v1").get();
 
         assertLeaderNotChanged(leaderId);
         assertBucketMapsEquals(expectedKVs);
@@ -222,17 +224,17 @@ public class BizurNodeTest extends BizurTestBase {
             put("k1", "v1");
         }};
 
-        nodes[newLeaderId].set("k0", "v0").get();
+        getNode(newLeaderId).set("k0", "v0").get();
 
         advanceTimeForElections();
         assertLeaderOfMajority(newLeaderId);    // new leader is still the leader of majority
 
         revive(oldLeaderId);
 
-        assertThrows(ExecutionException.class, () -> nodes[oldLeaderId].set("some-key", "some-value").get());
+        assertThrows(ExecutionException.class, () -> getNode(oldLeaderId).set("some-key", "some-value").get());
         // at this point, the old leader will understand that it's no longer the leader.
 
-        nodes[newLeaderId].set("k1", "v1").get();
+        getNode(newLeaderId).set("k1", "v1").get();
         // Bizur propagates the leader changes after a write operation. Therefore, the old leader will update its vote
         // for new leader after this operation.
 
@@ -241,5 +243,23 @@ public class BizurNodeTest extends BizurTestBase {
         assertOneLeader();
 
         assertBucketMapsEquals(expectedKVs);
+    }
+
+    private void assertBucketMapsEquals(BizurNode node, Map<String, String> expectedBucketMap) {
+        int totalSize = 0;
+        for (Integer bucketIndex : node.getBucketMap().keySet()) {
+            Bucket bucket = node.getBucketMap().get(bucketIndex);
+            for (String key : bucket.getKeySetOp()) {
+                assertEquals(expectedBucketMap.get(key), bucket.getOp(key));
+                totalSize++;
+            }
+        }
+        assertEquals(expectedBucketMap.size(), totalSize);
+    }
+
+    private void assertBucketMapsEquals(Map<String, String> expectedBucketMap) {
+        for (BizurNode node : getNodes()) {
+            assertBucketMapsEquals(node, expectedBucketMap);
+        }
     }
 }

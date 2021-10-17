@@ -3,7 +3,11 @@ package com.mboysan.consensus.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class TimerQueue implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimerQueue.class);

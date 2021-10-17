@@ -4,10 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Random;
 
 public abstract class Message implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Message.class);
@@ -37,21 +35,25 @@ public abstract class Message implements Serializable {
      */
     private int receiverId;
 
+    @SuppressWarnings("unchecked")
     private <T extends Message> T setId(String id) {
         this.id = id;
         return (T) this;
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends Message> T setCorrelationId(String correlationId) {
         this.correlationId = correlationId;
         return (T) this;
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends Message> T setSenderId(int senderId) {
         this.senderId = senderId;
         return (T) this;
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends Message> T setReceiverId(int receiverId) {
         this.receiverId = receiverId;
         return (T) this;

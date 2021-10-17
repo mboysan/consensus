@@ -53,7 +53,7 @@ public class RaftKVStore implements KVStore {
     }
 
     @Override
-    public boolean put(String key, String value) {
+    public boolean put(String key, String value) throws KVOperationException {
         return append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value));
     }
 
@@ -63,7 +63,7 @@ public class RaftKVStore implements KVStore {
     }
 
     @Override
-    public boolean remove(String key) {
+    public boolean remove(String key) throws KVOperationException {
         return append(String.format("rm%s%s", CMD_SEP, key));
     }
 
@@ -72,15 +72,20 @@ public class RaftKVStore implements KVStore {
         return store.keySet();
     }
 
-    private boolean append(String command) {
+    private boolean append(String command) throws KVOperationException {
         try {
-            return raft.append(command).get(5, TimeUnit.SECONDS);
+            boolean applied = raft.append(command).get(5, TimeUnit.SECONDS);
+            if (!applied) {
+                throw new KVOperationException("append failed for cmd=" + command);
+            }
+            return true;
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage(), e);
             Thread.currentThread().interrupt();
+            throw new KVOperationException(e);
         } catch (ExecutionException | TimeoutException e) {
             LOGGER.error(e.getMessage(), e);
+            throw new KVOperationException(e);
         }
-        return false;
     }
 }
