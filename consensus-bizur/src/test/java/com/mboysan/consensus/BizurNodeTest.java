@@ -12,12 +12,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class BizurNodeTest extends LeaderBasedNodeTestBase<BizurNode> implements BizurInternals {
+public class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
-        BizurNode node = new BizurNode(0, transport);
+        BizurNode node = createNode(0, transport, null);
 
         assertThrows(IllegalStateException.class, () -> node.get(new KVGetRequest("some-key")));
 

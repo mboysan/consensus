@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-abstract class KVStoreTestBase<N extends AbstractNode<?>> extends LeaderBasedNodeTestBase<N> {
+abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N> {
 
     private KVStore[] stores;
 

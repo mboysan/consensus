@@ -21,6 +21,7 @@ import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,13 +38,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class NettyTransport implements Transport {
-
-    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = 5000;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyTransport.class);
 
     private final int port;
     private final Map<Integer, String> destinations;
+    private final long messageCallbackTimeoutMs;
+    private final int clientPoolSize;
     private volatile boolean isRunning = false;
 
     private EventLoopGroup bossGroup;
@@ -55,9 +55,11 @@ public class NettyTransport implements Transport {
     private final Map<Integer, ObjectPool<NettyClient>> clientPools = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
-    public NettyTransport(int port, Map<Integer, String> destinations) {
-        this.port = port;
-        this.destinations = destinations;
+    public NettyTransport(NettyTransportConfig config) {
+        this.port = config.port();
+        this.destinations = config.destinations();
+        this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
+        this.clientPoolSize = config.clientPoolSize();
     }
 
     @Override
@@ -124,7 +126,9 @@ public class NettyTransport implements Transport {
         destinations.forEach((id, dest) -> {
             if (id != nodeId) { // we don't add clients for ourself
                 NettyClientFactory clientFactory = new NettyClientFactory(dest);
-                clientPools.put(id, new GenericObjectPool<>(clientFactory));
+                GenericObjectPoolConfig<NettyClient> poolConfig = new GenericObjectPoolConfig<>();
+                poolConfig.setMaxTotal(clientPoolSize);
+                clientPools.put(id, new GenericObjectPool<>(clientFactory, poolConfig));
                 nodeIds.add(id);
             }
         });
@@ -157,7 +161,7 @@ public class NettyTransport implements Transport {
             sendUsingClientPool(message);
 
             // fixme: possible memory leak due to msgFuture not being removed from callbackMap in case of Exception
-            return msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            return msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);

@@ -33,11 +33,7 @@ public class RaftKVStore implements KVStore {
         }
     };
 
-    public RaftKVStore(int nodeId, Transport transport) {
-        this(new RaftNode(nodeId, transport));
-    }
-
-    RaftKVStore(RaftNode raft) {
+    public RaftKVStore(RaftNode raft) {
         this.raft = raft;
         raft.registerStateMachine(stateMachine);
     }

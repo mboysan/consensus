@@ -9,15 +9,12 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 public class TimersForTesting implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimersForTesting.class);
 
     private static final long SEED = 1L;
-
-    static {
-        LOGGER.info("TimersForTesting.SEED={}", SEED);
-        System.out.println("TimersForTesting.SEED=" + SEED);
-    }
 
     private Random random = new Random(SEED);
     private long currentTime = 0;
@@ -76,6 +73,7 @@ public class TimersForTesting implements Timers {
         long advanceTo = currentTime + time;
         while (currentTime <= advanceTo) {
             Task task = sortedTasks.pollFirst();
+            assertNotNull(task);
             if (task.timeToRun <= advanceTo) {
                 currentTime = task.timeToRun;
                 if (!task.isPaused) {
@@ -94,6 +92,7 @@ public class TimersForTesting implements Timers {
 
     private void runNext() {
         Task task = sortedTasks.pollFirst();
+        assertNotNull(task);
         currentTime = task.timeToRun;
         if (!task.isPaused) {
             task.run();
