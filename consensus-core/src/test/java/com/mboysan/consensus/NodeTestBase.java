@@ -3,8 +3,6 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.util.TimersForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -19,16 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-abstract class LeaderBasedNodeTestBase<N extends AbstractNode<?>> implements NodeInternals<N> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(LeaderBasedNodeTestBase.class);
-
+abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<N> {
     private static final long SEED = 1L;
-
-    static {
-        LOGGER.info("RaftTestBase.SEED={}", SEED);
-        System.out.println("RaftTestBase.SEED=" + SEED);
-    }
 
     private static final TimersForTesting TIMER = new TimersForTesting();
     private static Random RNG = new Random(SEED);
@@ -49,13 +39,11 @@ abstract class LeaderBasedNodeTestBase<N extends AbstractNode<?>> implements Nod
         nodes = (N[]) Array.newInstance(getNodeType(), numServers);
         transport = new InVMTransport();
         for (int i = 0; i < numServers; i++) {
-            N node;
-            node = createNode(i, transport, TIMER);
+            N node = createNode(i, transport, TIMER);
             nodes[i] = node;
             futures.add(node.start());
-
-            advanceTimeInterval = Math.max(advanceTimeInterval, getElectionTimeoutMsOf(node));
         }
+        advanceTimeInterval = getElectionTimeoutOf(nodes[0]) * nodes.length;
 
         advanceTimeForElections();
         for (Future<Void> future : futures) {
@@ -163,6 +151,4 @@ abstract class LeaderBasedNodeTestBase<N extends AbstractNode<?>> implements Nod
     static Random getRNG() {
         return RNG;
     }
-
-
 }

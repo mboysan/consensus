@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class InVMTransport implements Transport {
 
-    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = 5000;
+    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = TransportConfig.getCached().messageCallbackTimeoutMs();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 

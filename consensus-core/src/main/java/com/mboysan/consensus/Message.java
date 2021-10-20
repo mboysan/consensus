@@ -9,13 +9,13 @@ import java.security.SecureRandom;
 
 public abstract class Message implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Message.class);
-    private static final String SEED = System.currentTimeMillis() + "";
 
+    private static final SecureRandom RNG;
     static {
+        String SEED = CoreConfig.getCached().rngSeed();
         LOGGER.info("message RNG seed = {}", SEED);
+        RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
     }
-
-    private static final SecureRandom RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
 
     /**
      * Unique id of a request and response message pair.

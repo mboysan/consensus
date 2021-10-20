@@ -35,11 +35,14 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
-    // TODO: add optional Properties or something like that
-    AbstractNode(int nodeId, Transport transport) {
-        this.nodeId = nodeId;
+    private final AbstractNodeConfig nodeConfig;
+
+    AbstractNode(AbstractNodeConfig config, Transport transport) {
+        this.nodeId = config.nodeId();
         this.transport = transport;
         this.timers = createTimers();
+        this.nodeConfig = config;
+        LOGGER.info("node-{} config={}", nodeId, nodeConfig);
     }
 
     Timers createTimers() {
@@ -142,5 +145,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     public boolean isRunning() {
         return isRunning;
+    }
+
+    AbstractNodeConfig getNodeConfig() {
+        return nodeConfig;
     }
 }

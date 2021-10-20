@@ -12,15 +12,7 @@ public class BizurKVStore implements KVStore {
 
     private final BizurNode bizur;
 
-    public BizurKVStore(int nodeId, Transport transport, int numBuckets) {
-        this(new BizurNode(nodeId, transport, numBuckets));
-    }
-
-    public BizurKVStore(int nodeId, Transport transport) {
-        this(new BizurNode(nodeId, transport));
-    }
-
-    BizurKVStore(BizurNode bizur) {
+    public BizurKVStore(BizurNode bizur) {
         this.bizur = bizur;
     }
 

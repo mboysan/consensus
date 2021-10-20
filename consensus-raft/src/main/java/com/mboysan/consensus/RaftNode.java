@@ -23,16 +23,18 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private final Lock updateLock = new ReentrantLock();
 
-    private static final long UPDATE_INTERVAL_MS = 500;
-    private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 10;  //5000
-    long electionTimeoutMs;
-    private long electionTime;
+    private final long updateIntervalMs;
+    private long electionTimeoutMs;
+    private long nextElectionTime;
 
     private final RaftState state = new RaftState();
     private Consumer<String> stateMachine = null;
 
-    public RaftNode(int nodeId, Transport transport) {
-        super(nodeId, transport);
+    public RaftNode(RaftConfig config, Transport transport) {
+        super(config, transport);
+
+        this.electionTimeoutMs = config.electionTimeoutMs();
+        this.updateIntervalMs = config.updateIntervalMs();
     }
 
     @Override
@@ -57,11 +59,11 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     @Override
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
-        electionTimeoutMs = ELECTION_TIMEOUT_MS * electId;
-        LOGGER.info("node-{} electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
-        electionTime = getTimers().currentTime() + electionTimeoutMs;
-        long updateTimeoutMs = UPDATE_INTERVAL_MS;
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
+        this.electionTimeoutMs = electionTimeoutMs * electId;
+        LOGGER.info("node-{} modified electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
+
+        nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
+        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -70,7 +72,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         return null;
                     }
                 }
-                getTimers().sleep(updateTimeoutMs);
+                getTimers().sleep(updateIntervalMs);
             }
         });
     }
@@ -121,8 +123,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private boolean isElectionNeeded() {
         long currentTime = getTimers().currentTime();
-        if (currentTime >= electionTime) {
-            electionTime = currentTime + electionTimeoutMs;
+        if (currentTime >= nextElectionTime) {
+            nextElectionTime = currentTime + electionTimeoutMs;
             boolean isElectionNeeded = state.role != LEADER && !state.seenLeader;
             state.seenLeader = false;
             if (isElectionNeeded) {

@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -17,31 +16,23 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
-    private static final SecureRandom RNG = new SecureRandom();
-
-    static final int DEFAULT_NUM_BUCKETS = 1;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurNode.class);
 
     private final Lock updateLock = new ReentrantLock();
 
-    private static final long UPDATE_INTERVAL_MS = 500;
-    private static final long ELECTION_TIMEOUT_MS = UPDATE_INTERVAL_MS * 10;  //5000
-    long electionTimeoutMs;
-    private long electionTime;
-
     private final int numBuckets;
+    private final long updateIntervalMs;
+    private long electionTimeoutMs;
+
     private final Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>();
 
     private final BizurState bizurState = new BizurState();
 
-    public BizurNode(int nodeId, Transport transport) {
-        this(nodeId, transport, DEFAULT_NUM_BUCKETS);
-    }
+    public BizurNode(BizurConfig config, Transport transport) {
+        super(config, transport);
 
-    public BizurNode(int nodeId, Transport transport, int numBuckets) {
-        super(nodeId, transport);
-        this.numBuckets = numBuckets;
+        this.numBuckets = config.numBuckets();
+        this.updateIntervalMs = config.updateIntervalMs();
     }
 
     @Override
@@ -57,11 +48,10 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
-        electionTimeoutMs = ELECTION_TIMEOUT_MS * electId;
-        LOGGER.info("node-{} electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
-        electionTime = getTimers().currentTime() + electionTimeoutMs;
-        long updateTimeoutMs = UPDATE_INTERVAL_MS;
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateTimeoutMs, updateTimeoutMs);
+        this.electionTimeoutMs = electionTimeoutMs * electId;
+        LOGGER.info("node-{} modified electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
+
+        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -70,7 +60,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                         return null;
                     }
                 }
-                getTimers().sleep(updateTimeoutMs);
+                getTimers().sleep(updateIntervalMs);
             }
         });
     }
@@ -334,8 +324,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     private int getRandomPeerId() {
-        int randPeerId = RNG.nextInt(getPeerSize());
-        return randPeerId == getNodeId() ? (randPeerId + 1) % getPeerSize() : randPeerId;
+        return Math.abs((int) System.currentTimeMillis()) % getPeerSize();
     }
 
     Bucket getBucket(int index) {

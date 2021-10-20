@@ -1,17 +1,20 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.Timers;
-import com.mboysan.consensus.util.TimersForTesting;
+import org.aeonbits.owner.ConfigFactory;
+
+import java.util.Properties;
 
 public interface BizurInternals extends NodeInternals<BizurNode> {
+
     @Override
     default Class<BizurNode> getNodeType() {
         return BizurNode.class;
     }
 
     @Override
-    default BizurNode createNode(int nodeId, Transport transport, TimersForTesting timer) {
-        return new BizurNode(nodeId, transport) {
+    default BizurNode createNode(Properties properties, Transport transport, Timers timer) {
+        return new BizurNode(ConfigFactory.create(BizurConfig.class, properties), transport) {
             @Override
             Timers createTimers() {
                 return timer;
@@ -20,8 +23,8 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
     }
 
     @Override
-    default long getElectionTimeoutMsOf(BizurNode node) {
-        return node.electionTimeoutMs;
+    default long getElectionTimeoutOf(BizurNode node) {
+        return ((BizurConfig) node.getNodeConfig()).electionTimeoutMs();
     }
 
     @Override

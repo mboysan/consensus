@@ -1,7 +1,9 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.Timers;
-import com.mboysan.consensus.util.TimersForTesting;
+import org.aeonbits.owner.ConfigFactory;
+
+import java.util.Properties;
 
 public interface RaftInternals extends NodeInternals<RaftNode> {
     @Override
@@ -10,8 +12,8 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
     }
 
     @Override
-    default RaftNode createNode(int nodeId, Transport transport, TimersForTesting timer) {
-        return new RaftNode(nodeId, transport) {
+    default RaftNode createNode(Properties properties, Transport transport, Timers timer) {
+        return new RaftNode(ConfigFactory.create(RaftConfig.class, properties), transport) {
             @Override
             Timers createTimers() {
                 return timer;
@@ -20,13 +22,13 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
     }
 
     @Override
-    default long getElectionTimeoutMsOf(RaftNode node) {
-        return node.electionTimeoutMs;
+    default int getLeaderIdOf(RaftNode node) {
+        return node.getState().leaderId;
     }
 
     @Override
-    default int getLeaderIdOf(RaftNode node) {
-        return node.getState().leaderId;
+    default long getElectionTimeoutOf(RaftNode node) {
+        return ((RaftConfig) node.getNodeConfig()).electionTimeoutMs();
     }
 
     @Override

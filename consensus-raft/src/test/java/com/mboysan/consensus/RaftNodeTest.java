@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RaftNodeTest extends LeaderBasedNodeTestBase<RaftNode> implements RaftInternals {
+class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
-        RaftNode node = new RaftNode(0, transport);
+        RaftNode node = createNode(0, transport, null);
 
         assertThrows(IllegalStateException.class, () -> node.append("some-command"));
 
