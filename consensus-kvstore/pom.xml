@@ -9,29 +9,45 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>consensus-core</artifactId>
+    <artifactId>consensus-kvstore</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-core</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.aeonbits.owner</groupId>
-            <artifactId>owner</artifactId>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-core</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-bizur</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-bizur</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-raft</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-raft</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

@@ -29,9 +29,4 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
     default long getElectionTimeoutOf(RaftNode node) {
         return ((RaftConfig) node.getNodeConfig()).electionTimeoutMs();
     }
-
-    @Override
-    default KVStore createKVStore(RaftNode node) {
-        return new RaftKVStore(node);
-    }
 }

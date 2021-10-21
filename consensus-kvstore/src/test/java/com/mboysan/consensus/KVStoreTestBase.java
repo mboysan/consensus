@@ -2,6 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,9 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
         }
     }
 
+    abstract KVStore createKVStore(N node);
+
+    @Test
     void testPutGet() throws Exception {
         init(5);
 
@@ -39,6 +43,7 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
         assertEntriesForAll(expectedEntries);
     }
 
+    @Test
     void testRemove() throws Exception {
         init(5);
 
@@ -51,6 +56,7 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
         assertStoreSizeForAll(0);
     }
 
+    @Test
     void multiThreadTest() throws Exception {
         init(5);
 
@@ -74,6 +80,7 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
         assertEntriesForAll(expectedEntries);
     }
 
+    @Test
     void testFollowerFailure() throws Exception {
         int numServers = 5;
         init(numServers);

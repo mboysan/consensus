@@ -18,6 +18,4 @@ public interface NodeInternals<N extends AbstractNode<?>> {
 
     long getElectionTimeoutOf(N node);
     int getLeaderIdOf(N node);
-
-    KVStore createKVStore(N node);
 }
