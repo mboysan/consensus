@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.LogEntry;
+
 import java.util.ArrayList;
 import java.util.List;
 

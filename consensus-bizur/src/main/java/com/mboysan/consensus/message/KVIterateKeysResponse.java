@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
 import java.util.Set;
 

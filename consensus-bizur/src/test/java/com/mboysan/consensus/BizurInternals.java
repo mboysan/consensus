@@ -1,7 +1,6 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.Timers;
-import org.aeonbits.owner.ConfigFactory;
 
 import java.util.Properties;
 
@@ -14,7 +13,7 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
 
     @Override
     default BizurNode createNode(Properties properties, Transport transport, Timers timer) {
-        return new BizurNode(ConfigFactory.create(BizurConfig.class, properties), transport) {
+        return new BizurNode(IConfig.newInstance(BizurConfig.class, properties), transport) {
             @Override
             Timers createTimers() {
                 return timer;

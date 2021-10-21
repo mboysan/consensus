@@ -1,7 +1,6 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.Timers;
-import org.aeonbits.owner.ConfigFactory;
 
 import java.util.Properties;
 
@@ -13,7 +12,7 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
 
     @Override
     default RaftNode createNode(Properties properties, Transport transport, Timers timer) {
-        return new RaftNode(ConfigFactory.create(RaftConfig.class, properties), transport) {
+        return new RaftNode(IConfig.newInstance(RaftConfig.class, properties), transport) {
             @Override
             Timers createTimers() {
                 return timer;

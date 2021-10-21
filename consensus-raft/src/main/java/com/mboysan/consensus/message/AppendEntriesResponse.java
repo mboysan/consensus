@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
 public class AppendEntriesResponse extends Message {
 

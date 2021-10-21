@@ -1,9 +1,9 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
-public class HeartbeatRequest extends Message {
+public class HeartbeatResponse extends Message {
     private final long sendTimeMs;
 
-    public HeartbeatRequest(long sendTimeMs) {
+    public HeartbeatResponse(long sendTimeMs) {
         this.sendTimeMs = sendTimeMs;
     }
 
@@ -13,7 +13,7 @@ public class HeartbeatRequest extends Message {
 
     @Override
     public String toString() {
-        return "HeartbeatRequest{" +
+        return "HeartbeatResponse{" +
                 "sendTimeMs=" + sendTimeMs +
                 "} " + super.toString();
     }

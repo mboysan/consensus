@@ -1,4 +1,6 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
+
+import com.mboysan.consensus.BucketView;
 
 public class ReplicaReadResponse extends Message {
 

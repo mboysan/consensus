@@ -1,23 +1,23 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
 import java.io.Serializable;
 import java.util.Objects;
 
-class LogEntry implements Serializable {
+public class LogEntry implements Serializable {
 
     private final String command;
     private final int term;
 
-    LogEntry(String command, int term) {
+    public LogEntry(String command, int term) {
         this.command = command;
         this.term = term;
     }
 
-    String getCommand() {
+    public String getCommand() {
         return command;
     }
 
-    int getTerm() {
+    public int getTerm() {
         return term;
     }
 
