@@ -30,9 +30,4 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
     default int getLeaderIdOf(BizurNode node) {
         return node.getBizurStateUnprotected().getLeaderId();
     }
-
-    @Override
-    default KVStore createKVStore(BizurNode node) {
-        return new BizurKVStore(node);
-    }
 }

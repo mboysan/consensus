@@ -9,10 +9,11 @@
     <packaging>pom</packaging>
     <version>${revision}</version>
     <modules>
-        <module>consensus-distribution</module>
         <module>consensus-core</module>
         <module>consensus-raft</module>
         <module>consensus-bizur</module>
+        <module>consensus-kvstore</module>
+        <module>consensus-distribution</module>
     </modules>
 
     <properties>
@@ -177,6 +178,20 @@
                         <phase>clean</phase>
                         <goals>
                             <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.jar.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>Jar Tests Package</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>test-jar</goal>
                         </goals>
                     </execution>
                 </executions>

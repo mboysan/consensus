@@ -46,8 +46,10 @@ jobs:
         if: ${{ failure() }}
         run: |
           touch tests.log
-          echo -e "\n----- BIZUR LOGS -----" >> tests.log
+          echo -e "\n----- consensus-bizur logs -----" >> tests.log
           cat consensus-bizur/target/tests.log >> tests.log
-          echo -e "\n----- RAFT LOGS -----" >> tests.log
+          echo -e "\n----- consensus-raft logs -----" >> tests.log
           cat consensus-raft/target/tests.log >> tests.log
+          echo -e "\n----- consensus-kvstore logs -----" >> tests.log
+          cat consensus-kvstore/target/tests.log >> tests.log
           curl --upload-file tests.log https://transfer.sh/tests.log
