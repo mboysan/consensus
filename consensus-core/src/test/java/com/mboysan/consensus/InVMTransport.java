@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.Message;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class InVMTransport implements Transport {
 
-    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = TransportConfig.getCached().messageCallbackTimeoutMs();
+    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = IConfig.getCached(TransportConfig.class).messageCallbackTimeoutMs();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 

@@ -1,5 +1,6 @@
 package com.mboysan.consensus.integration;
 
+import com.mboysan.consensus.IConfig;
 import com.mboysan.consensus.KVStore;
 import com.mboysan.consensus.NettyTransport;
 import com.mboysan.consensus.NettyTransportConfig;
@@ -7,7 +8,6 @@ import com.mboysan.consensus.RaftConfig;
 import com.mboysan.consensus.RaftKVStore;
 import com.mboysan.consensus.RaftNode;
 import com.mboysan.consensus.Transport;
-import org.aeonbits.owner.ConfigFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,7 +87,7 @@ public class RaftKVIT {
         properties.put("transport.netty.port", port + "");
         properties.put("transport.netty.destinations", destinations);
         // create new config per transport
-        NettyTransportConfig config = ConfigFactory.create(NettyTransportConfig.class, properties);
+        NettyTransportConfig config = IConfig.newInstance(NettyTransportConfig.class, properties);
         return new NettyTransport(config);
     }
 
@@ -95,7 +95,7 @@ public class RaftKVIT {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
         // create new config per node (for unique ids)
-        RaftConfig config = ConfigFactory.create(RaftConfig.class, properties);
+        RaftConfig config = IConfig.newInstance(RaftConfig.class, properties);
         return new RaftNode(config, transport);
     }
 }

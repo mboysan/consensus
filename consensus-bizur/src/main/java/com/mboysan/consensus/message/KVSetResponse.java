@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
 public class KVSetResponse extends KVOperationResponse {
     public KVSetResponse(boolean success, Exception exception) {

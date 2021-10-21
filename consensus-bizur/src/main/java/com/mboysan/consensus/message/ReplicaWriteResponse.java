@@ -1,10 +1,9 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
-public class PleaseVoteResponse extends Message {
-
+public class ReplicaWriteResponse extends Message {
     private final boolean acked;
 
-    public PleaseVoteResponse(boolean acked) {
+    public ReplicaWriteResponse(boolean acked) {
         this.acked = acked;
     }
 
@@ -14,7 +13,7 @@ public class PleaseVoteResponse extends Message {
 
     @Override
     public String toString() {
-        return "PleaseVoteResponse{" +
+        return "ReplicaWriteResponse{" +
                 "acked=" + acked +
                 "} " + super.toString();
     }

@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.KVGetRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;

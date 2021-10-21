@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
 public class ReplicaReadRequest extends Message {
     private final int bucketIndex;

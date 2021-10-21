@@ -1,9 +1,9 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.message;
 
-public class KVGetRequest extends Message {
+public class KVDeleteRequest extends Message {
     private final String key;
 
-    public KVGetRequest(String key) {
+    public KVDeleteRequest(String key) {
         this.key = key;
     }
 
@@ -13,7 +13,7 @@ public class KVGetRequest extends Message {
 
     @Override
     public String toString() {
-        return "KVGetRequest{" +
+        return "KVDeleteRequest{" +
                 "key='" + key + '\'' +
                 "} " + super.toString();
     }

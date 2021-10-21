@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.Message;
+
 import java.io.IOException;
 import java.util.Set;
 

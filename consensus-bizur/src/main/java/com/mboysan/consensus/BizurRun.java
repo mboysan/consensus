@@ -1,5 +1,12 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.PleaseVoteRequest;
+import com.mboysan.consensus.message.PleaseVoteResponse;
+import com.mboysan.consensus.message.ReplicaReadRequest;
+import com.mboysan.consensus.message.ReplicaReadResponse;
+import com.mboysan.consensus.message.ReplicaWriteRequest;
+import com.mboysan.consensus.message.ReplicaWriteResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

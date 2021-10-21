@@ -1,12 +1,10 @@
 package com.mboysan.consensus;
 
-import org.aeonbits.owner.ConfigCache;
 import org.aeonbits.owner.Converter;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 public interface NettyTransportConfig extends TransportConfig {
 
@@ -48,9 +46,5 @@ public interface NettyTransportConfig extends TransportConfig {
             }
             return destinations;
         }
-    }
-
-    static NettyTransportConfig getCached(Properties... properties) {
-        return ConfigCache.getOrCreate(NettyTransportConfig.class, properties);
     }
 }
