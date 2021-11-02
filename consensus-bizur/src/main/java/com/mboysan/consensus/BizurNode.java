@@ -37,6 +37,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurNode.class);
 
+    private final BizurClient rpcClient;
+
     private final Lock updateLock = new ReentrantLock();
 
     private final int numBuckets;
@@ -49,6 +51,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     public BizurNode(BizurConfig config, Transport transport) {
         super(config, transport);
+        this.rpcClient = new BizurClient(transport);
 
         this.numBuckets = config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
@@ -56,7 +59,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     BizurRPC getRPC() {
-        return new BizurClient(getTransport());
+        return rpcClient;
     }
 
     @Override
