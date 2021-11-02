@@ -1,6 +1,6 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.configuration;
 
-public interface BizurConfig extends NodeConfig {
+public interface BizurConfig extends Configuration {
     @Key("bizur.numBuckets")
     @DefaultValue("1")
     int numBuckets();

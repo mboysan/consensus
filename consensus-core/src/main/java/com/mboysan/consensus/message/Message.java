@@ -1,6 +1,6 @@
 package com.mboysan.consensus.message;
 
-import com.mboysan.consensus.IConfig;
+import com.mboysan.consensus.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,7 @@ public abstract class Message implements Serializable {
 
     private static final SecureRandom RNG;
     static {
-        String SEED = IConfig.getCached(IConfig.class).rngSeed();
+        String SEED = Configuration.getCached(Configuration.class).rngSeed();
         LOGGER.info("message RNG seed = {}", SEED);
         RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
     }

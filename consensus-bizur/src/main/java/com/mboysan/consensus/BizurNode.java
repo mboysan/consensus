@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
