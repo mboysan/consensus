@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.util.TimerQueue;
 import com.mboysan.consensus.util.Timers;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -35,9 +36,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
-    private final NodeConfig nodeConfig;
+    private final Configuration nodeConfig;
 
-    AbstractNode(NodeConfig config, Transport transport) {
+    AbstractNode(Configuration config, Transport transport) {
         this.nodeId = config.nodeId();
         this.transport = transport;
         this.timers = createTimers();
@@ -147,7 +148,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         return isRunning;
     }
 
-    NodeConfig getNodeConfig() {
+    Configuration getConfiguration() {
         return nodeConfig;
     }
 }

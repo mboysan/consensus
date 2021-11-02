@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.configuration;
 
 import org.aeonbits.owner.Converter;
 
@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-public interface NettyTransportConfig extends TransportConfig {
+public interface NettyTransportConfig extends Configuration {
 
     @Key("transport.netty.port")
     int port();

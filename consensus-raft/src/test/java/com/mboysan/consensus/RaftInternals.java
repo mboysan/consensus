@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.util.Timers;
 
 import java.util.Properties;
@@ -12,7 +14,7 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
 
     @Override
     default RaftNode createNode(Properties properties, Transport transport, Timers timer) {
-        return new RaftNode(IConfig.newInstance(RaftConfig.class, properties), transport) {
+        return new RaftNode(Configuration.newInstance(RaftConfig.class, properties), transport) {
             @Override
             Timers createTimers() {
                 return timer;
@@ -27,6 +29,6 @@ public interface RaftInternals extends NodeInternals<RaftNode> {
 
     @Override
     default long getElectionTimeoutOf(RaftNode node) {
-        return ((RaftConfig) node.getNodeConfig()).electionTimeoutMs();
+        return ((RaftConfig) node.getConfiguration()).electionTimeoutMs();
     }
 }

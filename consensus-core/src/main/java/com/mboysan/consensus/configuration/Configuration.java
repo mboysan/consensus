@@ -1,4 +1,4 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.configuration;
 
 import org.aeonbits.owner.Config;
 import org.aeonbits.owner.ConfigCache;
@@ -9,11 +9,22 @@ import java.lang.reflect.Method;
 import java.util.Properties;
 
 @Config.Sources("classpath:application.properties")
-public interface IConfig extends Config {
+public interface Configuration extends Config {
     @Key("rng.seed")
     @DefaultValue("")
     @ConverterClass(SeedConverter.class)
     String rngSeed();
+
+    @Key("node.id")
+    int nodeId();
+
+    @Key("transport.class.name")
+        // NettyTransport can be used
+    String transportClassName();
+
+    @Key("transport.message.callbackTimeoutMs")
+    @DefaultValue("5000")
+    long messageCallbackTimeoutMs();
 
     class SeedConverter implements Converter<String> {
         @Override
@@ -26,11 +37,11 @@ public interface IConfig extends Config {
         }
     }
 
-    static <T extends IConfig> T newInstance(Class<T> configClass, Properties... properties) {
+    static <T extends Configuration> T newInstance(Class<T> configClass, Properties... properties) {
         return ConfigFactory.create(configClass, properties);
     }
 
-    static <T extends IConfig> T getCached(Class<T> configClass, Properties... properties) {
+    static <T extends Configuration> T getCached(Class<T> configClass, Properties... properties) {
         return ConfigCache.getOrCreate(configClass, properties);
     }
 }
