@@ -29,6 +29,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftNode.class);
 
+    private final RaftClient rpcClient;
+
     private final Lock updateLock = new ReentrantLock();
 
     private final long updateIntervalMs;
@@ -40,6 +42,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     public RaftNode(RaftConfig config, Transport transport) {
         super(config, transport);
+        this.rpcClient = new RaftClient(transport);
 
         this.electionTimeoutMs = config.electionTimeoutMs();
         this.updateIntervalMs = config.updateIntervalMs();
@@ -47,7 +50,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     @Override
     RaftRPC getRPC() {
-        return new RaftClient(getTransport());
+        return rpcClient;
     }
 
     @Override
