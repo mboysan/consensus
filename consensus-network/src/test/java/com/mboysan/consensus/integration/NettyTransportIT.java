@@ -18,6 +18,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NettyTransportIT {
@@ -43,6 +45,21 @@ public class NettyTransportIT {
             serverTransport.shutdown();
             assertTrue(serverTransport.verifyShutdown());
         }
+    }
+
+    @Test
+    void testSomeUnhappyPaths() throws IOException {
+        serverTransports[0].start();    // 2nd start does nothing (increase code cov)
+        serverTransports[0].shutdown();
+        serverTransports[0].shutdown(); // 2nd shutdown does nothing (increase code cov)
+        assertThrows(UnsupportedOperationException.class, () -> serverTransports[0].sendRecvAsync(new TestMessage("")));
+        assertThrows(IllegalStateException.class, () -> serverTransports[0].sendRecv(new TestMessage("")));
+
+        NettyClientTransport client = createClientTransport();
+        client.addNode(0, null);    // does nothing (increase code cov)
+        assertFalse(client.isShared());
+        client.shutdown();
+        client.shutdown();  // 2nd shutdown does nothing (increase code cov)
     }
 
     @Test
@@ -85,6 +102,18 @@ public class NettyTransportIT {
             client.shutdown();
             assertTrue(client.verifyShutdown());
         }
+    }
+
+    @Test
+    void testIOErrorOnReceiverShutdown() throws IOException {
+        TestMessage request = testMessage(0, 0, 1);
+
+        serverTransports[1].shutdown();
+        assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request));
+
+        serverTransports[1].start();
+        TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
+        assertResponse(request, response);
     }
 
     private TestMessage testMessage(int payloadId, int senderId, int receiverId) {

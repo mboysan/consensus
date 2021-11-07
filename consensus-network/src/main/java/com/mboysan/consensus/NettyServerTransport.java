@@ -109,17 +109,11 @@ public class NettyServerTransport implements Transport {
 
     @Override
     public Future<Message> sendRecvAsync(Message message) {
-        if (!isRunning) {
-            throw new IllegalStateException("server is not running (2)");
-        }
         return clientTransport.sendRecvAsync(message);
     }
 
     @Override
     public Message sendRecv(Message message) throws IOException {
-        if (!isRunning) {
-            throw new IllegalStateException("server is not running (2)");
-        }
         return clientTransport.sendRecv(message);
     }
 

@@ -78,10 +78,10 @@ public class NettyClientTransport implements Transport {
     @Override
     public Message sendRecv(Message message) throws IOException {
         if (!isRunning) {
-            throw new IllegalStateException("server is not running (2)");
+            throw new IllegalStateException("client is not running (2)");
         }
         if (message.getId() == null) {
-            throw new IllegalArgumentException("correlationId must not be null");
+            throw new IllegalArgumentException("msg id must not be null");
         }
         LOGGER.debug("OUT (request) : {}", message);
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();

@@ -5,6 +5,7 @@ import org.aeonbits.owner.Converter;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public interface NettyTransportConfig extends Configuration {
 
@@ -32,9 +33,7 @@ public interface NettyTransportConfig extends Configuration {
     class DestinationsConverter implements Converter<Map<Integer, String>> {
         @Override
         public Map<Integer, String> convert(Method method, String s) {
-            if (s == null) {
-                return null;
-            }
+            Objects.requireNonNull(s);
             s = s.replaceAll("\\s+","");    // remove whitespace
             Map<Integer,String> destinations = new HashMap<>();
             String[] allDestinations = s.split(",");
