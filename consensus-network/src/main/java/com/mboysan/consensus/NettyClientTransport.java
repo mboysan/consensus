@@ -56,7 +56,7 @@ public class NettyClientTransport implements Transport {
     }
 
     @Override
-    public synchronized void start() throws IOException {
+    public synchronized void start() {
         isRunning = true;
     }
 
