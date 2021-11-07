@@ -20,6 +20,11 @@
         </dependency>
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-network</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mboysan.consensus</groupId>
             <artifactId>consensus-raft</artifactId>
             <version>${project.version}</version>
         </dependency>
