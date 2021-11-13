@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -73,8 +74,13 @@ public class NettyServerTransport implements Transport {
                                 @Override
                                 protected void channelRead0(ChannelHandlerContext ctx, Message request) throws IOException {
                                     LOGGER.debug("IN (request): {}", request);
-                                    Message response = requestProcessor.processRequest(request);
-                                    ctx.writeAndFlush(response);
+                                    try {
+                                        Message response = requestProcessor.processRequest(request);
+                                        ctx.writeAndFlush(response);
+                                    } catch (Exception e) {
+                                        LOGGER.error("request could not be processed, err={}", e.getMessage());
+                                        throw e;
+                                    }
                                 }
                             });
                         }
@@ -105,6 +111,11 @@ public class NettyServerTransport implements Transport {
     @Override
     public void removeNode(int nodeId) {
         clientTransport.removeNode(nodeId);
+    }
+
+    @Override
+    public Set<Integer> getDestinationNodeIds() {
+        return Collections.unmodifiableSet(destinations.keySet());
     }
 
     @Override

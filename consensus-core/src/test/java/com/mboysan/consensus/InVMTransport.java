@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class InVMTransport implements Transport {
 
@@ -69,6 +71,11 @@ public class InVMTransport implements Transport {
             serverMap.remove(nodeId);
         }
         LOGGER.info("server-{} removed", nodeId);
+    }
+
+    @Override
+    public Set<Integer> getDestinationNodeIds() {
+        return Collections.unmodifiableSet(serverMap.keySet());
     }
 
     public synchronized void connectedToNetwork(int nodeId, boolean isConnected) {

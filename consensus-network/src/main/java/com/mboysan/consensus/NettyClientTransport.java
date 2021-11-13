@@ -26,7 +26,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -45,7 +48,7 @@ public class NettyClientTransport implements Transport {
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     public NettyClientTransport(NettyTransportConfig config) {
-        this.destinations = config.destinations();
+        this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = config.clientPoolSize();
     }
@@ -68,6 +71,11 @@ public class NettyClientTransport implements Transport {
     @Override
     public void removeNode(int nodeId) {
         // No need to implement this method for this transport at the moment.
+    }
+
+    @Override
+    public Set<Integer> getDestinationNodeIds() {
+        return Collections.unmodifiableSet(destinations.keySet());
     }
 
     @Override

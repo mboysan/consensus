@@ -1,17 +1,29 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVDeleteResponse;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVGetResponse;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVIterateKeysResponse;
+import com.mboysan.consensus.message.KVSetRequest;
+import com.mboysan.consensus.message.KVSetResponse;
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.StateMachineRequest;
+import com.mboysan.consensus.message.StateMachineResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
-public class RaftKVStore implements KVStore {
+public class RaftKVStore implements KVStoreRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVStore.class);
 
@@ -39,8 +51,8 @@ public class RaftKVStore implements KVStore {
     }
 
     @Override
-    public synchronized void start() throws Exception {
-        raft.start().get();
+    public Future<Void> start() throws IOException {
+        return raft.start();
     }
 
     @Override
@@ -49,39 +61,62 @@ public class RaftKVStore implements KVStore {
     }
 
     @Override
-    public boolean put(String key, String value) throws KVOperationException {
-        return append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value));
-    }
-
-    @Override
-    public String get(String key) {
-        return store.get(key);
-    }
-
-    @Override
-    public boolean remove(String key) throws KVOperationException {
-        return append(String.format("rm%s%s", CMD_SEP, key));
-    }
-
-    @Override
-    public Set<String> keySet() {
-        return store.keySet();
-    }
-
-    private boolean append(String command) throws KVOperationException {
+    public KVGetResponse get(KVGetRequest request) {
         try {
-            boolean applied = raft.append(command).get(5, TimeUnit.SECONDS);
-            if (!applied) {
-                throw new KVOperationException("append failed for cmd=" + command);
-            }
-            return true;
-        } catch (InterruptedException e) {
-            LOGGER.error(e.getMessage(), e);
-            Thread.currentThread().interrupt();
-            throw new KVOperationException(e);
-        } catch (ExecutionException | TimeoutException e) {
-            LOGGER.error(e.getMessage(), e);
-            throw new KVOperationException(e);
+            String value = store.get(Objects.requireNonNull(request.getKey()));
+            return new KVGetResponse(true, null, value).responseTo(request);
+        } catch (Exception e) {
+            logError(raft.getNodeId(), request, e);
+            return new KVGetResponse(false, e, null).responseTo(request);
         }
+    }
+
+    @Override
+    public KVSetResponse set(KVSetRequest request) {
+        try {
+            String key = Objects.requireNonNull(request.getKey());
+            String value = Objects.requireNonNull(request.getValue());
+            boolean success = append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value), request);
+            return new KVSetResponse(success, null).responseTo(request);
+        } catch (Exception e) {
+            logError(raft.getNodeId(), request, e);
+            return new KVSetResponse(false, e).responseTo(request);
+        }
+    }
+
+    @Override
+    public KVDeleteResponse delete(KVDeleteRequest request) {
+        try {
+            String key = Objects.requireNonNull(request.getKey());
+            boolean success = append(String.format("rm%s%s", CMD_SEP, key), request);
+            return new KVDeleteResponse(success, null).responseTo(request);
+        } catch (Exception e) {
+            logError(raft.getNodeId(), request, e);
+            return new KVDeleteResponse(false, e).responseTo(request);
+        }
+    }
+
+    @Override
+    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) {
+        try {
+            Set<String> keys = new HashSet<>(store.keySet());
+            return new KVIterateKeysResponse(true, null, keys).responseTo(request);
+        } catch (Exception e) {
+            logError(raft.getNodeId(), request, e);
+            return new KVIterateKeysResponse(false, e, null).responseTo(request);
+        }
+    }
+
+    private boolean append(String command, Message baseRequest) throws IOException {
+        StateMachineRequest request = new StateMachineRequest(command)
+                .setSenderId(baseRequest.getSenderId())
+                .setReceiverId(baseRequest.getReceiverId())
+                .setCorrelationId(baseRequest.getCorrelationId());
+        StateMachineResponse response = raft.stateMachineRequest(request);
+        return response.isApplied();
+    }
+
+    private static void logError(int nodeId, Message request, Exception err) {
+        LOGGER.error("on RaftKVStore-{}, error={}, for request={}", nodeId, err, request.toString());
     }
 }
