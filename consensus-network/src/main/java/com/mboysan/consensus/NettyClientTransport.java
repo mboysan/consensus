@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class NettyClientTransport implements Transport {
 
@@ -64,23 +65,18 @@ public class NettyClientTransport implements Transport {
     }
 
     @Override
-    public void addNode(int nodeId, RPCProtocol requestProcessor) {
-        // No need to implement this method for this transport at the moment.
-    }
-
-    @Override
-    public void removeNode(int nodeId) {
-        // No need to implement this method for this transport at the moment.
-    }
-
-    @Override
     public Set<Integer> getDestinationNodeIds() {
         return Collections.unmodifiableSet(destinations.keySet());
     }
 
     @Override
+    public void registerMessageProcessor(Function<Message, Message> messageProcessor) {
+        throw new UnsupportedOperationException("registerMessageProcessor unsupported.");
+    }
+
+    @Override
     public Future<Message> sendRecvAsync(Message message) {
-        throw new UnsupportedOperationException("unsupported with this transport");
+        throw new UnsupportedOperationException("sendRecvAsync unsupported.");
     }
 
     @Override
@@ -91,7 +87,6 @@ public class NettyClientTransport implements Transport {
         if (message.getId() == null) {
             throw new IllegalArgumentException("msg id must not be null");
         }
-        LOGGER.debug("OUT (request) : {}", message);
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
         callbackMap.put(message.getId(), msgFuture);
         try {
@@ -210,6 +205,7 @@ public class NettyClientTransport implements Transport {
         }
 
         void send(Message message) {
+            LOGGER.debug("OUT (request): {}", message);
             channel.writeAndFlush(message);
         }
 

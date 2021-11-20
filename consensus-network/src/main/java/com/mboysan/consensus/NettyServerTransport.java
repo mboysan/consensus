@@ -1,6 +1,8 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.event.NodeListChangedEvent;
+import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.CheckedSupplier;
 import io.netty.bootstrap.ServerBootstrap;
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public class NettyServerTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyServerTransport.class);
@@ -38,14 +41,19 @@ public class NettyServerTransport implements Transport {
     private EventLoopGroup workerGroup;
     private Channel channel;
 
-    private RPCProtocol requestProcessor;
-
+    /**
+     * Id of the node that this transport is responsible from
+     */
     private final NettyClientTransport clientTransport;
+    private Function<Message, Message> messageProcessor;
 
     public NettyServerTransport(NettyTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
         this.clientTransport = new NettyClientTransport(config);
+
+        EventManager.getInstance().registerEventListener(NodeStartedEvent.class, this::onNodeStarted);
+//        EventManager.getInstance().registerEventListener(AddRequestProcessorEvent.class, this::onAddRequestProcessor);
     }
 
     @Override
@@ -72,10 +80,11 @@ public class NettyServerTransport implements Transport {
 
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<Message>() {
                                 @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, Message request) throws IOException {
-                                    LOGGER.debug("IN (request): {}", request);
+                                protected void channelRead0(ChannelHandlerContext ctx, Message request) {
                                     try {
-                                        Message response = requestProcessor.processRequest(request);
+                                        LOGGER.debug("IN (request): {}", request);
+                                        Message response = messageProcessor.apply(request);
+                                        LOGGER.debug("OUT (response): {}", response);
                                         ctx.writeAndFlush(response);
                                     } catch (Exception e) {
                                         LOGGER.error("request could not be processed, err={}", e.getMessage());
@@ -95,8 +104,8 @@ public class NettyServerTransport implements Transport {
         isRunning = true;
     }
 
-    @Override
-    public void addNode(int nodeId, RPCProtocol requestProcessor) {
+    private synchronized void onNodeStarted(NodeStartedEvent event) {
+        int nodeId = event.getSourceNodeId();
         Objects.requireNonNull(destinations);
         Set<Integer> nodeIds = new HashSet<>();
         destinations.forEach((id, dest) -> {
@@ -104,13 +113,17 @@ public class NettyServerTransport implements Transport {
                 nodeIds.add(id);
             }
         });
-        this.requestProcessor = requestProcessor;
-        requestProcessor.onNodeListChanged(nodeIds);
+        EventManager.getInstance().fireEvent(new NodeListChangedEvent(nodeId, nodeIds));
     }
 
     @Override
-    public void removeNode(int nodeId) {
-        clientTransport.removeNode(nodeId);
+    public void registerMessageProcessor(Function<Message, Message> messageProcessor) {
+        if (this.messageProcessor != null) {
+            if (!this.messageProcessor.equals(messageProcessor)) {  // for restarts
+                throw new IllegalStateException("request processor already registered");
+            }
+        }
+        this.messageProcessor = messageProcessor;
     }
 
     @Override

@@ -1,6 +1,9 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.event.NodeListChangedEvent;
+import com.mboysan.consensus.event.NodeStartedEvent;
+import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.util.TimerQueue;
 import com.mboysan.consensus.util.Timers;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -37,6 +40,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
     private final Configuration nodeConfig;
+    private final EventManager eventManager;
 
     AbstractNode(Configuration config, Transport transport) {
         this.nodeId = config.nodeId();
@@ -44,6 +48,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         this.timers = createTimers();
         this.nodeConfig = config;
         LOGGER.info("node-{} config={}", nodeId, nodeConfig);
+
+        this.eventManager = EventManager.getInstance();
+        eventManager.registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
     }
 
     Timers createTimers() {
@@ -59,7 +66,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
         isRunning = true;
 
-        transport.addNode(nodeId, this);
+        transport.registerMessageProcessor(this);
+        eventManager.fireEvent(new NodeStartedEvent(nodeId));
+
         peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
                 new BasicThreadFactory.Builder().namingPattern("PeerExec-" + nodeId + "-%d").daemon(true).build()
         );
@@ -81,7 +90,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         commandExecutor.shutdown();
         peerExecutor.shutdown();
         peers.clear();
-        transport.removeNode(nodeId);
+        eventManager.fireEvent(new NodeStoppedEvent(nodeId));
         if (!transport.isShared()) {
             transport.shutdown();
         }
@@ -90,8 +99,11 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     abstract void shutdownNode();
 
-    @Override
-    public synchronized void onNodeListChanged(Set<Integer> serverIds) {
+    private synchronized void onNodeListChanged(NodeListChangedEvent event) {
+        if (event.getTargetNodeId() != nodeId) {
+            return;
+        }
+        Set<Integer> serverIds = event.getServerIds();
         // first, we add new peers for each new serverId.
         serverIds.forEach(peerId -> peers.computeIfAbsent(peerId, this::createPeer));
 

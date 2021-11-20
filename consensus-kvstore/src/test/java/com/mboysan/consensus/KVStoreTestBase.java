@@ -16,24 +16,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N> {
 
     private KVStoreRPC[] stores;
+    private InVMTransport clientServingTransport;
 
     @Override
     void init(int numServers) throws Exception {
         super.init(numServers);
         stores = new KVStoreRPC[numServers];
+        clientServingTransport = new InVMTransport();
         for (int i = 0; i < numServers; i++) {
-            stores[i] = createKVStore(getNode(i));
+            stores[i] = createKVStore(getNode(i), clientServingTransport);
             stores[i].start();
         }
     }
 
-    abstract KVStoreRPC createKVStore(N node);
+    abstract KVStoreRPC createKVStore(N node, Transport clientServingTransport);
 
     @Test
     void testPutGet() throws Exception {
@@ -180,5 +181,6 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
         for (KVStoreRPC store : stores) {
             store.shutdown();
         }
+        clientServingTransport.shutdown();
     }
 }

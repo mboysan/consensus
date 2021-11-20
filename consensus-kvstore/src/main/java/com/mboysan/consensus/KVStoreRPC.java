@@ -11,7 +11,6 @@ import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
 
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.Future;
 
 public interface KVStoreRPC extends RPCProtocol {
@@ -27,11 +26,6 @@ public interface KVStoreRPC extends RPCProtocol {
     KVDeleteResponse delete(KVDeleteRequest request) throws IOException;
 
     KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
-
-    @Override
-    default void onNodeListChanged(Set<Integer> serverIds) {
-        // nothing needs to be done
-    }
 
     @Override
     default Message processRequest(Message request) throws IOException {

@@ -11,8 +11,6 @@ import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.StateMachineRequest;
 import com.mboysan.consensus.message.StateMachineResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -20,16 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
-public class RaftKVStore implements KVStoreRPC {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVStore.class);
+public class RaftKVStore extends AbstractKVStore<RaftNode> {
 
     private static final String CMD_SEP = "@@@";
 
-    private final RaftNode raft;
     private final Map<String, String> store = new ConcurrentHashMap<>();
 
     private final Consumer<String> stateMachine = cmd -> {
@@ -45,19 +39,9 @@ public class RaftKVStore implements KVStoreRPC {
         }
     };
 
-    public RaftKVStore(RaftNode raft) {
-        this.raft = raft;
-        raft.registerStateMachine(stateMachine);
-    }
-
-    @Override
-    public Future<Void> start() throws IOException {
-        return raft.start();
-    }
-
-    @Override
-    public synchronized void shutdown() {
-        raft.shutdown();
+    public RaftKVStore(RaftNode node, Transport clientServingTransport) {
+        super(node, clientServingTransport);
+        getNode().registerStateMachine(stateMachine);
     }
 
     @Override
@@ -66,7 +50,7 @@ public class RaftKVStore implements KVStoreRPC {
             String value = store.get(Objects.requireNonNull(request.getKey()));
             return new KVGetResponse(true, null, value).responseTo(request);
         } catch (Exception e) {
-            logError(raft.getNodeId(), request, e);
+            logError(request, e);
             return new KVGetResponse(false, e, null).responseTo(request);
         }
     }
@@ -79,7 +63,7 @@ public class RaftKVStore implements KVStoreRPC {
             boolean success = append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value), request);
             return new KVSetResponse(success, null).responseTo(request);
         } catch (Exception e) {
-            logError(raft.getNodeId(), request, e);
+            logError(request, e);
             return new KVSetResponse(false, e).responseTo(request);
         }
     }
@@ -91,7 +75,7 @@ public class RaftKVStore implements KVStoreRPC {
             boolean success = append(String.format("rm%s%s", CMD_SEP, key), request);
             return new KVDeleteResponse(success, null).responseTo(request);
         } catch (Exception e) {
-            logError(raft.getNodeId(), request, e);
+            logError(request, e);
             return new KVDeleteResponse(false, e).responseTo(request);
         }
     }
@@ -102,7 +86,7 @@ public class RaftKVStore implements KVStoreRPC {
             Set<String> keys = new HashSet<>(store.keySet());
             return new KVIterateKeysResponse(true, null, keys).responseTo(request);
         } catch (Exception e) {
-            logError(raft.getNodeId(), request, e);
+            logError(request, e);
             return new KVIterateKeysResponse(false, e, null).responseTo(request);
         }
     }
@@ -112,11 +96,7 @@ public class RaftKVStore implements KVStoreRPC {
                 .setSenderId(baseRequest.getSenderId())
                 .setReceiverId(baseRequest.getReceiverId())
                 .setCorrelationId(baseRequest.getCorrelationId());
-        StateMachineResponse response = raft.stateMachineRequest(request);
+        StateMachineResponse response = getNode().stateMachineRequest(request);
         return response.isApplied();
-    }
-
-    private static void logError(int nodeId, Message request, Exception err) {
-        LOGGER.error("on RaftKVStore-{}, error={}, for request={}", nodeId, err, request.toString());
     }
 }

@@ -1,6 +1,8 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.event.NodeListChangedEvent;
+import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
@@ -19,7 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 public class InVMTransport implements Transport {
 
@@ -33,6 +35,13 @@ public class InVMTransport implements Transport {
 
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
+
+    private final EventManager eventManager;
+
+    public InVMTransport() {
+        this.eventManager = EventManager.getInstance();
+        eventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+    }
 
     @Override
     public void start() {
@@ -49,25 +58,32 @@ public class InVMTransport implements Transport {
     }
 
     @Override
-    public synchronized void addNode(int nodeId, RPCProtocol protoServer) {
-        Server server = serverMap.get(nodeId);
-        if (server == null) {
-            server = new Server(protoServer);
-            // add this server to map and start processing
-            serverMap.put(nodeId, server);
-            serverMap.forEach((i, s) -> s.protoServer.onNodeListChanged(Set.copyOf(serverMap.keySet())));
+    public synchronized void registerMessageProcessor(Function<Message, Message> messageProcessor) {
+        if (messageProcessor instanceof AbstractNode) {
+            int nodeId = ((AbstractNode<?>) messageProcessor).getNodeId();
+            Server server = serverMap.get(nodeId);
+            if (server == null) {
+                server = new Server(messageProcessor);
+                // add this server to map and start processing
+                serverMap.put(nodeId, server);
+                serverMap.forEach((i, s) -> eventManager.fireEvent(new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
+                serverExecutor.execute(server);
+            }
+            LOGGER.info("server-{} added", nodeId);
+        } else {
+            Server server = new Server(messageProcessor);
             serverExecutor.execute(server);
+            LOGGER.info("messageProcessor added");
         }
-        LOGGER.info("server-{} added", nodeId);
     }
 
-    @Override
-    public synchronized void removeNode(int nodeId) {
+    private void onNodeStopped(NodeStoppedEvent event) {
+        int nodeId = event.getSourceNodeId();
         Server server = serverMap.get(nodeId);
         if (server != null) {
             Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());
             idsTmp.remove(nodeId);
-            serverMap.forEach((i, s) -> s.protoServer.onNodeListChanged(Set.copyOf(idsTmp)));
+            eventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
             serverMap.remove(nodeId);
         }
         LOGGER.info("server-{} removed", nodeId);
@@ -121,9 +137,13 @@ public class InVMTransport implements Transport {
         }
         // this is the local server, no need to create a separate thread/task, so we do the processing
         // on the current thread.
-        Message resp = serverMap.get(message.getReceiverId()).protoServer.processRequest(message);
-        LOGGER.debug("IN (self) : {}", resp);
-        return resp;
+        try {
+            Message resp = serverMap.get(message.getReceiverId()).messageProcessor.apply(message);
+            LOGGER.debug("IN (self) : {}", resp);
+            return resp;
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
     }
 
     private void verifySenderAlive(Message message) throws IOException {
@@ -151,10 +171,10 @@ public class InVMTransport implements Transport {
         volatile boolean isConnectedToNetwork = true;
         volatile boolean isRunning = true;
         final BlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
-        final RPCProtocol protoServer;
+        final Function<Message, Message> messageProcessor;
 
-        Server(RPCProtocol protoServer) {
-            this.protoServer = protoServer;
+        Server(Function<Message, Message> messageProcessor) {
+            this.messageProcessor = messageProcessor;
         }
 
         private void add(Message msg) throws IOException {
@@ -186,7 +206,7 @@ public class InVMTransport implements Transport {
                     }
 
                     // we first process the message
-                    Message response = protoServer.processRequest(message);
+                    Message response = messageProcessor.apply(message);
 
                     // we send the response to the callback
                     CompletableFuture<Message> msgFuture = callbackMap.remove(message.getId());

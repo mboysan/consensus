@@ -38,10 +38,16 @@ public class RaftKVIT {
     private static final Random RNG = new Random();
 
     private static final int NUM_NODES = 3;
-    private static final Map<Integer, String> DESTINATIONS = new HashMap<>() {{
+    private static final Map<Integer, String> NODE_DESTINATIONS = new HashMap<>() {{
         put(0, "localhost:8080");
         put(1, "localhost:8081");
         put(2, "localhost:8082");
+    }};
+
+    private static final Map<Integer, String> STORE_DESTINATIONS = new HashMap<>() {{
+        put(0, "localhost:8083");
+        put(1, "localhost:8084");
+        put(2, "localhost:8085");
     }};
 
     private KVStoreRPC[] stores;
@@ -57,9 +63,13 @@ public class RaftKVIT {
         List<Future<?>> startFutures = new ArrayList<>();
         stores = new KVStoreRPC[NUM_NODES];
         for (int i = 0; i < stores.length; i++) {
-            Transport transport = createServerTransport(8080 + i);
-            RaftNode raftNode = createNode(i, transport);
-            stores[i] = new RaftKVStore(raftNode);
+            int nodePort = 8080 + i;
+            Transport nodeTransport = createServerTransport(nodePort, NODE_DESTINATIONS);
+            RaftNode raftNode = createNode(i, nodeTransport);
+
+            int storePort = 8083 + i;
+            Transport storeTransport = createServerTransport(storePort, STORE_DESTINATIONS);
+            stores[i] = new RaftKVStore(raftNode, storeTransport);
             startFutures.add(stores[i].start());
         }
         for (Future<?> startFuture : startFutures) {
@@ -87,7 +97,7 @@ public class RaftKVIT {
     }
 
     @Test
-    void testMultiPutGetMultiThreaded() throws KVOperationException, InterruptedException, ExecutionException {
+    void testPutGetDeleteMultiThreaded() throws KVOperationException, InterruptedException, ExecutionException {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
         MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 1000; i++) {
@@ -104,7 +114,7 @@ public class RaftKVIT {
             });
         }
         exec.endExecution();
-        Thread.sleep(5000);
+        Thread.sleep(5000); // allow time to sync
         assertEntriesForAll(expectedEntries);
     }
 
@@ -144,27 +154,26 @@ public class RaftKVIT {
         }
     }
 
-    NettyServerTransport createServerTransport(int port) {
+    NettyServerTransport createServerTransport(int port, Map<Integer, String> destinations) {
         StringJoiner sj = new StringJoiner(",");
-        for (Map.Entry<Integer, String> entry : DESTINATIONS.entrySet()) {
+        for (Map.Entry<Integer, String> entry : destinations.entrySet()) {
             sj.add(entry.getKey() + "=" + entry.getValue());
         }
-        String destinations = sj.toString();
+        String nettyDestinations = sj.toString();
 
         Properties properties = new Properties();
         properties.put("transport.netty.port", port + "");
-        properties.put("transport.netty.destinations", destinations);
+        properties.put("transport.netty.destinations", nettyDestinations);
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyServerTransport(config);
     }
 
     NettyClientTransport createClientTransport(int nodeId) {
-        String destination = nodeId + "=" + DESTINATIONS.get(nodeId);
+        String destination = nodeId + "=" + STORE_DESTINATIONS.get(nodeId);
 
         Properties properties = new Properties();
         properties.put("transport.netty.destinations", destination);
-        properties.put("transport.message.callbackTimeoutMs", "1000000");   // lets make the callback time very large
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyClientTransport(config);
