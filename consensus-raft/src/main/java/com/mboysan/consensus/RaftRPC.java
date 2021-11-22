@@ -28,6 +28,6 @@ interface RaftRPC extends RPCProtocol {
         if (request instanceof StateMachineRequest) {
             return stateMachineRequest((StateMachineRequest) request);
         }
-        throw new IllegalArgumentException("unrecognized message");
+        throw new IllegalArgumentException("unrecognized message=" + request);
     }
 }

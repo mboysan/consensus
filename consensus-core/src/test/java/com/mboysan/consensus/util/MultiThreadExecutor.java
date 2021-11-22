@@ -68,12 +68,12 @@ public class MultiThreadExecutor {
      */
     public void endExecution() throws InterruptedException, ExecutionException {
         LOGGER.info("ending execution id=" + execId);
-        executor.shutdown();
         latch.countDown();
         for (Future<Optional<Exception>> future : futures) {
             Optional<Exception> optEx = future.get();
             optEx.ifPresent(e -> fail(String.format("execution[id=%s] failed with exception=%s", execId, e)));
         }
+        executor.shutdown();
         LOGGER.info("execution[id={}] ended successfully.", execId);
     }
 }

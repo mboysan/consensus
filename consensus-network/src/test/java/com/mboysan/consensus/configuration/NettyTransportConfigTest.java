@@ -17,12 +17,12 @@ class NettyTransportConfigTest {
         props.put("transport.netty.destinations", "0=localhost:8080,1=localhost:8081, 2=localhost:8082");
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, props);
 
-        Map<Integer, String> expected = new HashMap<>() {{
-            put(0, "localhost:8080");
-            put(1, "localhost:8081");
-            put(2, "localhost:8082");
+        Map<Integer, Destination> expected = new HashMap<>() {{
+            put(0, new Destination(0, "localhost", 8080));
+            put(1, new Destination(1, "localhost", 8081));
+            put(2, new Destination(2, "localhost", 8082));
         }};
-        Map<Integer, String> actual = config.destinations();
+        Map<Integer, Destination> actual = config.destinations();
 
         assertEquals(expected, actual);
     }

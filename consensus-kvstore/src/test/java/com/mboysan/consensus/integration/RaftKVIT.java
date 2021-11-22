@@ -1,81 +1,111 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.KVOperationException;
-import com.mboysan.consensus.KVStore;
+import com.mboysan.consensus.KVStoreClient;
+import com.mboysan.consensus.KVStoreRPC;
+import com.mboysan.consensus.NettyClientTransport;
 import com.mboysan.consensus.NettyServerTransport;
 import com.mboysan.consensus.RaftKVStore;
 import com.mboysan.consensus.RaftNode;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import com.mboysan.consensus.util.NettyUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@link RaftKVStore} Integration Test.
  * TODO: improve this test
  */
 public class RaftKVIT {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIT.class);
-
     private static final Random RNG = new Random();
 
-    private static final int NUM_NODES = 3;
+    private static final List<Destination> NODE_DESTINATIONS = new ArrayList<>();
+    static {
+        addDestination(NODE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+    }
+    private static final String NODE_DESTINATIONS_STR = NettyUtil.convertDestinationsListToProps(NODE_DESTINATIONS);
 
-    KVStore[] stores;
-    String destinations = "0=localhost:8080, 1=localhost:8081, 2=localhost:8082";
-    Transport[] transports;
+    private static final List<Destination> STORE_DESTINATIONS = new ArrayList<>();
+    static {
+        addDestination(STORE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+    }
+
+    private KVStoreRPC[] stores;
+    private KVStoreClient[] clients;
 
     @BeforeEach
     void setUp() throws Exception {
-        transports = new Transport[NUM_NODES];
+        startServers();
+        startClients();
+    }
 
-        stores = new KVStore[NUM_NODES];
-        for (int i = 0; i < NUM_NODES; i++) {
-            transports[i] = createServerTransport(8080 + i, destinations);
-            RaftNode raftNode = createNode(i, transports[i]);
-            stores[i] = new RaftKVStore(raftNode);
+    private void startServers() throws ExecutionException, InterruptedException, IOException {
+        List<Future<?>> startFutures = new ArrayList<>();
+        stores = new KVStoreRPC[NODE_DESTINATIONS.size()];
+        for (int i = 0; i < stores.length; i++) {
+            Destination nodeDestination = NODE_DESTINATIONS.get(i);
+            Transport nodeTransport = createServerTransport(nodeDestination);
+            RaftNode raftNode = createNode(i, nodeTransport);
+
+            Destination storeDestination = STORE_DESTINATIONS.get(i);
+            Transport storeTransport = createServerTransport(storeDestination);
+            stores[i] = new RaftKVStore(raftNode, storeTransport);
+            startFutures.add(stores[i].start());
         }
-        Thread[] threads = new Thread[stores.length];
-        for (int i = 0; i < NUM_NODES; i++) {
-            int finalI = i;
-            threads[i] = new Thread(() -> {
-                try {
-                    stores[finalI].start();
-                } catch (Exception e) {
-                    LOGGER.error(e.getMessage(), e);
-                }
-            });
-            threads[i].start();
+        for (Future<?> startFuture : startFutures) {
+            startFuture.get();
         }
-        for (Thread thread : threads) {
-            thread.join();
+    }
+
+    private void startClients() throws IOException {
+        clients = new KVStoreClient[STORE_DESTINATIONS.size()];
+        for (int i = 0; i < clients.length; i++) {
+            Destination storeDestination = STORE_DESTINATIONS.get(i);
+            Transport transport = createClientTransport(storeDestination);
+            clients[i] = new KVStoreClient(transport);
+            clients[i].start();
         }
     }
 
     @AfterEach
-    void tearDown() throws Exception {
-        for (KVStore store : stores) {
+    void tearDown() {
+        for (KVStoreRPC store : stores) {
             store.shutdown();
+        }
+        for (KVStoreClient client : clients) {
+            client.shutdown();
         }
     }
 
     @Test
-    void testMultiPutGetMultiThreaded() throws KVOperationException, InterruptedException, ExecutionException {
+    void testPutGetDeleteMultiThreaded() throws KVOperationException, InterruptedException, ExecutionException {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
         MultiThreadExecutor exec = new MultiThreadExecutor();
         for (int i = 0; i < 1000; i++) {
@@ -83,16 +113,16 @@ public class RaftKVIT {
             exec.execute(() -> {
                 String key = "k" + finalI;
                 String val = "v" + finalI;
-                assertTrue(stores[randomNodeId()].put(key, val));
+                clients[randomNodeId()].set(key, val);
                 if (RNG.nextBoolean()) {   // in some cases, remove the entry
-                    assertTrue(stores[randomNodeId()].remove(key));
+                    clients[randomNodeId()].delete(key);
                 } else {    // in other cases, just leave it inserted.
                     expectedEntries.put(key, val);
                 }
             });
         }
         exec.endExecution();
-        Thread.sleep(5000);
+        Thread.sleep(5000); // allow time to sync
         assertEntriesForAll(expectedEntries);
     }
 
@@ -102,15 +132,15 @@ public class RaftKVIT {
         System.out.println("SHUTDOWN------------------------------");
         Thread.sleep(20000);
 
-        stores[1].put("k0", "v0");
+        clients[1].set("k0", "v0");
         Thread.sleep(5000);
 
         System.out.println("RESTART++++++++++++++++++++++++++++");
         stores[0].start();
 
         Thread.sleep(5000);
-        assertEquals("v0", stores[0].get("k0"));
-        assertEquals("v0", stores[1].get("k0"));
+        assertEquals("v0", clients[0].get("k0"));
+        assertEquals("v0", clients[1].get("k0"));
     }
 
     private int randomNodeId() {
@@ -120,25 +150,33 @@ public class RaftKVIT {
     void assertEntriesForAll(Map<String, String> expectedEntries) throws KVOperationException {
         assertStoreSizeForAll(expectedEntries.size());
         for (String expKey : expectedEntries.keySet()) {
-            for (KVStore store : stores) {
-                assertEquals(expectedEntries.get(expKey), store.get(expKey));
+            for (KVStoreClient client : clients) {
+                assertEquals(expectedEntries.get(expKey), client.get(expKey));
             }
         }
     }
 
     void assertStoreSizeForAll(int size) throws KVOperationException {
-        for (KVStore store : stores) {
-            assertEquals(size, store.keySet().size());
+        for (KVStoreClient client : clients) {
+            assertEquals(size, client.iterateKeys().size());
         }
     }
 
-    NettyServerTransport createServerTransport(int port, String destinations) {
+    NettyServerTransport createServerTransport(Destination myAddress) {
         Properties properties = new Properties();
-        properties.put("transport.netty.port", port + "");
-        properties.put("transport.netty.destinations", destinations);
+        properties.put("transport.netty.port", myAddress.getPort() + "");
+        properties.put("transport.netty.destinations", NODE_DESTINATIONS_STR);
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyServerTransport(config);
+    }
+
+    NettyClientTransport createClientTransport(Destination storeDestination) {
+        Properties properties = new Properties();
+        properties.put("transport.netty.destinations", storeDestination.toString());
+        // create new config per transport
+        NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
+        return new NettyClientTransport(config);
     }
 
     RaftNode createNode(int nodeId, Transport transport) {
@@ -147,5 +185,9 @@ public class RaftKVIT {
         // create new config per node (for unique ids)
         RaftConfig config = Configuration.newInstance(RaftConfig.class, properties);
         return new RaftNode(config, transport);
+    }
+
+    private static void addDestination(List<Destination> destinations, int nodeId, String host, int port) {
+        Objects.requireNonNull(destinations).add(new Destination(nodeId, host, port));
     }
 }

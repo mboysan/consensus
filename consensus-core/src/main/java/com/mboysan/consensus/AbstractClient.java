@@ -1,17 +1,10 @@
 package com.mboysan.consensus;
 
-import java.util.Set;
-
-abstract class AbstractClient implements RPCProtocol {
+abstract class AbstractClient {
     private final Transport transport;
 
     AbstractClient(Transport transport) {
         this.transport = transport;
-    }
-
-    @Override
-    public void onNodeListChanged(Set<Integer> serverIds) {
-        throw new UnsupportedOperationException("this is relevant to only the RaftServer");
     }
 
     Transport getTransport() {

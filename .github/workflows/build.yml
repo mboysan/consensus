@@ -46,6 +46,8 @@ jobs:
         if: ${{ failure() }}
         run: |
           touch tests.log
+          echo -e "\n----- consensus-core logs -----" >> tests.log
+          cat consensus-network/target/tests.log >> tests.log
           echo -e "\n----- consensus-network logs -----" >> tests.log
           cat consensus-network/target/tests.log >> tests.log
           echo -e "\n----- consensus-bizur logs -----" >> tests.log

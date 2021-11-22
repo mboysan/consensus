@@ -51,6 +51,10 @@ abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<
         }
     }
 
+    Transport getTransport() {
+        return transport;
+    }
+
     N getNode(int index) {
         return nodes[index];
     }

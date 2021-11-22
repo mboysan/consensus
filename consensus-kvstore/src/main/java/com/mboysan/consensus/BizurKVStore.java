@@ -1,66 +1,57 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.util.CheckedSupplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVDeleteResponse;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVGetResponse;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVIterateKeysResponse;
+import com.mboysan.consensus.message.KVSetRequest;
+import com.mboysan.consensus.message.KVSetResponse;
 
-import java.util.Set;
+public class BizurKVStore extends AbstractKVStore<BizurNode> {
 
-public class BizurKVStore implements KVStore {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(BizurKVStore.class);
-
-    private final BizurNode bizur;
-
-    public BizurKVStore(BizurNode bizur) {
-        this.bizur = bizur;
+    public BizurKVStore(BizurNode node, Transport clientServingTransport) {
+        super(node, clientServingTransport);
     }
 
     @Override
-    public synchronized void start() throws Exception {
-        bizur.start().get();
-    }
-
-    @Override
-    public synchronized void shutdown() {
-        bizur.shutdown();
-    }
-
-    @Override
-    public boolean put(String key, String value) throws KVOperationException {
-        return exec(() -> {
-            bizur.set(key, value).get();
-            return true;
-        });
-    }
-
-    @Override
-    public String get(String key) throws KVOperationException {
-        return exec(() -> bizur.get(key).get());
-    }
-
-    @Override
-    public boolean remove(String key) throws KVOperationException {
-        return exec(() -> {
-            bizur.delete(key).get();
-            return true;
-        });
-    }
-
-    @Override
-    public Set<String> keySet() throws KVOperationException {
-        return exec(() -> bizur.iterateKeys().get());
-    }
-
-    private <T> T exec(CheckedSupplier<T> supplier) throws KVOperationException {
+    public KVGetResponse get(KVGetRequest request) {
         try {
-            return supplier.get();
+            return getNode().get(request);
         } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new KVOperationException(e);
+            logError(request, e);
+            return new KVGetResponse(false, e, null);
+        }
+    }
+
+    @Override
+    public KVSetResponse set(KVSetRequest request) {
+        try {
+            return getNode().set(request);
+        } catch (Exception e) {
+            logError(request, e);
+            return new KVSetResponse(false, e);
+        }
+    }
+
+    @Override
+    public KVDeleteResponse delete(KVDeleteRequest request) {
+        try {
+            return getNode().delete(request);
+        } catch (Exception e) {
+            logError(request, e);
+            return new KVDeleteResponse(false, e);
+        }
+    }
+
+    @Override
+    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) {
+        try {
+            return getNode().iterateKeys(request);
+        } catch (Exception e) {
+            logError(request, e);
+            return new KVIterateKeysResponse(false, e, null);
         }
     }
 }

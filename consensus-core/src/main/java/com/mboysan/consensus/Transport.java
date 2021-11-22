@@ -3,12 +3,14 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.message.Message;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 public interface Transport {
-    void addNode(int nodeId, RPCProtocol requestProcessor);
+    void registerMessageProcessor(Function<Message, Message> messageProcessor);
 
-    void removeNode(int nodeId);
+    Set<Integer> getDestinationNodeIds();
 
     Future<Message> sendRecvAsync(Message message) throws IOException;
 
