@@ -93,28 +93,37 @@ public class NettyTransportIT {
     void testSomeUnhappyPaths() {
         // --- server transport unhappy paths
         NettyServerTransport server = serverTransports[0];
+        assertFalse(server.verifyShutdown());   // server should be running
+
         assertDoesNotThrow(server::start); // 2nd start does nothing (increase code cov)
 
         assertThrows(UnsupportedOperationException.class, () -> server.sendRecvAsync(new TestMessage("")));
-        assertThrows(IllegalStateException.class, () -> server.sendRecv(new TestMessage("")));
 
         server.shutdown();
         assertDoesNotThrow(server::shutdown); // 2nd shutdown does nothing (increase code cov)
+        assertTrue(server.verifyShutdown());   // server should be shut down
 
         // --- client transport unhappy paths
-        NettyClientTransport client = clientTransports[0];
+        NettyClientTransport client = createClientTransport();
+        assertTrue(client.verifyShutdown());    // client is not started yet.
+
+        assertThrows(IllegalStateException.class, () -> client.sendRecv(new TestMessage("")));
+
+        client.start();
         assertDoesNotThrow(client::start); // 2nd start does nothing (increase code cov)
+        assertFalse(client.verifyShutdown());   // client should be running
 
         assertFalse(client.isShared());
 
         assertThrows(UnsupportedOperationException.class, () -> client.registerMessageProcessor(null));
 
         Message message = mock(Message.class);
-        when(message.getId()).thenReturn(null);
+        when(message.getId()).thenReturn(null); // msg id must be present
         assertThrows(IllegalArgumentException.class, () -> client.sendRecv(message));
 
         client.shutdown();
         assertDoesNotThrow(client::shutdown); // 2nd shutdown does nothing (increase code cov)
+        assertTrue(client.verifyShutdown());   // server should be shut down
     }
 
     @Test
