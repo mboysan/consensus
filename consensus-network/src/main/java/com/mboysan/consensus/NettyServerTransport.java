@@ -96,6 +96,9 @@ public class NettyServerTransport implements Transport {
                     })
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
             channel = b.bind(port).sync().channel();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
         } catch (Exception e) {
             throw new IOException(e);
         }
