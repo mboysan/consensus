@@ -91,10 +91,6 @@ public class NettyClientTransport implements Transport {
         try {
             sendUsingClientPool(message);
             return msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            callbackMap.remove(message.getId());
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
         } catch (Exception e) {
             callbackMap.remove(message.getId());
             throw new IOException(e);
@@ -184,9 +180,6 @@ public class NettyClientTransport implements Transport {
                         });
                 ChannelFuture f = b.connect(destination.getIp(), destination.getPort()).sync();
                 this.channel = (SocketChannel) f.channel();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException(e);
             } catch (Exception e) {
                 throw new IOException(e);
             }

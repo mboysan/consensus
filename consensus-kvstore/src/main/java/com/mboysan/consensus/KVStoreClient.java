@@ -90,10 +90,6 @@ public class KVStoreClient extends AbstractClient {
     private <T> T exec(CheckedSupplier<T> supplier) throws KVOperationException {
         try {
             return supplier.get();
-        } catch (InterruptedException e) {
-            LOGGER.error(e.getMessage(), e);
-            Thread.currentThread().interrupt();
-            throw new KVOperationException(e);
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             throw new KVOperationException(e);

@@ -10,11 +10,4 @@ public class NodeStoppedEvent implements IEvent {
     public int getSourceNodeId() {
         return sourceNodeId;
     }
-
-    @Override
-    public String toString() {
-        return "NodeStoppedEvent{" +
-                "nodeId=" + sourceNodeId +
-                '}';
-    }
 }

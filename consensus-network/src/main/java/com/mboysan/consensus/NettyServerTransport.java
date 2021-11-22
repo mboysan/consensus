@@ -96,8 +96,7 @@ public class NettyServerTransport implements Transport {
                     })
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
             channel = b.bind(port).sync().channel();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        } catch (Exception e) {
             throw new IOException(e);
         }
         clientTransport.start();
@@ -158,9 +157,6 @@ public class NettyServerTransport implements Transport {
     private void shutdown(CheckedSupplier<?> toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).get();
-        } catch (InterruptedException e) {
-            LOGGER.error(e.getMessage(), e);
-            Thread.currentThread().interrupt();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }

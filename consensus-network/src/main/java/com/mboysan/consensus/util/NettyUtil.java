@@ -62,9 +62,8 @@ public final class NettyUtil {
             socket.setReuseAddress(true);
             return socket.getLocalPort();
         } catch (IOException e) {
-            LOGGER.warn("err closing socket. msg={}", e.getMessage(), e);
+            throw new IllegalStateException("Could not find a free TCP/IP port.", e);
         }
-        throw new IllegalStateException("Could not find a free TCP/IP port.");
     }
 
 }

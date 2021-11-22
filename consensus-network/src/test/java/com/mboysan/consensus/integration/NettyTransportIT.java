@@ -7,6 +7,7 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import com.mboysan.consensus.util.NettyUtil;
@@ -21,10 +22,13 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class NettyTransportIT {
 
@@ -86,17 +90,31 @@ public class NettyTransportIT {
     }
 
     @Test
-    void testSomeUnhappyPaths() throws IOException {
-        serverTransports[0].start();    // 2nd start does nothing (increase code cov)
-        serverTransports[0].shutdown();
-        serverTransports[0].shutdown(); // 2nd shutdown does nothing (increase code cov)
-        assertThrows(UnsupportedOperationException.class, () -> serverTransports[0].sendRecvAsync(new TestMessage("")));
-        assertThrows(IllegalStateException.class, () -> serverTransports[0].sendRecv(new TestMessage("")));
+    void testSomeUnhappyPaths() {
+        // --- server transport unhappy paths
+        NettyServerTransport server = serverTransports[0];
+        assertDoesNotThrow(server::start); // 2nd start does nothing (increase code cov)
 
-        NettyClientTransport client = createClientTransport();
+        assertThrows(UnsupportedOperationException.class, () -> server.sendRecvAsync(new TestMessage("")));
+        assertThrows(IllegalStateException.class, () -> server.sendRecv(new TestMessage("")));
+
+        server.shutdown();
+        assertDoesNotThrow(server::shutdown); // 2nd shutdown does nothing (increase code cov)
+
+        // --- client transport unhappy paths
+        NettyClientTransport client = clientTransports[0];
+        assertDoesNotThrow(client::start); // 2nd start does nothing (increase code cov)
+
         assertFalse(client.isShared());
+
+        assertThrows(UnsupportedOperationException.class, () -> client.registerMessageProcessor(null));
+
+        Message message = mock(Message.class);
+        when(message.getId()).thenReturn(null);
+        assertThrows(IllegalArgumentException.class, () -> client.sendRecv(message));
+
         client.shutdown();
-        client.shutdown();  // 2nd shutdown does nothing (increase code cov)
+        assertDoesNotThrow(client::shutdown); // 2nd shutdown does nothing (increase code cov)
     }
 
     @Test

@@ -18,12 +18,4 @@ public class NodeListChangedEvent implements IEvent {
     public Set<Integer> getServerIds() {
         return serverIds;
     }
-
-    @Override
-    public String toString() {
-        return "NodeListChangedEvent{" +
-                "targetNodeId=" + targetNodeId +
-                ", serverIds=" + serverIds +
-                '}';
-    }
 }
