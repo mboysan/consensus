@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.message.Message;
 import io.netty.bootstrap.Bootstrap;
@@ -24,8 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +39,7 @@ public class NettyClientTransport implements Transport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClientTransport.class);
 
-    private final Map<Integer, String> destinations;
+    private final Map<Integer, Destination> destinations;
     private final long messageCallbackTimeoutMs;
     private final int clientPoolSize;
     private volatile boolean isRunning = false;
@@ -123,7 +122,7 @@ public class NettyClientTransport implements Transport {
 
     private ObjectPool<NettyClient> getOrCreateClientPool(int receiverId) {
         return clientPools.computeIfAbsent(receiverId, (id) -> {
-            String dest = destinations.get(id);
+            Destination dest = destinations.get(id);
             NettyClientFactory clientFactory = new NettyClientFactory(dest, callbackMap);
             GenericObjectPoolConfig<NettyClient> poolConfig = new GenericObjectPoolConfig<>();
             poolConfig.setMaxTotal(clientPoolSize);
@@ -152,14 +151,11 @@ public class NettyClientTransport implements Transport {
     private static class NettyClient {
         private final EventLoopGroup group;
         private SocketChannel channel;
-        private final InetAddress ip;
-        private final int port;
+        private final Destination destination;
         private final Map<String, CompletableFuture<Message>> callbackMap;
 
-        NettyClient(String destAddress, Map<String, CompletableFuture<Message>> callbackMap) throws UnknownHostException {
-            String[] dest = destAddress.split(":");
-            this.ip = InetAddress.getByName(dest[0]);
-            this.port = Integer.parseInt(dest[1]);
+        NettyClient(Destination destination, Map<String, CompletableFuture<Message>> callbackMap) {
+            this.destination = destination;
             this.group = new NioEventLoopGroup(1);
             this.callbackMap = callbackMap;
         }
@@ -186,7 +182,7 @@ public class NettyClientTransport implements Transport {
                                 });
                             }
                         });
-                ChannelFuture f = b.connect(ip, port).sync();
+                ChannelFuture f = b.connect(destination.getIp(), destination.getPort()).sync();
                 this.channel = (SocketChannel) f.channel();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -215,17 +211,17 @@ public class NettyClientTransport implements Transport {
     }
 
     private static class NettyClientFactory extends BasePooledObjectFactory<NettyClient> {
-        private final String destAddress;
+        private final Destination destination;
         private final Map<String, CompletableFuture<Message>> callbackMap;
 
-        private NettyClientFactory(String destAddress, Map<String, CompletableFuture<Message>> callbackMap) {
-            this.destAddress = destAddress;
+        private NettyClientFactory(Destination destination, Map<String, CompletableFuture<Message>> callbackMap) {
+            this.destination = destination;
             this.callbackMap = callbackMap;
         }
 
         @Override
-        public NettyClient create() throws Exception {
-            return new NettyClient(destAddress, callbackMap);
+        public NettyClient create() {
+            return new NettyClient(destination, callbackMap);
         }
 
         @Override

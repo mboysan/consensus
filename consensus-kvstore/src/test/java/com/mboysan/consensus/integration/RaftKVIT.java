@@ -9,21 +9,22 @@ import com.mboysan.consensus.RaftKVStore;
 import com.mboysan.consensus.RaftNode;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import com.mboysan.consensus.util.NettyUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
-import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -37,18 +38,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class RaftKVIT {
     private static final Random RNG = new Random();
 
-    private static final int NUM_NODES = 3;
-    private static final Map<Integer, String> NODE_DESTINATIONS = new HashMap<>() {{
-        put(0, "localhost:8080");
-        put(1, "localhost:8081");
-        put(2, "localhost:8082");
-    }};
+    private static final List<Destination> NODE_DESTINATIONS = new ArrayList<>();
+    static {
+        addDestination(NODE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+    }
+    private static final String NODE_DESTINATIONS_STR = NettyUtil.convertDestinationsListToProps(NODE_DESTINATIONS);
 
-    private static final Map<Integer, String> STORE_DESTINATIONS = new HashMap<>() {{
-        put(0, "localhost:8083");
-        put(1, "localhost:8084");
-        put(2, "localhost:8085");
-    }};
+    private static final List<Destination> STORE_DESTINATIONS = new ArrayList<>();
+    static {
+        addDestination(STORE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+    }
 
     private KVStoreRPC[] stores;
     private KVStoreClient[] clients;
@@ -61,14 +68,14 @@ public class RaftKVIT {
 
     private void startServers() throws ExecutionException, InterruptedException, IOException {
         List<Future<?>> startFutures = new ArrayList<>();
-        stores = new KVStoreRPC[NUM_NODES];
+        stores = new KVStoreRPC[NODE_DESTINATIONS.size()];
         for (int i = 0; i < stores.length; i++) {
-            int nodePort = 8080 + i;
-            Transport nodeTransport = createServerTransport(nodePort, NODE_DESTINATIONS);
+            Destination nodeDestination = NODE_DESTINATIONS.get(i);
+            Transport nodeTransport = createServerTransport(nodeDestination);
             RaftNode raftNode = createNode(i, nodeTransport);
 
-            int storePort = 8083 + i;
-            Transport storeTransport = createServerTransport(storePort, STORE_DESTINATIONS);
+            Destination storeDestination = STORE_DESTINATIONS.get(i);
+            Transport storeTransport = createServerTransport(storeDestination);
             stores[i] = new RaftKVStore(raftNode, storeTransport);
             startFutures.add(stores[i].start());
         }
@@ -78,9 +85,10 @@ public class RaftKVIT {
     }
 
     private void startClients() throws IOException {
-        clients = new KVStoreClient[NUM_NODES];
+        clients = new KVStoreClient[STORE_DESTINATIONS.size()];
         for (int i = 0; i < clients.length; i++) {
-            Transport transport = createClientTransport(i);
+            Destination storeDestination = STORE_DESTINATIONS.get(i);
+            Transport transport = createClientTransport(storeDestination);
             clients[i] = new KVStoreClient(transport);
             clients[i].start();
         }
@@ -154,26 +162,18 @@ public class RaftKVIT {
         }
     }
 
-    NettyServerTransport createServerTransport(int port, Map<Integer, String> destinations) {
-        StringJoiner sj = new StringJoiner(",");
-        for (Map.Entry<Integer, String> entry : destinations.entrySet()) {
-            sj.add(entry.getKey() + "=" + entry.getValue());
-        }
-        String nettyDestinations = sj.toString();
-
+    NettyServerTransport createServerTransport(Destination myAddress) {
         Properties properties = new Properties();
-        properties.put("transport.netty.port", port + "");
-        properties.put("transport.netty.destinations", nettyDestinations);
+        properties.put("transport.netty.port", myAddress.getPort() + "");
+        properties.put("transport.netty.destinations", NODE_DESTINATIONS_STR);
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyServerTransport(config);
     }
 
-    NettyClientTransport createClientTransport(int nodeId) {
-        String destination = nodeId + "=" + STORE_DESTINATIONS.get(nodeId);
-
+    NettyClientTransport createClientTransport(Destination storeDestination) {
         Properties properties = new Properties();
-        properties.put("transport.netty.destinations", destination);
+        properties.put("transport.netty.destinations", storeDestination.toString());
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyClientTransport(config);
@@ -185,5 +185,9 @@ public class RaftKVIT {
         // create new config per node (for unique ids)
         RaftConfig config = Configuration.newInstance(RaftConfig.class, properties);
         return new RaftNode(config, transport);
+    }
+
+    private static void addDestination(List<Destination> destinations, int nodeId, String host, int port) {
+        Objects.requireNonNull(destinations).add(new Destination(nodeId, host, port));
     }
 }

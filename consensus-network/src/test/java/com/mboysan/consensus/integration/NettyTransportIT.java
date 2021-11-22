@@ -1,20 +1,22 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.EchoRPCProtocol;
-import com.mboysan.consensus.EventManager;
 import com.mboysan.consensus.NettyClientTransport;
 import com.mboysan.consensus.NettyServerTransport;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
-import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import com.mboysan.consensus.util.NettyUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +30,12 @@ public class NettyTransportIT {
 
     private static final int NUM_SERVERS = 3;
     private static final int NUM_CLIENTS = 3;
-    private static final String DESTINATIONS = "0=localhost:8080, 1=localhost:8081, 2=localhost:8082";
+    private static final List<Destination> DESTINATIONS = new ArrayList<>();
+    static {
+        addDestination(0, "localhost", NettyUtil.findFreePort());
+        addDestination(1, "localhost", NettyUtil.findFreePort());
+        addDestination(2, "localhost", NettyUtil.findFreePort());
+    }
     private NettyServerTransport[] serverTransports;
     private NettyClientTransport[] clientTransports;
 
@@ -41,7 +48,8 @@ public class NettyTransportIT {
     private void setupServers() throws IOException {
         serverTransports = new NettyServerTransport[NUM_SERVERS];
         for (int i = 0; i < serverTransports.length; i++) {
-            NettyServerTransport serverTransport = createServerTransport(8080 + i);
+            int port = DESTINATIONS.get(i).getPort();
+            NettyServerTransport serverTransport = createServerTransport(port);
             serverTransport.registerMessageProcessor(new EchoRPCProtocol());
             serverTransports[i] = serverTransport;
             serverTransport.start();
@@ -150,7 +158,7 @@ public class NettyTransportIT {
     NettyServerTransport createServerTransport(int port) {
         Properties properties = new Properties();
         properties.put("transport.netty.port", port + "");
-        properties.put("transport.netty.destinations", DESTINATIONS);
+        properties.put("transport.netty.destinations", NettyUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyServerTransport(config);
@@ -158,9 +166,13 @@ public class NettyTransportIT {
 
     NettyClientTransport createClientTransport() {
         Properties properties = new Properties();
-        properties.put("transport.netty.destinations", DESTINATIONS);
+        properties.put("transport.netty.destinations", NettyUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyClientTransport(config);
+    }
+
+    private static void addDestination(int nodeId, String host, int port) {
+        DESTINATIONS.add(new Destination(nodeId, host, port));
     }
 }

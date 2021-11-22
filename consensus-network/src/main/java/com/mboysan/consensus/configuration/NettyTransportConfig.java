@@ -1,11 +1,10 @@
 package com.mboysan.consensus.configuration;
 
+import com.mboysan.consensus.util.NettyUtil;
 import org.aeonbits.owner.Converter;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public interface NettyTransportConfig extends Configuration {
 
@@ -24,26 +23,16 @@ public interface NettyTransportConfig extends Configuration {
      */
     @Key("transport.netty.destinations")
     @ConverterClass(DestinationsConverter.class)
-    Map<Integer,String> destinations();
+    Map<Integer, Destination> destinations();
 
     @Key("transport.netty.clientPoolSize")
     @DefaultValue("8")
     int clientPoolSize();
 
-    class DestinationsConverter implements Converter<Map<Integer, String>> {
+    class DestinationsConverter implements Converter<Map<Integer, Destination>> {
         @Override
-        public Map<Integer, String> convert(Method method, String s) {
-            Objects.requireNonNull(s);
-            s = s.replaceAll("\\s+","");    // remove whitespace
-            Map<Integer,String> destinations = new HashMap<>();
-            String[] allDestinations = s.split(",");
-            for (String destination : allDestinations) {
-                String[] idDestinationPair = destination.split("=");
-                Integer id = Integer.parseInt(idDestinationPair[0]);
-                String ipPortPair = idDestinationPair[1];
-                destinations.put(id, ipPortPair);
-            }
-            return destinations;
+        public Map<Integer, Destination> convert(Method method, String s) {
+            return NettyUtil.convertPropsToDestinationsMap(s);
         }
     }
 }

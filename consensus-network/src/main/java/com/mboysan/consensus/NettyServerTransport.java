@@ -1,5 +1,6 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
@@ -34,7 +35,7 @@ public class NettyServerTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyServerTransport.class);
 
     private final int port;
-    private final Map<Integer, String> destinations;
+    private final Map<Integer, Destination> destinations;
     private volatile boolean isRunning = false;
 
     private EventLoopGroup bossGroup;
@@ -53,7 +54,6 @@ public class NettyServerTransport implements Transport {
         this.clientTransport = new NettyClientTransport(config);
 
         EventManager.getInstance().registerEventListener(NodeStartedEvent.class, this::onNodeStarted);
-//        EventManager.getInstance().registerEventListener(AddRequestProcessorEvent.class, this::onAddRequestProcessor);
     }
 
     @Override
