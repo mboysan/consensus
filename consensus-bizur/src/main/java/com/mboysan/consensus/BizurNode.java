@@ -44,6 +44,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     private final int numBuckets;
     private final long updateIntervalMs;
     private long electionTimeoutMs;
+    private long nextElectionTime;
 
     private final Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>();
 
@@ -55,6 +56,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
         this.numBuckets = config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
+        this.electionTimeoutMs = config.electionTimeoutMs();
     }
 
     @Override
@@ -71,8 +73,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
         this.electionTimeoutMs = electionTimeoutMs * electId;
-        LOGGER.info("node-{} modified electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
-
+        this.nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
+        LOGGER.info("node-{} modified electionTimeoutMs={}, nextElectionTime={}",
+                getNodeId(), electionTimeoutMs, nextElectionTime);
         getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
@@ -114,16 +117,27 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         synchronized (bizurState) {
             leaderId = bizurState.getLeaderId();
         }
-        if (leaderId == -1) {   // if no leader, try to become leader
-            getTimers().sleep(electionTimeoutMs);
-            new BizurRun(this).startElection();
-            update();
-            return;
-        }
         if (leaderId == getNodeId()) {
             return; // I am the leader, no need to take action
         }
+        if (isElectionNeeded(leaderId)) {
+            new BizurRun(this).startElection();
+        }
+    }
 
+    private boolean isElectionNeeded(int leaderId) {
+        long currentTime = getTimers().currentTime();
+        if (currentTime >= nextElectionTime) {
+            nextElectionTime = currentTime + electionTimeoutMs;
+            if (leaderId == -1 || !heartbeat(leaderId)) {   // if no leader or leader dead
+                LOGGER.info("node-{} needs a new election", getNodeId());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean heartbeat(int leaderId) {
         HeartbeatRequest request = new HeartbeatRequest(System.currentTimeMillis())
                 .setSenderId(getNodeId())
                 .setReceiverId(leaderId);
@@ -133,13 +147,13 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 long elapsed = response.getSendTimeMs() - request.getSendTimeMs();
                 LOGGER.trace("peer-{} heartbeat elapsed={}", leaderId, elapsed);
             }
+            return true;
         } catch (IOException e) {
             LOGGER.error("peer-{} IO exception for request={}, cause={}", leaderId, request, e.getMessage());
-            // leader is dead, lets start the election.
-            getTimers().sleep(electionTimeoutMs);
-            new BizurRun(this).startElection();
+            return false;
         }
     }
+
 
     /*----------------------------------------------------------------------------------
      * Internal RPC Commands
