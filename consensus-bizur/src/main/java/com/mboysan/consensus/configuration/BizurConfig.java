@@ -6,10 +6,6 @@ public interface BizurConfig extends Configuration {
     int numBuckets();
 
     @Key("bizur.updateIntervalMs")
-    @DefaultValue("500")
-    long updateIntervalMs();
-
-    @Key("bizur.electionTimeoutMs")
     @DefaultValue("5000")
-    long electionTimeoutMs();
+    long updateIntervalMs();
 }

@@ -42,9 +42,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     private final Lock updateLock = new ReentrantLock();
 
     private final int numBuckets;
-    private final long updateIntervalMs;
-    private long electionTimeoutMs;
-    private long nextElectionTime;
+    private long updateIntervalMs;
 
     private final Map<Integer, Bucket> bucketMap = new ConcurrentHashMap<>();
 
@@ -56,7 +54,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
         this.numBuckets = config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
-        this.electionTimeoutMs = config.electionTimeoutMs();
     }
 
     @Override
@@ -72,10 +69,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
-        this.electionTimeoutMs = electionTimeoutMs * electId;
-        this.nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
-        LOGGER.info("node-{} modified electionTimeoutMs={}, nextElectionTime={}",
-                getNodeId(), electionTimeoutMs, nextElectionTime);
+        this.updateIntervalMs = updateIntervalMs * electId;
+        LOGGER.info("node-{} modified updateIntervalMs={}", getNodeId(), updateIntervalMs);
         getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
@@ -126,13 +121,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     private boolean isElectionNeeded(int leaderId) {
-        long currentTime = getTimers().currentTime();
-        if (currentTime >= nextElectionTime) {
-            nextElectionTime = currentTime + electionTimeoutMs;
-            if (leaderId == -1 || !heartbeat(leaderId)) {   // if no leader or leader dead
-                LOGGER.info("node-{} needs a new election", getNodeId());
-                return true;
-            }
+        if (leaderId == -1 || !heartbeat(leaderId)) {   // if no leader or leader dead
+            LOGGER.info("node-{} needs a new election", getNodeId());
+            return true;
         }
         return false;
     }
