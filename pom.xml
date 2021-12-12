@@ -33,8 +33,8 @@
         <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
         <maven.jar.plugin.version>3.2.0</maven.jar.plugin.version>
         <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
-        <maven.surefire.version>3.0.0-M5</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
-        <maven.failsafe.version>3.0.0-M5</maven.failsafe.version>
+        <maven.surefire.version>3.0.0-M4</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
+        <maven.failsafe.version>3.0.0-M4</maven.failsafe.version>
         <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
         <mockito.version>1.10.19</mockito.version>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
