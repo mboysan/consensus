@@ -25,7 +25,7 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
 
     @Override
     default long getElectionTimeoutOf(BizurNode node) {
-        return ((BizurConfig) node.getConfiguration()).electionTimeoutMs();
+        return ((BizurConfig) node.getConfiguration()).updateIntervalMs();
     }
 
     @Override

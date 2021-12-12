@@ -44,8 +44,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         super(config, transport);
         this.rpcClient = new RaftClient(transport);
 
-        this.electionTimeoutMs = config.electionTimeoutMs();
         this.updateIntervalMs = config.updateIntervalMs();
+        this.electionTimeoutMs = config.electionTimeoutMs();
     }
 
     @Override
@@ -71,9 +71,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
         this.electionTimeoutMs = electionTimeoutMs * electId;
-        LOGGER.info("node-{} modified electionTimeoutMs={}", getNodeId(), electionTimeoutMs);
-
-        nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
+        this.nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
+        LOGGER.info("node-{} modified electionTimeoutMs={}, nextElectionTime={}",
+                getNodeId(), electionTimeoutMs, nextElectionTime);
         getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {

@@ -3,6 +3,8 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.util.TimersForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -18,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<N> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeTestBase.class);
+
     private static final long SEED = 1L;
 
     private static final TimersForTesting TIMER = new TimersForTesting();
@@ -44,6 +48,7 @@ abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<
             futures.add(node.start());
         }
         advanceTimeInterval = getElectionTimeoutOf(nodes[0]) * nodes.length;
+        LOGGER.info("advanceTimeInterval={}", advanceTimeInterval);
 
         advanceTimeForElections();
         for (Future<Void> future : futures) {
