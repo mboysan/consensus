@@ -21,7 +21,7 @@
         <revision>1.0-SNAPSHOT</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.java.version>15</maven.compiler.java.version>
+        <maven.compiler.java.version>17</maven.compiler.java.version>
 
         <slf4j.version>1.7.30</slf4j.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
@@ -32,12 +32,12 @@
         <jacoco.maven.plugin.version>0.8.7</jacoco.maven.plugin.version>
         <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
         <maven.jar.plugin.version>3.2.0</maven.jar.plugin.version>
-        <maven.war.plugin.version>3.3.1</maven.war.plugin.version>
+        <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
         <maven.surefire.version>3.0.0-M4</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
         <maven.failsafe.version>3.0.0-M4</maven.failsafe.version>
         <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
         <mockito.version>1.10.19</mockito.version>
-        <junit.jupiter.version>5.7.1</junit.jupiter.version>
+        <junit.jupiter.version>5.8.2</junit.jupiter.version>
 
         <sonar.projectKey>mboysan_consensus</sonar.projectKey>
         <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
