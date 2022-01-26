@@ -25,8 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * {@link RaftKVStore} Integration Test.
  * TODO: improve this test
  */
-public class RaftKVIntegrationTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIntegrationTest.class);
+public class RaftKVIT {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIT.class);
 
     private static final String HOST_NAME = "localhost";
 
@@ -164,7 +164,7 @@ public class RaftKVIntegrationTest {
 
     NettyServerTransport createServerTransport(Destination myAddress) {
         Properties properties = new Properties();
-        properties.put("transport.netty.port", myAddress.getPort() + "");
+        properties.put("transport.netty.port", myAddress.port() + "");
         properties.put("transport.netty.destinations", NODE_DESTINATIONS_STR);
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);

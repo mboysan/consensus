@@ -23,11 +23,11 @@ class RaftLog implements Comparable<RaftLog> {
         if (index < 0 || index >= entries.size()) {
             return 0;
         }
-        return get(index).getTerm();
+        return get(index).term();
     }
 
     void push(LogEntry entry) {
-        if (entry.getTerm() == 0 || entry.getTerm() < lastLogTerm()) {
+        if (entry.term() == 0 || entry.term() < lastLogTerm()) {
             throw new IllegalArgumentException("new entry has lower term than the last entry's term");
         }
         entries.add(entry);

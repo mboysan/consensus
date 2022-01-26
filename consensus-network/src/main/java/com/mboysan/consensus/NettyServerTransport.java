@@ -99,7 +99,7 @@ public class NettyServerTransport implements Transport {
     }
 
     private synchronized void onNodeStarted(NodeStartedEvent event) {
-        int nodeId = event.getSourceNodeId();
+        int nodeId = event.sourceNodeId();
         Objects.requireNonNull(destinations);
         Set<Integer> nodeIds = new HashSet<>();
         destinations.forEach((id, dest) -> {

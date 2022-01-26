@@ -24,7 +24,7 @@ public final class NettyUtil {
 
     public static Map<Integer, Destination> convertPropsToDestinationsMap(String nettyDestProps) {
         List<Destination> destinations = convertPropsToDestinationsList(nettyDestProps);
-        return destinations.stream().collect(Collectors.toMap(Destination::getNodeId, identity()));
+        return destinations.stream().collect(Collectors.toMap(Destination::nodeId, identity()));
     }
 
     public static List<Destination> convertPropsToDestinationsList(String nettyDestProps) {

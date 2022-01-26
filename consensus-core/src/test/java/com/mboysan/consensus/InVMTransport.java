@@ -72,7 +72,7 @@ public class InVMTransport implements Transport {
     }
 
     private void onNodeStopped(NodeStoppedEvent event) {
-        int nodeId = event.getSourceNodeId();
+        int nodeId = event.sourceNodeId();
         Server server = serverMap.get(nodeId);
         if (server != null) {
             Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());

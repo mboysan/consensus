@@ -106,10 +106,10 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     abstract void update();
 
     private synchronized void onNodeListChanged(NodeListChangedEvent event) {
-        if (event.getTargetNodeId() != nodeId) {
+        if (event.targetNodeId() != nodeId) {
             return;
         }
-        Set<Integer> serverIds = event.getServerIds();
+        Set<Integer> serverIds = event.serverIds();
         // first, we add new peers for each new serverId.
         serverIds.forEach(peerId -> peers.computeIfAbsent(peerId, this::createPeer));
 

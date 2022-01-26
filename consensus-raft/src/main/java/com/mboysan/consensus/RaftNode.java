@@ -236,7 +236,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             state.lastApplied++;
             if (stateMachine != null) {
                 // apply on StateMachine
-                stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
+                stateMachine.accept(state.raftLog.get(state.lastApplied).command());
             }
         }
         synchronized (this) {

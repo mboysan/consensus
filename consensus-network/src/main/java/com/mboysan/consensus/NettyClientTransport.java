@@ -178,7 +178,7 @@ public class NettyClientTransport implements Transport {
                                 });
                             }
                         });
-                ChannelFuture f = b.connect(destination.getIp(), destination.getPort()).sync();
+                ChannelFuture f = b.connect(destination.ip(), destination.port()).sync();
                 this.channel = (SocketChannel) f.channel();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

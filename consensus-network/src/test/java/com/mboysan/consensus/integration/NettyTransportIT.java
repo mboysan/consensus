@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class NettyTransportIntegrationTest {
+class NettyTransportIT {
 
     private static final String HOST_NAME = "localhost";
 
@@ -50,7 +50,7 @@ class NettyTransportIntegrationTest {
     private void setupServers() throws IOException {
         serverTransports = new NettyServerTransport[NUM_SERVERS];
         for (int i = 0; i < serverTransports.length; i++) {
-            int port = DESTINATIONS.get(i).getPort();
+            int port = DESTINATIONS.get(i).port();
             NettyServerTransport serverTransport = createServerTransport(port);
             serverTransport.registerMessageProcessor(new EchoRPCProtocol());
             serverTransports[i] = serverTransport;
