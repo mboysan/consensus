@@ -11,17 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -34,8 +25,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     private final Transport transport;
     private final Timers timers;
 
-    ExecutorService peerExecutor;
-    ExecutorService commandExecutor;    // TODO: move this to KVStore
+    private ExecutorService peerExecutor;
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
@@ -72,9 +62,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
                 new BasicThreadFactory.Builder().namingPattern("PeerExec-" + nodeId + "-%d").daemon(true).build()
         );
-        commandExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("CmdExec-" + nodeId + "-%d").daemon(true).build()
-        );
 
         return startNode();
     }
@@ -87,7 +74,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
         isRunning = false;
         timers.shutdown();
-        commandExecutor.shutdown();
         peerExecutor.shutdown();
         peers.clear();
         eventManager.fireEvent(new NodeStoppedEvent(nodeId));

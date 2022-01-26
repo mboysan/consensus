@@ -1,25 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
-import com.mboysan.consensus.message.HeartbeatRequest;
-import com.mboysan.consensus.message.HeartbeatResponse;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVOperationResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
-import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.message.PleaseVoteRequest;
-import com.mboysan.consensus.message.PleaseVoteResponse;
-import com.mboysan.consensus.message.ReplicaReadRequest;
-import com.mboysan.consensus.message.ReplicaReadResponse;
-import com.mboysan.consensus.message.ReplicaWriteRequest;
-import com.mboysan.consensus.message.ReplicaWriteResponse;
-import com.mboysan.consensus.util.CheckedSupplier;
+import com.mboysan.consensus.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -290,52 +272,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .responseTo(request);
     }
 
-    // TODO: refactor and get rid of these
-
-    public Future<String> get(String key) {
-        return exec(() -> {
-            KVGetRequest request = new KVGetRequest(key);
-            KVGetResponse response = get(request);
-            validateResponse(response, request);
-            return response.getValue();
-        });
-    }
-
-    public Future<Void> set(String key, String value) {
-        return exec(() -> {
-            KVSetRequest request = new KVSetRequest(key, value);
-            KVSetResponse response = set(request);
-            validateResponse(response, request);
-            return null;
-        });
-    }
-
-    public Future<Void> delete(String key) {
-        return exec(() -> {
-            KVDeleteRequest request = new KVDeleteRequest(key);
-            KVDeleteResponse response = delete(request);
-            validateResponse(response, request);
-            return null;
-        });
-    }
-
-    public Future<Set<String>> iterateKeys() {
-        return exec(() -> {
-            KVIterateKeysRequest request = new KVIterateKeysRequest();
-            KVIterateKeysResponse response = iterateKeys(request);
-            validateResponse(response, request);
-            return response.getKeys();
-        });
-    }
-
-    private void validateResponse(KVOperationResponse response, Message forRequest) throws BizurException {
-        if (!response.isSuccess()) {
-            throw new BizurException(String.format("on node-%d: failed response=[%s] for request=[%s]",
-                    getNodeId(), response, forRequest.toString()));
-        }
-    }
-
-
     /*----------------------------------------------------------------------------------
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
@@ -360,18 +296,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private void logErrorForRequest(Exception exception, Message request) {
         LOGGER.error("err on node-{}: exception={}, request={}", getNodeId(), exception.getMessage(), request.toString());
-    }
-
-    private <T> Future<T> exec(CheckedSupplier<T> supplier) {
-        validateAction();
-        return commandExecutor.submit(() -> {
-            try {
-                return supplier.get();
-            } catch (Exception e) {
-                LOGGER.error(e.getMessage(), e);
-                throw e;
-            }
-        });
     }
 
     BizurState getBizurStateUnprotected() {
