@@ -24,6 +24,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     private final RaftClient rpcClient;
 
     private final Lock updateLock = new ReentrantLock();
+    private boolean notified = false;
 
     private final long updateIntervalMs;
     private long electionTimeoutMs;
@@ -266,7 +267,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             }
         }
         synchronized (this) {
-            notifyAll();
+            doNotifyAll();
         }
     }
 
@@ -339,7 +340,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 int term = state.currentTerm;
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {
-                        wait(); // wait for state machine advancement.
+                        doWait(); // wait for state machine advancement.
                     } catch (InterruptedException e) {
                         LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
                         Thread.currentThread().interrupt();
@@ -368,6 +369,18 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         state.role = FOLLOWER;
         state.votedFor = -1;
         state.seenLeader = false;
+    }
+
+    private synchronized void doWait() throws InterruptedException {
+        while (!notified) {
+            wait();
+        }
+        notified = false;
+    }
+
+    private synchronized void doNotifyAll() {
+        notified = true;
+        notifyAll();
     }
 
     /*----------------------------------------------------------------------------------

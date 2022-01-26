@@ -20,8 +20,8 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
         Transport transport = new InVMTransport();
         RaftNode node = createNode(0, transport, null);
 
-        assertThrows(IllegalStateException.class,
-                () -> node.stateMachineRequest(new StateMachineRequest("some-command")));
+        StateMachineRequest request = new StateMachineRequest("some-command");
+        assertThrows(IllegalStateException.class, () -> node.stateMachineRequest(request));
 
         node.shutdown();
         transport.shutdown();
