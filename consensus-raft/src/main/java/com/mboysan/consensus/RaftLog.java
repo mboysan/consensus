@@ -104,10 +104,7 @@ class RaftLog implements Comparable<RaftLog> {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof RaftLog)) return false;
-
-        RaftLog raftLog = (RaftLog) o;
-
+        if (!(o instanceof RaftLog raftLog)) return false;
         return entries.equals(raftLog.entries);
     }
 

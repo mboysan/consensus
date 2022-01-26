@@ -12,16 +12,12 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurNode.class);
 
     private final BizurClient rpcClient;
-
-    private final Lock updateLock = new ReentrantLock();
 
     private final int numBuckets;
     private long updateIntervalMs;
@@ -67,29 +63,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         });
     }
 
-    @Override
-    void shutdownNode() {
-        // no special logic needed
-    }
-
     /*----------------------------------------------------------------------------------
      * Algorithms
      * ----------------------------------------------------------------------------------*/
 
-    private void tryUpdate() {
-        if (updateLock.tryLock()) {
-            try {
-                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
-                update();
-            } finally {
-                updateLock.unlock();
-            }
-        } else {
-            LOGGER.debug("update in progress, skipped.");
-        }
-    }
-
-    private synchronized void update() {
+    @Override
+    synchronized void update() {
         int leaderId;
         synchronized (bizurState) {
             leaderId = bizurState.getLeaderId();
@@ -210,7 +189,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             }
         }
         // route to leader/peer
-        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
+        logRequestRouting(request, getNodeId(), leaderId);
         return getRPC().get(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -229,7 +208,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             }
         }
         // route to leader/peer
-        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
+        logRequestRouting(request, getNodeId(), leaderId);
         return getRPC().set(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -248,7 +227,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             }
         }
         // route to leader/peer
-        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
+        logRequestRouting(request, getNodeId(), leaderId);
         return getRPC().delete(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -267,7 +246,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             }
         }
         // route to leader/peer
-        LOGGER.debug("routing request={}, from={} to={}", request, getNodeId(), leaderId);
+        logRequestRouting(request, getNodeId(), leaderId);
         return getRPC().iterateKeys(request.setReceiverId(leaderId).setSenderId(getNodeId()))
                 .responseTo(request);
     }
@@ -294,8 +273,14 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         return bucketMap.computeIfAbsent(index, Bucket::new);
     }
 
+    private void logRequestRouting(Message request, int from, int to) {
+        LOGGER.debug("routing request={}, from={} to={}", request, from, to);
+    }
+
     private void logErrorForRequest(Exception exception, Message request) {
-        LOGGER.error("err on node-{}: exception={}, request={}", getNodeId(), exception.getMessage(), request.toString());
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error("err on node-{}: exception={}, request={}", getNodeId(), exception.getMessage(), request);
+        }
     }
 
     BizurState getBizurStateUnprotected() {

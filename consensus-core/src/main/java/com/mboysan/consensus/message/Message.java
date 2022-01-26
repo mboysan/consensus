@@ -13,9 +13,9 @@ public abstract class Message implements Serializable {
 
     private static final SecureRandom RNG;
     static {
-        String SEED = Configuration.getCached(Configuration.class).rngSeed();
-        LOGGER.info("message RNG seed = {}", SEED);
-        RNG = new SecureRandom(SEED.getBytes(StandardCharsets.UTF_8));
+        String seed = Configuration.getCached(Configuration.class).rngSeed();
+        LOGGER.info("message RNG seed = {}", seed);
+        RNG = new SecureRandom(seed.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

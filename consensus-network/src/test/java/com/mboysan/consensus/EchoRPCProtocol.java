@@ -6,10 +6,9 @@ import com.mboysan.consensus.message.TestMessage;
 public class EchoRPCProtocol implements RPCProtocol {
     @Override
     public Message processRequest(Message request) {
-        if (!(request instanceof TestMessage)) {
+        if (!(request instanceof TestMessage req)) {
             throw new IllegalArgumentException("unsupported message type");
         }
-        TestMessage req = (TestMessage) request;
         return new TestMessage(req.getPayload()).responseTo(req);
     }
 }

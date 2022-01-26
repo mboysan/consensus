@@ -34,10 +34,7 @@ public class Destination {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Destination)) return false;
-
-        Destination that = (Destination) o;
-
+        if (!(o instanceof Destination that)) return false;
         if (nodeId != that.nodeId) return false;
         if (port != that.port) return false;
         return ip.equals(that.ip);

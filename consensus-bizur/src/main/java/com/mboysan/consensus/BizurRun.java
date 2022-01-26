@@ -1,12 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.message.PleaseVoteRequest;
-import com.mboysan.consensus.message.PleaseVoteResponse;
-import com.mboysan.consensus.message.ReplicaReadRequest;
-import com.mboysan.consensus.message.ReplicaReadResponse;
-import com.mboysan.consensus.message.ReplicaWriteRequest;
-import com.mboysan.consensus.message.ReplicaWriteResponse;
+import com.mboysan.consensus.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,6 +70,11 @@ class BizurRun {
         return String.format("[node-%d, corrId=%s]", getNodeId(), correlationId);
     }
 
+    private void logPeerIOException(int peerId, Message request, IOException exception) {
+        LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
+                contextInfo(), peerId, request, exception.getMessage());
+    }
+
     /*------------------------------------------- Algorithms -------------------------------------------*/
 
     /*----------------------------------------------------------------------------------
@@ -98,8 +97,7 @@ class BizurRun {
                     ackCount.incrementAndGet();
                 }
             } catch (IOException e) {
-                LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
-                        contextInfo(), peer.peerId, request, e.getMessage());
+                logPeerIOException(peer.peerId, request, e);
             }
         });
         if (isMajorityAcked(ackCount.get())) {
@@ -137,8 +135,7 @@ class BizurRun {
                     ackCount.incrementAndGet();
                 }
             } catch (IOException e) {
-                LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
-                        contextInfo(), peer.peerId, request, e.getMessage());
+                logPeerIOException(peer.peerId, request, e);
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
@@ -172,8 +169,7 @@ class BizurRun {
                     ackCount.incrementAndGet();
                 }
             } catch (IOException e) {
-                LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
-                        contextInfo(), peer.peerId, request, e.getMessage());
+                logPeerIOException(peer.peerId, request, e);
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
@@ -205,17 +201,15 @@ class BizurRun {
                 if (response.isAcked()) {
                     BucketView bucketView = response.getBucketView();
                     synchronized (maxVerBucketView) {
-                        if (!maxVerBucketView.compareAndSet(null, bucketView)) {
-                            if (bucketView.compareTo(maxVerBucketView.get()) > 0) {
-                                maxVerBucketView.set(bucketView);
-                            }
+                        if (!maxVerBucketView.compareAndSet(null, bucketView)
+                                && bucketView.compareTo(maxVerBucketView.get()) > 0) {
+                            maxVerBucketView.set(bucketView);
                         }
                     }
                     ackCount.incrementAndGet();
                 }
             } catch (IOException e) {
-                LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
-                        contextInfo(), peer.peerId, request, e.getMessage());
+                logPeerIOException(peer.peerId, request, e);
             }
         });
         if (isMajorityAcked(ackCount.get())) {

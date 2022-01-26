@@ -7,17 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<N> {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeTestBase.class);
@@ -135,7 +129,7 @@ abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<
 
     int findLeaderOfMajority() {
         N node = Arrays.stream(nodes).sorted(Comparator.comparingInt(this::getLeaderIdOf))
-                .collect(Collectors.toList())
+                .toList()
                 .get(nodes.length / 2);
         return getLeaderIdOf(node);
     }

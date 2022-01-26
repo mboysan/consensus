@@ -7,12 +7,7 @@ import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.CheckedSupplier;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -23,13 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class NettyServerTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyServerTransport.class);
@@ -119,11 +111,9 @@ public class NettyServerTransport implements Transport {
     }
 
     @Override
-    public void registerMessageProcessor(Function<Message, Message> messageProcessor) {
-        if (this.messageProcessor != null) {
-            if (!this.messageProcessor.equals(messageProcessor)) {  // for restarts
-                throw new IllegalStateException("request processor already registered");
-            }
+    public void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
+        if (this.messageProcessor != null && !this.messageProcessor.equals(messageProcessor)) {  // for restarts
+            throw new IllegalStateException("request processor already registered");
         }
         this.messageProcessor = messageProcessor;
     }
@@ -157,7 +147,7 @@ public class NettyServerTransport implements Transport {
         clientTransport.shutdown();
     }
 
-    private void shutdown(CheckedSupplier<?> toShutdown) {
+    private void shutdown(CheckedSupplier<?, Exception> toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).get();
         } catch (Exception e) {

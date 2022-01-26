@@ -1,16 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
-import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.message.StateMachineRequest;
-import com.mboysan.consensus.message.StateMachineResponse;
+import com.mboysan.consensus.message.*;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -26,21 +16,22 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
 
     private final Map<String, String> store = new ConcurrentHashMap<>();
 
-    private final Consumer<String> stateMachine = cmd -> {
-        String[] split = cmd.split(CMD_SEP);
-        String command = split[0];
-        if (command.equals("put")) {
-            String key = split[1];
-            String val = split[2];
-            store.put(key, val);
-        } else if (command.equals("rm")) {
-            String key = split[1];
-            store.remove(key);
-        }
-    };
-
     public RaftKVStore(RaftNode node, Transport clientServingTransport) {
         super(node, clientServingTransport);
+
+        Consumer<String> stateMachine = cmd -> {
+            String[] split = cmd.split(CMD_SEP);
+            String command = split[0];
+            if (command.equals("put")) {
+                String key = split[1];
+                String val = split[2];
+                store.put(key, val);
+            } else if (command.equals("rm")) {
+                String key = split[1];
+                store.remove(key);
+            }
+        };
+
         getNode().registerStateMachine(stateMachine);
     }
 

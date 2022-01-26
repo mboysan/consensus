@@ -1,12 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.AppendEntriesRequest;
-import com.mboysan.consensus.message.AppendEntriesResponse;
-import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.message.RequestVoteRequest;
-import com.mboysan.consensus.message.RequestVoteResponse;
-import com.mboysan.consensus.message.StateMachineRequest;
-import com.mboysan.consensus.message.StateMachineResponse;
+import com.mboysan.consensus.message.*;
 
 import java.io.IOException;
 
@@ -18,16 +12,16 @@ interface RaftRPC extends RPCProtocol {
     StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException;
 
     @Override
-    default Message processRequest(Message request) throws IOException {
-        if (request instanceof AppendEntriesRequest) {
-            return appendEntries((AppendEntriesRequest) request);
+    default Message processRequest(Message message) throws IOException {
+        if (message instanceof AppendEntriesRequest request) {
+            return appendEntries(request);
         }
-        if (request instanceof RequestVoteRequest) {
-            return requestVote((RequestVoteRequest) request);
+        if (message instanceof RequestVoteRequest request) {
+            return requestVote(request);
         }
-        if (request instanceof StateMachineRequest) {
-            return stateMachineRequest((StateMachineRequest) request);
+        if (message instanceof StateMachineRequest request) {
+            return stateMachineRequest(request);
         }
-        throw new IllegalArgumentException("unrecognized message=" + request);
+        throw new IllegalArgumentException("unrecognized message=" + message);
     }
 }

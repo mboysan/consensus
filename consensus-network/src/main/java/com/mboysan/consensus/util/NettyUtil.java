@@ -1,23 +1,15 @@
 package com.mboysan.consensus.util;
 
 import com.mboysan.consensus.configuration.Destination;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.function.Function.identity;
 
 public final class NettyUtil {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(NettyUtil.class);
 
     private NettyUtil(){}
 

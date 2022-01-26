@@ -24,10 +24,7 @@ public class LogEntry implements Serializable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof LogEntry)) return false;
-
-        LogEntry logEntry = (LogEntry) o;
-
+        if (!(o instanceof LogEntry logEntry)) return false;
         if (term != logEntry.term) return false;
         return Objects.equals(command, logEntry.command);
     }
