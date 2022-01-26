@@ -71,8 +71,10 @@ class BizurRun {
     }
 
     private void logPeerIOException(int peerId, Message request, IOException exception) {
-        LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
-                contextInfo(), peerId, request, exception.getMessage());
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error("{} - peer-{} IO exception for request={}, cause={}",
+                    contextInfo(), peerId, request, exception.getMessage());
+        }
     }
 
     /*------------------------------------------- Algorithms -------------------------------------------*/

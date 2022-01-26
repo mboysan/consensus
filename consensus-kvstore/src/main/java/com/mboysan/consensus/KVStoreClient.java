@@ -2,8 +2,6 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.*;
 import com.mboysan.consensus.util.CheckedSupplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,8 +11,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStoreClient extends AbstractClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClient.class);
-
     private final List<Integer> nodeIds;
     private final AtomicInteger currIndex = new AtomicInteger(-1);
 

@@ -4,7 +4,6 @@ import com.mboysan.consensus.message.Message;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 @FunctionalInterface

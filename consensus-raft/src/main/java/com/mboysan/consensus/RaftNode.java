@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -23,7 +21,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private final RaftClient rpcClient;
 
-    private final Lock updateLock = new ReentrantLock();
     private boolean notified = false;
 
     private final long updateIntervalMs;
