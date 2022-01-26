@@ -17,6 +17,8 @@ import com.mboysan.consensus.util.NettyUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * TODO: improve this test
  */
 public class RaftKVIT {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIT.class);
+
     private static final Random RNG = new Random();
 
     private static final List<Destination> NODE_DESTINATIONS = new ArrayList<>();
@@ -126,16 +130,22 @@ public class RaftKVIT {
         assertEntriesForAll(expectedEntries);
     }
 
+    /**
+     * Tests the scenario in which the leader is shutdown and is restarted after a while.
+     * This test might take several minutes to complete.
+     */
     @Test
     void testShutdownAndStart() throws Exception {
         stores[0].shutdown();
         System.out.println("SHUTDOWN------------------------------");
+        LOGGER.info("SHUTDOWN------------------------------");
         Thread.sleep(20000);
 
         clients[1].set("k0", "v0");
         Thread.sleep(5000);
 
         System.out.println("RESTART++++++++++++++++++++++++++++");
+        LOGGER.info("RESTART++++++++++++++++++++++++++++");
         stores[0].start();
 
         Thread.sleep(5000);

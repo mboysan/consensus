@@ -1,13 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.message.AppendEntriesRequest;
-import com.mboysan.consensus.message.AppendEntriesResponse;
-import com.mboysan.consensus.message.LogEntry;
-import com.mboysan.consensus.message.RequestVoteRequest;
-import com.mboysan.consensus.message.RequestVoteResponse;
-import com.mboysan.consensus.message.StateMachineRequest;
-import com.mboysan.consensus.message.StateMachineResponse;
+import com.mboysan.consensus.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,9 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static com.mboysan.consensus.RaftState.Role.CANDIDATE;
-import static com.mboysan.consensus.RaftState.Role.FOLLOWER;
-import static com.mboysan.consensus.RaftState.Role.LEADER;
+import static com.mboysan.consensus.RaftState.Role.*;
 
 public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
@@ -32,6 +24,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     private final RaftClient rpcClient;
 
     private final Lock updateLock = new ReentrantLock();
+    private boolean notified = false;
 
     private final long updateIntervalMs;
     private long electionTimeoutMs;
@@ -266,19 +259,15 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     private void advanceStateMachine() {
-        boolean isAdvanced = false;
         while (state.lastApplied < state.commitIndex) {
-            isAdvanced = true;
             state.lastApplied++;
             if (stateMachine != null) {
+                // apply on StateMachine
                 stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
             }
-            // apply on StateMachine
         }
-        if (isAdvanced) {
-            synchronized (this) {
-                notifyAll();
-            }
+        synchronized (this) {
+            doNotifyAll();
         }
     }
 
@@ -338,6 +327,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     @Override
     public StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException {
+        validateAction();
         int leaderId;
         synchronized (this) {
             if (state.leaderId == -1) {
@@ -350,8 +340,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 int term = state.currentTerm;
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {
-                        wait(); // after calling append(), the future returned can be cancelled, which will throw
-                        // the following exception
+                        doWait(); // wait for state machine advancement.
                     } catch (InterruptedException e) {
                         LOGGER.warn("The request has been interrupted/cancelled for index={}", entryIndex);
                         Thread.currentThread().interrupt();
@@ -370,18 +359,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         return state.raftLog.logTerm(entryIndex) == term && state.lastApplied >= entryIndex;
     }
 
-    public Future<Boolean> append(String command) {
-        validateAction();
-        return commandExecutor.submit(() -> {
-            try {
-                return stateMachineRequest(new StateMachineRequest(command)).isApplied();
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
-            return false;
-        });
-    }
-
     /*----------------------------------------------------------------------------------
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
@@ -392,6 +369,18 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         state.role = FOLLOWER;
         state.votedFor = -1;
         state.seenLeader = false;
+    }
+
+    private synchronized void doWait() throws InterruptedException {
+        while (!notified) {
+            wait();
+        }
+        notified = false;
+    }
+
+    private synchronized void doNotifyAll() {
+        notified = true;
+        notifyAll();
     }
 
     /*----------------------------------------------------------------------------------
