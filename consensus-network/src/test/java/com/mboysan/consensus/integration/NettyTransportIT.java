@@ -22,23 +22,21 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class NettyTransportIT {
+class NettyTransportIT {
+
+    private static final String HOST_NAME = "localhost";
 
     private static final int NUM_SERVERS = 3;
     private static final int NUM_CLIENTS = 3;
     private static final List<Destination> DESTINATIONS = new ArrayList<>();
     static {
-        addDestination(0, "localhost", NettyUtil.findFreePort());
-        addDestination(1, "localhost", NettyUtil.findFreePort());
-        addDestination(2, "localhost", NettyUtil.findFreePort());
+        addDestination(0, NettyUtil.findFreePort());
+        addDestination(1, NettyUtil.findFreePort());
+        addDestination(2, NettyUtil.findFreePort());
     }
     private NettyServerTransport[] serverTransports;
     private NettyClientTransport[] clientTransports;
@@ -52,7 +50,7 @@ public class NettyTransportIT {
     private void setupServers() throws IOException {
         serverTransports = new NettyServerTransport[NUM_SERVERS];
         for (int i = 0; i < serverTransports.length; i++) {
-            int port = DESTINATIONS.get(i).getPort();
+            int port = DESTINATIONS.get(i).port();
             NettyServerTransport serverTransport = createServerTransport(port);
             serverTransport.registerMessageProcessor(new EchoRPCProtocol());
             serverTransports[i] = serverTransport;
@@ -97,7 +95,8 @@ public class NettyTransportIT {
 
         assertDoesNotThrow(server::start); // 2nd start does nothing (increase code cov)
 
-        assertThrows(UnsupportedOperationException.class, () -> server.sendRecvAsync(new TestMessage("")));
+        TestMessage testMsg1 = new TestMessage("");
+        assertThrows(UnsupportedOperationException.class, () -> server.sendRecvAsync(testMsg1));
 
         server.shutdown();
         assertDoesNotThrow(server::shutdown); // 2nd shutdown does nothing (increase code cov)
@@ -107,7 +106,8 @@ public class NettyTransportIT {
         NettyClientTransport client = createClientTransport();
         assertTrue(client.verifyShutdown());    // client is not started yet.
 
-        assertThrows(IllegalStateException.class, () -> client.sendRecv(new TestMessage("")));
+        TestMessage testMsg2 = new TestMessage("");
+        assertThrows(IllegalStateException.class, () -> client.sendRecv(testMsg2));
 
         client.start();
         assertDoesNotThrow(client::start); // 2nd start does nothing (increase code cov)
@@ -199,7 +199,7 @@ public class NettyTransportIT {
         return new NettyClientTransport(config);
     }
 
-    private static void addDestination(int nodeId, String host, int port) {
-        DESTINATIONS.add(new Destination(nodeId, host, port));
+    private static void addDestination(int nodeId, int port) {
+        DESTINATIONS.add(new Destination(nodeId, HOST_NAME, port));
     }
 }

@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -20,6 +22,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractNode.class);
 
     private volatile boolean isRunning;
+    private final Lock updateLock = new ReentrantLock();
 
     private final int nodeId;
     private final Transport transport;
@@ -83,13 +86,30 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         shutdownNode();
     }
 
-    abstract void shutdownNode();
+    void shutdownNode() {
+        // override if a special logic is needed.
+    }
+
+    void tryUpdate() {
+        if (updateLock.tryLock()) {
+            try {
+                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
+                update();
+            } finally {
+                updateLock.unlock();
+            }
+        } else {
+            LOGGER.debug("update in progress, skipped.");
+        }
+    }
+
+    abstract void update();
 
     private synchronized void onNodeListChanged(NodeListChangedEvent event) {
-        if (event.getTargetNodeId() != nodeId) {
+        if (event.targetNodeId() != nodeId) {
             return;
         }
-        Set<Integer> serverIds = event.getServerIds();
+        Set<Integer> serverIds = event.serverIds();
         // first, we add new peers for each new serverId.
         serverIds.forEach(peerId -> peers.computeIfAbsent(peerId, this::createPeer));
 

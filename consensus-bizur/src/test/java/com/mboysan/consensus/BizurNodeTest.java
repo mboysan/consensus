@@ -10,14 +10,15 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
+class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
 
     @Test
     void testWhenServerNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
         BizurNode node = createNode(0, transport, null);
 
-        assertThrows(IllegalStateException.class, () -> node.get(new KVGetRequest("some-key")));
+        KVGetRequest request = new KVGetRequest("some-key");
+        assertThrows(IllegalStateException.class, () -> node.get(request));
 
         node.shutdown();
         transport.shutdown();

@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -23,7 +21,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private final RaftClient rpcClient;
 
-    private final Lock updateLock = new ReentrantLock();
     private boolean notified = false;
 
     private final long updateIntervalMs;
@@ -81,29 +78,12 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         });
     }
 
-    @Override
-    void shutdownNode() {
-        // no special logic needed
-    }
-
     /*----------------------------------------------------------------------------------
      * Rules for Servers
      * ----------------------------------------------------------------------------------*/
 
-    private void tryUpdate() {
-        if (updateLock.tryLock()) {
-            try {
-                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
-                update();
-            } finally {
-                updateLock.unlock();
-            }
-        } else {
-            LOGGER.debug("update in progress, skipped.");
-        }
-    }
-
-    private synchronized void update() {
+    @Override
+    synchronized void update() {
         startNewElection();
         sendRequestVoteToPeers();
         becomeLeader();
@@ -227,16 +207,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private void advanceCommitIndex() {
         if (state.role == LEADER) {
-/*            int majorityIdx = peers.size() / 2;
-            int n = IntStream.concat(
-                    peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
-                    IntStream.of(state.raftLog.size())) // append len(log)
-                    .sorted()
-                    .boxed().collect(Collectors.toList()).get(majorityIdx);
-            if (state.raftLog.logTerm(n) == state.currentTerm) {
-                state.commitIndex = n;
-            }*/
-
             /* If there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N,
                and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).*/
             int N = IntStream.concat(
@@ -263,7 +233,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             state.lastApplied++;
             if (stateMachine != null) {
                 // apply on StateMachine
-                stateMachine.accept(state.raftLog.get(state.lastApplied).getCommand());
+                stateMachine.accept(state.raftLog.get(state.lastApplied).command());
             }
         }
         synchronized (this) {

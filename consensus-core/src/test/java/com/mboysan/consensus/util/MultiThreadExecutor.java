@@ -7,11 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -50,7 +46,7 @@ public class MultiThreadExecutor {
      * of the <tt>runnable</tt>.
      * @param runnable the runnable to handle and report any ee.ut.jbizur.exceptions caught when running it.
      */
-    public void execute(CheckedRunnable runnable) {
+    public void execute(CheckedRunnable<Exception> runnable) {
         futures.add(executor.submit(() -> {
             try {
                 latch.await();

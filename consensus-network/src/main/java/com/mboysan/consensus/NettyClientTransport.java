@@ -4,11 +4,7 @@ import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.message.Message;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -33,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class NettyClientTransport implements Transport {
 
@@ -69,7 +65,7 @@ public class NettyClientTransport implements Transport {
     }
 
     @Override
-    public void registerMessageProcessor(Function<Message, Message> messageProcessor) {
+    public void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
         throw new UnsupportedOperationException("registerMessageProcessor unsupported.");
     }
 
@@ -121,7 +117,7 @@ public class NettyClientTransport implements Transport {
     }
 
     private ObjectPool<NettyClient> getOrCreateClientPool(int receiverId) {
-        return clientPools.computeIfAbsent(receiverId, (id) -> {
+        return clientPools.computeIfAbsent(receiverId, id -> {
             Destination dest = destinations.get(id);
             NettyClientFactory clientFactory = new NettyClientFactory(dest, callbackMap);
             GenericObjectPoolConfig<NettyClient> poolConfig = new GenericObjectPoolConfig<>();
@@ -182,7 +178,7 @@ public class NettyClientTransport implements Transport {
                                 });
                             }
                         });
-                ChannelFuture f = b.connect(destination.getIp(), destination.getPort()).sync();
+                ChannelFuture f = b.connect(destination.ip(), destination.port()).sync();
                 this.channel = (SocketChannel) f.channel();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

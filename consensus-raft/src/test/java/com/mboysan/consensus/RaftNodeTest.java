@@ -365,7 +365,7 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
         RaftLog log0 = getNode(0).getState().raftLog;
         assertEquals(commands.size(), log0.size());
         for (int i = 0; i < getNode(0).getState().raftLog.size(); i++) {
-            assertEquals(commands.get(i), log0.get(i).getCommand());
+            assertEquals(commands.get(i), log0.get(i).command());
         }
         for (RaftNode server : getNodes()) {
             assertEquals(log0, server.getState().raftLog);

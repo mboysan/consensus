@@ -13,15 +13,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class InVMTransport implements Transport {
 
@@ -58,9 +52,9 @@ public class InVMTransport implements Transport {
     }
 
     @Override
-    public synchronized void registerMessageProcessor(Function<Message, Message> messageProcessor) {
-        if (messageProcessor instanceof AbstractNode) {
-            int nodeId = ((AbstractNode<?>) messageProcessor).getNodeId();
+    public synchronized void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
+        if (messageProcessor instanceof AbstractNode msgProcessor) {
+            int nodeId = msgProcessor.getNodeId();
             Server server = serverMap.get(nodeId);
             if (server == null) {
                 server = new Server(messageProcessor);
@@ -78,7 +72,7 @@ public class InVMTransport implements Transport {
     }
 
     private void onNodeStopped(NodeStoppedEvent event) {
-        int nodeId = event.getSourceNodeId();
+        int nodeId = event.sourceNodeId();
         Server server = serverMap.get(nodeId);
         if (server != null) {
             Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());

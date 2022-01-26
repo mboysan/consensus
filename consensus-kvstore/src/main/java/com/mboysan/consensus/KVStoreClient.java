@@ -1,17 +1,7 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVOperationResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
+import com.mboysan.consensus.message.*;
 import com.mboysan.consensus.util.CheckedSupplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,8 +11,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStoreClient extends AbstractClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClient.class);
-
     private final List<Integer> nodeIds;
     private final AtomicInteger currIndex = new AtomicInteger(-1);
 
@@ -87,11 +75,10 @@ public class KVStoreClient extends AbstractClient {
         }
     }
 
-    private <T> T exec(CheckedSupplier<T> supplier) throws KVOperationException {
+    private <T> T exec(CheckedSupplier<T, Exception> supplier) throws KVOperationException {
         try {
             return supplier.get();
         } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
             throw new KVOperationException(e);
         }
     }

@@ -1,13 +1,6 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.KVOperationException;
-import com.mboysan.consensus.KVStoreClient;
-import com.mboysan.consensus.KVStoreRPC;
-import com.mboysan.consensus.NettyClientTransport;
-import com.mboysan.consensus.NettyServerTransport;
-import com.mboysan.consensus.RaftKVStore;
-import com.mboysan.consensus.RaftNode;
-import com.mboysan.consensus.Transport;
+import com.mboysan.consensus.*;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
@@ -21,12 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -40,25 +28,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class RaftKVIT {
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftKVIT.class);
 
+    private static final String HOST_NAME = "localhost";
+
     private static final Random RNG = new Random();
 
     private static final List<Destination> NODE_DESTINATIONS = new ArrayList<>();
     static {
-        addDestination(NODE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 0, NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 1, NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 2, NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 3, NettyUtil.findFreePort());
+        addDestination(NODE_DESTINATIONS, 4, NettyUtil.findFreePort());
     }
     private static final String NODE_DESTINATIONS_STR = NettyUtil.convertDestinationsListToProps(NODE_DESTINATIONS);
 
     private static final List<Destination> STORE_DESTINATIONS = new ArrayList<>();
     static {
-        addDestination(STORE_DESTINATIONS, 0, "localhost", NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 1, "localhost", NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 2, "localhost", NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 3, "localhost", NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 4, "localhost", NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 0, NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 1, NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 2, NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 3, NettyUtil.findFreePort());
+        addDestination(STORE_DESTINATIONS, 4, NettyUtil.findFreePort());
     }
 
     private KVStoreRPC[] stores;
@@ -174,7 +164,7 @@ public class RaftKVIT {
 
     NettyServerTransport createServerTransport(Destination myAddress) {
         Properties properties = new Properties();
-        properties.put("transport.netty.port", myAddress.getPort() + "");
+        properties.put("transport.netty.port", myAddress.port() + "");
         properties.put("transport.netty.destinations", NODE_DESTINATIONS_STR);
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
@@ -197,7 +187,7 @@ public class RaftKVIT {
         return new RaftNode(config, transport);
     }
 
-    private static void addDestination(List<Destination> destinations, int nodeId, String host, int port) {
-        Objects.requireNonNull(destinations).add(new Destination(nodeId, host, port));
+    private static void addDestination(List<Destination> destinations, int nodeId, int port) {
+        Objects.requireNonNull(destinations).add(new Destination(nodeId, HOST_NAME, port));
     }
 }

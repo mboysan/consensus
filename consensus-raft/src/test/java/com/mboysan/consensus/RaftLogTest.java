@@ -6,10 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RaftLogTest {
 
@@ -64,7 +61,7 @@ class RaftLogTest {
         log.push(entry2);
         log.push(entry3);
 
-        assertEquals(entry3.getTerm(), log.lastLogTerm());
+        assertEquals(entry3.term(), log.lastLogTerm());
     }
 
     @Test
@@ -78,9 +75,9 @@ class RaftLogTest {
         log.push(entry2);
         log.push(entry3);
 
-        assertEquals(entry1.getTerm(), log.logTerm(0));
-        assertEquals(entry2.getTerm(), log.logTerm(1));
-        assertEquals(entry3.getTerm(), log.logTerm(2));
+        assertEquals(entry1.term(), log.logTerm(0));
+        assertEquals(entry2.term(), log.logTerm(1));
+        assertEquals(entry3.term(), log.logTerm(2));
 
         assertEquals(0, log.logTerm(-1));
         assertEquals(0, log.logTerm(3));

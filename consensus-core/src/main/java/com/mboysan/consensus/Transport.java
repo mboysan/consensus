@@ -5,10 +5,10 @@ import com.mboysan.consensus.message.Message;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.Future;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public interface Transport {
-    void registerMessageProcessor(Function<Message, Message> messageProcessor);
+    void registerMessageProcessor(UnaryOperator<Message> messageProcessor);
 
     Set<Integer> getDestinationNodeIds();
 

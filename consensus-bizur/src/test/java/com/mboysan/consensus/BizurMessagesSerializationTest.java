@@ -1,21 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.HeartbeatRequest;
-import com.mboysan.consensus.message.HeartbeatResponse;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
-import com.mboysan.consensus.message.PleaseVoteRequest;
-import com.mboysan.consensus.message.PleaseVoteResponse;
-import com.mboysan.consensus.message.ReplicaReadRequest;
-import com.mboysan.consensus.message.ReplicaReadResponse;
-import com.mboysan.consensus.message.ReplicaWriteRequest;
-import com.mboysan.consensus.message.ReplicaWriteResponse;
+import com.mboysan.consensus.message.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashSet;

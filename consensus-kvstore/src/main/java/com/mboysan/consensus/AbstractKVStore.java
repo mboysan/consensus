@@ -13,7 +13,7 @@ public abstract class AbstractKVStore<N extends AbstractNode<?>> implements KVSt
     private final N node;
     private final Transport clientServingTransport;
 
-    public AbstractKVStore(N node, Transport clientServingTransport) {
+    AbstractKVStore(N node, Transport clientServingTransport) {
         this.node = node;
         this.clientServingTransport = clientServingTransport;
     }
@@ -36,7 +36,9 @@ public abstract class AbstractKVStore<N extends AbstractNode<?>> implements KVSt
     }
 
     void logError(Message request, Exception err) {
-        LOGGER.error("on {} KVStore-{}, error={}, for request={}",
-                getNode().getClass().getSimpleName(), getNode().getNodeId(), err, request.toString());
+        if (LOGGER.isErrorEnabled()) {
+            LOGGER.error("on {} KVStore-{}, error={}, for request={}",
+                    getNode().getClass().getSimpleName(), getNode().getNodeId(), err, request);
+        }
     }
 }
