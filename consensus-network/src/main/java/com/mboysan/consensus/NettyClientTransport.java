@@ -139,11 +139,7 @@ public class NettyClientTransport implements Transport {
     }
 
     public synchronized boolean verifyShutdown() {
-        return !isRunning
-                && callbackMap.size() == 0
-                && (clientPools.size() == 0
-                || clientPools.entrySet().stream()
-                .filter(entry -> entry.getValue().getNumActive() > 0).findFirst().isEmpty());
+        return !isRunning && callbackMap.size() == 0 && clientPools.size() == 0;
     }
 
     private static class NettyClient {
