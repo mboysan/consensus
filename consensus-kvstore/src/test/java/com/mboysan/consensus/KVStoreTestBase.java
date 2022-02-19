@@ -63,6 +63,17 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
     }
 
     @Test
+    void testRouting() throws Exception {
+        int numServers = 5;
+        init(numServers);
+
+        int leaderId = assertOneLeader();
+
+        assertTrue(set((leaderId + 1) % numServers, "k0", "v0"));
+        assertEquals("v0", get((leaderId + 2) % numServers, "k0"));
+    }
+
+    @Test
     void multiThreadTest() throws Exception {
         init(5);
 

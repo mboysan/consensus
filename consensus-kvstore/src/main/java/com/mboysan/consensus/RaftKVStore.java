@@ -38,8 +38,15 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
     @Override
     public KVGetResponse get(KVGetRequest request) {
         try {
-            String value = store.get(Objects.requireNonNull(request.getKey()));
-            return new KVGetResponse(true, null, value).responseTo(request);
+            String key = request.getKey();
+            boolean success = append(String.format("get%s%s", CMD_SEP, key), request);
+            if (success) {
+                String value = store.get(Objects.requireNonNull(request.getKey()));
+                return new KVGetResponse(true, null, value).responseTo(request);
+            }
+            return new KVGetResponse(
+                    false, new KVOperationException("log append failed for key %s".formatted(key)), null)
+                    .responseTo(request);
         } catch (Exception e) {
             logError(request, e);
             return new KVGetResponse(false, e, null).responseTo(request);
@@ -74,8 +81,14 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
     @Override
     public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) {
         try {
-            Set<String> keys = new HashSet<>(store.keySet());
-            return new KVIterateKeysResponse(true, null, keys).responseTo(request);
+            boolean success = append("iterateKeys", request);
+            if (success) {
+                Set<String> keys = new HashSet<>(store.keySet());
+                return new KVIterateKeysResponse(true, null, keys).responseTo(request);
+            }
+            return new KVGetResponse(
+                    false, new KVOperationException("log append failed for iterateKeys"), null)
+                    .responseTo(request);
         } catch (Exception e) {
             logError(request, e);
             return new KVIterateKeysResponse(false, e, null).responseTo(request);

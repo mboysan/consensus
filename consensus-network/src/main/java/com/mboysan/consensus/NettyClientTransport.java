@@ -133,6 +133,7 @@ public class NettyClientTransport implements Transport {
         }
         isRunning = false;
         clientPools.forEach((i, pool) -> pool.close());
+        clientPools.clear();
         callbackMap.forEach((s, f) -> f.cancel(true));
         callbackMap.clear();
     }
@@ -140,8 +141,9 @@ public class NettyClientTransport implements Transport {
     public synchronized boolean verifyShutdown() {
         return !isRunning
                 && callbackMap.size() == 0
-                && clientPools.entrySet().stream()
-                .filter(entry -> entry.getValue().getNumActive() > 0).findFirst().isEmpty();
+                && (clientPools.size() == 0
+                || clientPools.entrySet().stream()
+                .filter(entry -> entry.getValue().getNumActive() > 0).findFirst().isEmpty());
     }
 
     private static class NettyClient {
