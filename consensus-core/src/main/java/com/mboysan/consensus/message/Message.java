@@ -30,11 +30,11 @@ public abstract class Message implements Serializable {
     /**
      * id of the sender node.
      */
-    private int senderId;
+    private int senderId = -1;
     /**
      * id of the receiver node.
      */
-    private int receiverId;
+    private int receiverId = -1;
 
     @SuppressWarnings("unchecked")
     private <T extends Message> T setId(String id) {

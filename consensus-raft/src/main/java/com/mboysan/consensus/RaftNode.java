@@ -236,9 +236,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 stateMachine.accept(state.raftLog.get(state.lastApplied).command());
             }
         }
-        synchronized (this) {
-            doNotifyAll();
-        }
+        doNotifyAll();
     }
 
     /*----------------------------------------------------------------------------------
@@ -287,7 +285,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
                 state.votedFor = request.getLeaderId();
 
-                advanceStateMachine();  // try syncing before leader update. TODO: check if this is okay.
+                update();   // sync for strong consistency
                 return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex()).responseTo(request);
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
@@ -306,7 +304,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             if (state.role == LEADER) {
                 state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
                 int entryIndex = state.raftLog.lastLogIndex();
-                update();
+                update();   // sync for strong consistency
                 int term = state.currentTerm;
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {

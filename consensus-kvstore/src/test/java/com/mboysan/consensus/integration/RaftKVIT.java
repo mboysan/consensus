@@ -102,7 +102,7 @@ public class RaftKVIT {
     void testPutGetDeleteMultiThreaded() throws KVOperationException, InterruptedException, ExecutionException {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
         MultiThreadExecutor exec = new MultiThreadExecutor();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 100; i++) {
             int finalI = i;
             exec.execute(() -> {
                 String key = "k" + finalI;
