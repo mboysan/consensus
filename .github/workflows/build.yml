@@ -85,7 +85,7 @@ jobs:
           cd mvn-repo
           
           # clean dir & copy new files
-          if [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus
+          [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus
           mkdir -p ./com/mboysan/consensus
           cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
           
