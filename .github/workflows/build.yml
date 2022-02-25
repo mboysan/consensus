@@ -42,6 +42,7 @@ jobs:
           -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
           -Dmaven.javadoc.skip=true -DcreateChecksum=true
           -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
       - name: Build failed - concat logs (1)
         if: ${{ failure() }}
         run: |
@@ -50,8 +51,8 @@ jobs:
             logFile="$logDir/target/tests.log"
             if [ -f $logFile ]
             then
-            echo -e "\n----- $logDir logs -----" >> tests.log
-            cat $logFile >> tests.log
+              echo -e "\n----- $logDir logs -----" >> tests.log
+              cat $logFile >> tests.log
             fi
           }
           touch tests.log
@@ -63,3 +64,34 @@ jobs:
       - name: Build failed - uploading logs (2)
         if: ${{ failure() }}
         run: curl --upload-file tests.log https://transfer.sh/tests.log
+
+      - name: Build succeded - Deploy to repo as library
+        if: ${{ success() }}
+        env:
+          MVN_REPO_KEY: ${{ secrets.MVN_REPO_KEY }}
+          BUILD_NUMBER: ${{github.run_number}}
+        run: |
+          mvn install -DskipTests
+          
+          PROJ_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
+          
+          # configure git
+          git config --global user.email "dev@mboysan.com"
+          git config --global user.name "mboysan"
+          
+          # get repo branch
+          cd $HOME
+          git clone --depth=1 https://github.com/mboysan/mvn-repo.git
+          cd mvn-repo
+          
+          # clean dir & copy new files
+          [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus
+          mkdir -p ./com/mboysan/consensus
+          cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
+          
+          # commit & push files
+          git add --all
+          git commit --message "build com.mboysan.consensus v${PROJ_VERSION}_${BUILD_NUMBER}"
+          git remote rm origin
+          git remote add origin https://${MVN_REPO_KEY}@github.com/mboysan/mvn-repo.git
+          git push --quiet origin master
