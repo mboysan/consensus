@@ -42,7 +42,30 @@ jobs:
           -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
           -Dmaven.javadoc.skip=true -DcreateChecksum=true
           -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-      - name: Deploy to repo as library
+
+      - name: Build failed - concat logs (1)
+        if: ${{ failure() }}
+        run: |
+          function append() {
+            logDir="$1"
+            logFile="$logDir/target/tests.log"
+            if [ -f $logFile ]
+            then
+              echo -e "\n----- $logDir logs -----" >> tests.log
+              cat $logFile >> tests.log
+            fi
+          }
+          touch tests.log
+          append consensus-core
+          append consensus-network
+          append consensus-bizur
+          append consensus-raft
+          append consensus-kvstore
+      - name: Build failed - uploading logs (2)
+        if: ${{ failure() }}
+        run: curl --upload-file tests.log https://transfer.sh/tests.log
+
+      - name: Build succeded - Deploy to repo as library
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +85,7 @@ jobs:
           cd mvn-repo
           
           # clean dir & copy new files
-          [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus/*
+          mkdir -p ./com/mboysan/consensus && rm -vr ./com/mboysan/consensus/*
           cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
           
           # commit & push files
@@ -71,25 +94,3 @@ jobs:
           git remote rm origin
           git remote add origin https://${GITHUB_TOKEN}@github.com/mboysan/mvn-repo.git
           git push --quiet origin master
-
-      - name: Build failed - concat logs (1)
-        if: ${{ failure() }}
-        run: |
-          function append() {
-            logDir="$1"
-            logFile="$logDir/target/tests.log"
-            if [ -f $logFile ]
-            then
-            echo -e "\n----- $logDir logs -----" >> tests.log
-            cat $logFile >> tests.log
-            fi
-          }
-          touch tests.log
-          append consensus-core
-          append consensus-network
-          append consensus-bizur
-          append consensus-raft
-          append consensus-kvstore
-      - name: Build failed - uploading logs (2)
-        if: ${{ failure() }}
-        run: curl --upload-file tests.log https://transfer.sh/tests.log
