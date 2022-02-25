@@ -370,9 +370,6 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
     // --------------------------------------------------------------------------------
 
     private boolean append(int nodeId, String command) throws IOException {
-        if (true) {
-            throw new IOException("dummy"); // TODO: delete
-        }
         return getNode(nodeId).stateMachineRequest(new StateMachineRequest(command)).isApplied();
     }
 }
