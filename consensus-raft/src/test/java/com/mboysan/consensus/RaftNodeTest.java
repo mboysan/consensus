@@ -7,9 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -140,26 +137,6 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
     }
 
     /**
-     * Tests cancellation of a command append event.
-     */
-    @Test
-    void testAppendFutureCancellation() throws Exception {
-        int numServers = 3;
-        init(numServers);
-        int leaderId = assertOneLeader();
-
-        disconnect((leaderId + 1) % numServers);
-        disconnect((leaderId + 2) % numServers);
-
-        // break the quorum and try to append a command, progress cannot be made hence, we need to cancel the
-        // future received.
-
-        Future<Boolean> result = appendAsync(leaderId, "cmd0");
-        result.cancel(true);
-        assertThrows(CancellationException.class, result::get);
-    }
-
-    /**
      * Tests if a follower node is down, the system is still operational.
      */
     @Test
@@ -232,11 +209,29 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
     }
 
     /**
+     * Tests appent event during a broken quorum. Append will fail.
+     */
+    @Test
+    void testAppendWhenQuorumNotFormed1() throws Exception {
+        int numServers = 3;
+        init(numServers);
+        int leaderId = assertOneLeader();
+
+        disconnect((leaderId + 1) % numServers);
+        disconnect((leaderId + 2) % numServers);
+
+        // break the quorum and try to append a command, progress cannot be made hence
+
+        boolean result = append(leaderId, "cmd0");
+        assertFalse(result);
+    }
+
+    /**
      * Tests append event during a broken quorum and the leader is changed after the quorum is reestablished.
      * Append will fail.
      */
     @Test
-    void testAppendWhenQuorumNotFormed1() throws Exception {
+    void testAppendWhenQuorumNotFormed2() throws Exception {
         int numServers = 5;
         init(numServers);
         int oldLeaderId = assertOneLeader();
@@ -249,7 +244,8 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
 
         List<String> expectedCommands = new ArrayList<>(List.of("cmd0"));
 
-        Future<Boolean> result = appendAsync(oldLeaderId, expectedCommands.get(0));
+        boolean result = append(oldLeaderId, expectedCommands.get(0));
+        assertFalse(result);
 
         kill(oldLeaderId);
         connect((oldLeaderId + 1) % numServers);
@@ -262,7 +258,6 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
 
         assertLeaderChanged(oldLeaderId, true /* oldLeader is aware */);
 
-        assertFalse(result.get());
         expectedCommands.clear();
         assertLogsEquals(expectedCommands);
     }
@@ -271,7 +266,7 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
      * Tests append event during a broken quorum and the leader is not changed after the quorum is reestablished.
      */
     @Test
-    void testAppendWhenQuorumNotFormed2() throws Exception {
+    void testAppendWhenQuorumNotFormed3() throws Exception {
         int numServers = 5;
         init(numServers);
         int leaderId = assertOneLeader();
@@ -282,7 +277,8 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
 
         advanceTimeForElections();
 
-        Future<Boolean> result = appendAsync(leaderId, "cmd0");
+        boolean result = append(leaderId, "cmd0");
+        assertFalse(result);
 
         advanceTimeForElections();
 
@@ -293,7 +289,6 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
         advanceTimeForElections();
         assertLeaderOfMajority(findLeaderOfMajority());
 
-        assertFalse(result.get());
         assertLogsEquals(new ArrayList<>());    // empty list
     }
 
@@ -305,7 +300,7 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
      * the new leader and this new entry (cmd1).
      */
     @Test
-    void testAppendWhenQuorumNotFormed3() throws Exception {
+    void testAppendWhenQuorumNotFormed4() throws Exception {
         int numServers = 5;
         init(numServers);
         int oldLeaderId = assertOneLeader();
@@ -317,7 +312,8 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
         advanceTimeForElections();
 
         List<String> expectedCommands = Arrays.asList("cmd0", "cmd1");
-        Future<Boolean> resultCmd0 = appendAsync(oldLeaderId, expectedCommands.get(0));
+        boolean result = append(oldLeaderId, expectedCommands.get(0));
+        assertFalse(result);
 
         connect((oldLeaderId + 2) % numServers);
         connect((oldLeaderId + 3) % numServers);
@@ -329,7 +325,6 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
         connect(oldLeaderId);  // connect old leader and discover new one
         advanceTimeForElections();
         assertLeaderNotChanged(newLeaderId);    // oldLeader should not be able to become the leader at this point.
-        assertFalse(resultCmd0.get()); // this entry is long gone
         expectedCommands = List.of("cmd1");
 
         assertLogsEquals(expectedCommands); // log item will be applied as soon as the quorum is formed again.
@@ -375,16 +370,9 @@ class RaftNodeTest extends NodeTestBase<RaftNode> implements RaftInternals {
     // --------------------------------------------------------------------------------
 
     private boolean append(int nodeId, String command) throws IOException {
+        if (true) {
+            throw new IOException("dummy"); // TODO: delete
+        }
         return getNode(nodeId).stateMachineRequest(new StateMachineRequest(command)).isApplied();
-    }
-
-    private Future<Boolean> appendAsync(int nodeId, String command) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return append(nodeId, command);
-            } catch (IOException e) {
-                return false;
-            }
-        });
     }
 }

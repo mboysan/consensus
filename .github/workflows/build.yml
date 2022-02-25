@@ -42,18 +42,24 @@ jobs:
           -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
           -Dmaven.javadoc.skip=true -DcreateChecksum=true
           -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-      - name: Build failed uploading logs
+      - name: Build failed - concat logs (1)
         if: ${{ failure() }}
         run: |
+          function append() {
+            logDir="$1"
+            logFile="$logDir/target/tests.log"
+            if [ -f $logFile ]
+            then
+            echo -e "\n----- $logDir logs -----" >> tests.log
+            cat $logFile >> tests.log
+            fi
+          }
           touch tests.log
-          echo -e "\n----- consensus-core logs -----" >> tests.log
-          cat consensus-network/target/tests.log >> tests.log
-          echo -e "\n----- consensus-network logs -----" >> tests.log
-          cat consensus-network/target/tests.log >> tests.log
-          echo -e "\n----- consensus-bizur logs -----" >> tests.log
-          cat consensus-bizur/target/tests.log >> tests.log
-          echo -e "\n----- consensus-raft logs -----" >> tests.log
-          cat consensus-raft/target/tests.log >> tests.log
-          echo -e "\n----- consensus-kvstore logs -----" >> tests.log
-          cat consensus-kvstore/target/tests.log >> tests.log
-          curl --upload-file tests.log https://transfer.sh/tests.log
+          append consensus-core
+          append consensus-network
+          append consensus-bizur
+          append consensus-raft
+          append consensus-kvstore
+      - name: Build failed - uploading logs (2)
+        if: ${{ failure() }}
+        run: curl --upload-file tests.log https://transfer.sh/tests.log
