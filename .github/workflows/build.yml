@@ -42,7 +42,7 @@ jobs:
           -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
           -Dmaven.javadoc.skip=true -DcreateChecksum=true
           -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-      - name: Deploy to repo
+      - name: Deploy to repo as library
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
           cd mvn-repo
           
           # clean dir & copy new files
-          rm -vr ./com/mboysan/consensus/*
+          [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus/*
           cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
           
           # commit & push files
