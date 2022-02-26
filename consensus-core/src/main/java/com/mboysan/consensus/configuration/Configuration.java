@@ -18,9 +18,8 @@ public interface Configuration extends Config {
     @Key("node.id")
     int nodeId();
 
-    @Key("transport.class.name")
-        // NettyTransport can be used
-    String transportClassName();
+    @Key("node.consensus.protocol")
+    String nodeConsensusProtocol();
 
     @Key("transport.message.callbackTimeoutMs")
     @DefaultValue("5000")

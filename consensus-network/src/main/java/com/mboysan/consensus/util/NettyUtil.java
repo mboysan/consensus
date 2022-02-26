@@ -33,7 +33,7 @@ public final class NettyUtil {
         nettyDestProps = nettyDestProps.replaceAll("\\s+","");    // remove whitespace
         String[] dests = nettyDestProps.split(",");
         for (String dest : dests) {
-            String[] idIp = dest.split("=");
+            String[] idIp = dest.split("-");
             int id = Integer.parseInt(idIp[0]);
             String[] hostPort = idIp[1].split(":");
             String host = hostPort[0];

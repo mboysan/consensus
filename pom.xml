@@ -15,6 +15,7 @@
         <module>consensus-bizur</module>
         <module>consensus-kvstore</module>
         <module>consensus-distribution</module>
+        <module>consensus-cli</module>
     </modules>
 
     <properties>
@@ -36,7 +37,7 @@
         <maven.surefire.version>3.0.0-M4</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
         <maven.failsafe.version>3.0.0-M4</maven.failsafe.version>
         <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
-        <mockito.version>1.10.19</mockito.version>
+        <mockito.version>4.3.1</mockito.version>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
 
         <sonar.projectKey>mboysan_consensus</sonar.projectKey>
@@ -50,6 +51,11 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>
@@ -81,14 +87,8 @@
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
-                <artifactId>mockito-all</artifactId>
+                <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

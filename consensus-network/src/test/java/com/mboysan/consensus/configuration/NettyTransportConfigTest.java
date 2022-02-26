@@ -14,7 +14,7 @@ class NettyTransportConfigTest {
     @Test
     void testDestinationConverterSuccess() {
         Properties props = new Properties();
-        props.put("transport.netty.destinations", "0=localhost:8080,1=localhost:8081, 2=localhost:8082");
+        props.put("transport.netty.destinations", "0-localhost:8080,1-localhost:8081, 2-localhost:8082");
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, props);
 
         Map<Integer, Destination> expected = new HashMap<>() {{
