@@ -60,21 +60,21 @@ public class KVStoreServerCLI extends CLIBase {
     }
 
     private static Transport createNodeServingTransport(String[] args, Properties mainProps) {
-        return createNodeServingTransport(args, "node.transport", mainProps);
+        return createServerTransport(args, 0, mainProps);
     }
 
     private static Transport createClientServingTransport(String[] args, Properties mainProps) {
-        return createNodeServingTransport(args, "store.transport", mainProps);
+        return createServerTransport(args, 1, mainProps);
     }
 
-    private static Transport createNodeServingTransport(String[] args, String startString, Properties mainProps) {
+    private static Transport createServerTransport(String[] args, int portIndex, Properties mainProps) {
         Properties transportProperties = new Properties();
         transportProperties.putAll(mainProps);
         for (String arg : args) {
-            if (arg.startsWith(startString)) {
-                arg = arg.substring(arg.indexOf(".") + 1);
-                String[] kv = arg.split("=");
-                transportProperties.put(kv[0], kv[1]);
+            if (arg.contains("ports")) {
+                arg = arg.substring(arg.indexOf("=") + 1);
+                String[] ports = arg.split(",");
+                transportProperties.put("transport.netty.port", ports[portIndex] + "");
             }
         }
         NettyTransportConfig serverTransportConfig = Configuration.newInstance(NettyTransportConfig.class, transportProperties);

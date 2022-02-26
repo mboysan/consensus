@@ -71,7 +71,7 @@ public class InVMTransport implements Transport {
         }
     }
 
-    private void onNodeStopped(NodeStoppedEvent event) {
+    private synchronized void onNodeStopped(NodeStoppedEvent event) {
         int nodeId = event.sourceNodeId();
         Server server = serverMap.get(nodeId);
         if (server != null) {

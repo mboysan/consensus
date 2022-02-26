@@ -2,8 +2,6 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
-import com.mboysan.consensus.event.NodeListChangedEvent;
-import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.CheckedSupplier;
 import io.netty.bootstrap.ServerBootstrap;
@@ -20,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public class NettyServerTransport implements Transport {
@@ -38,19 +35,25 @@ public class NettyServerTransport implements Transport {
      * Id of the node that this transport is responsible from
      */
     private final NettyClientTransport clientTransport;
-    private Function<Message, Message> messageProcessor;
+    private UnaryOperator<Message> messageProcessor;
 
     public NettyServerTransport(NettyTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
         this.clientTransport = new NettyClientTransport(config);
-
-        EventManager.getInstance().registerEventListener(NodeStartedEvent.class, this::onNodeStarted);
     }
 
     @Override
     public boolean isShared() {
         return false;
+    }
+
+    @Override
+    public void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
+        if (this.messageProcessor != null && !this.messageProcessor.equals(messageProcessor)) {  // for restarts
+            throw new IllegalStateException("request processor already registered");
+        }
+        this.messageProcessor = messageProcessor;
     }
 
     @Override
@@ -96,26 +99,6 @@ public class NettyServerTransport implements Transport {
         }
         clientTransport.start();
         isRunning = true;
-    }
-
-    private synchronized void onNodeStarted(NodeStartedEvent event) {
-        int nodeId = event.sourceNodeId();
-        Objects.requireNonNull(destinations);
-        Set<Integer> nodeIds = new HashSet<>();
-        destinations.forEach((id, dest) -> {
-            if (id != nodeId) { // we don't add ourselves
-                nodeIds.add(id);
-            }
-        });
-        EventManager.getInstance().fireEvent(new NodeListChangedEvent(nodeId, nodeIds));
-    }
-
-    @Override
-    public void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
-        if (this.messageProcessor != null && !this.messageProcessor.equals(messageProcessor)) {  // for restarts
-            throw new IllegalStateException("request processor already registered");
-        }
-        this.messageProcessor = messageProcessor;
     }
 
     @Override

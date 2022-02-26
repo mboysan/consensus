@@ -34,21 +34,21 @@ public class RaftKVIT {
 
     private static final List<Destination> NODE_DESTINATIONS = new ArrayList<>();
     static {
-        addDestination(NODE_DESTINATIONS, 0, NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 1, NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 2, NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 3, NettyUtil.findFreePort());
-        addDestination(NODE_DESTINATIONS, 4, NettyUtil.findFreePort());
+        addNodeDestination(0, NettyUtil.findFreePort());
+        addNodeDestination(1, NettyUtil.findFreePort());
+        addNodeDestination(2, NettyUtil.findFreePort());
+        addNodeDestination(3, NettyUtil.findFreePort());
+        addNodeDestination(4, NettyUtil.findFreePort());
     }
     private static final String NODE_DESTINATIONS_STR = NettyUtil.convertDestinationsListToProps(NODE_DESTINATIONS);
 
     private static final List<Destination> STORE_DESTINATIONS = new ArrayList<>();
     static {
-        addDestination(STORE_DESTINATIONS, 0, NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 1, NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 2, NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 3, NettyUtil.findFreePort());
-        addDestination(STORE_DESTINATIONS, 4, NettyUtil.findFreePort());
+        addStoreDestination(0, NettyUtil.findFreePort());
+        addStoreDestination(1, NettyUtil.findFreePort());
+        addStoreDestination(2, NettyUtil.findFreePort());
+        addStoreDestination(3, NettyUtil.findFreePort());
+        addStoreDestination(4, NettyUtil.findFreePort());
     }
 
     private KVStoreRPC[] stores;
@@ -187,7 +187,11 @@ public class RaftKVIT {
         return new RaftNode(config, transport);
     }
 
-    private static void addDestination(List<Destination> destinations, int nodeId, int port) {
-        Objects.requireNonNull(destinations).add(new Destination(nodeId, HOST_NAME, port));
+    private static void addNodeDestination(int nodeId, int port) {
+        Objects.requireNonNull(NODE_DESTINATIONS).add(new Destination(nodeId, HOST_NAME, port));
+    }
+
+    private static void addStoreDestination(int nodeId, int port) {
+        Objects.requireNonNull(STORE_DESTINATIONS).add(new Destination(nodeId, HOST_NAME, port));
     }
 }

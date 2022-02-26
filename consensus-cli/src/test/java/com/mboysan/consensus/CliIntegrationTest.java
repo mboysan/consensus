@@ -22,7 +22,7 @@ public class CliIntegrationTest {
 
     @Test
     void testBizurKVStoreBootstrapping() throws Exception {
-//        bootstrapAndTest("bizur");
+        bootstrapAndTest("bizur");
     }
 
     void bootstrapAndTest(String protocol) throws Exception {
@@ -31,10 +31,8 @@ public class CliIntegrationTest {
             KVStoreServerCLI.main(new String[]{
                     "node.id=0",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "store.transport.netty.port=9090",  // client will connect to this port
-                    "store.transport.netty.destinations=0-localhost:9090",  // only needs to know its own store location
-                    "node.transport.netty.port=8080",
-                    "node.transport.netty.destinations=0-localhost:8080,1-localhost:8081,2-localhost:8082"
+                    "transport.netty.ports=8080,9090",  // nodes will connect to first port and client to second
+                    "transport.netty.destinations=0-localhost:8080,1-localhost:8081,2-localhost:8082"
             });
 
             // node-1

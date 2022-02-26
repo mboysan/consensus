@@ -33,7 +33,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
     private final Configuration nodeConfig;
-    private final EventManager eventManager;
 
     AbstractNode(Configuration config, Transport transport) {
         this.nodeId = config.nodeId();
@@ -42,8 +41,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         this.nodeConfig = config;
         LOGGER.info("node-{} config={}", nodeId, nodeConfig);
 
-        this.eventManager = EventManager.getInstance();
-        eventManager.registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
+        EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
+        // register known peer destinations
+        onNodeListChanged(new NodeListChangedEvent(nodeId, transport.getDestinationNodeIds()));
     }
 
     Timers createTimers() {
@@ -60,11 +60,12 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         isRunning = true;
 
         transport.registerMessageProcessor(this);
-        eventManager.fireEvent(new NodeStartedEvent(nodeId));
 
         peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
                 new BasicThreadFactory.Builder().namingPattern("PeerExec-" + nodeId + "-%d").daemon(true).build()
         );
+
+        EventManager.getInstance().fireEvent(new NodeStartedEvent(nodeId));
 
         return startNode();
     }
@@ -79,7 +80,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         timers.shutdown();
         peerExecutor.shutdown();
         peers.clear();
-        eventManager.fireEvent(new NodeStoppedEvent(nodeId));
+        EventManager.getInstance().fireEvent(new NodeStoppedEvent(nodeId));
         if (!transport.isShared()) {
             transport.shutdown();
         }
@@ -150,20 +151,12 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     abstract RPCProtocol getRPC();
 
-    Transport getTransport() {
-        return transport;
-    }
-
     Timers getTimers() {
         return timers;
     }
 
     public int getNodeId() {
         return nodeId;
-    }
-
-    public boolean isRunning() {
-        return isRunning;
     }
 
     Configuration getConfiguration() {
