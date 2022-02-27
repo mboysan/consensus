@@ -1,7 +1,6 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.CheckedRunnable;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,7 @@ public class CliIntegrationTest {
 
     @Test
     void testBizurKVStoreBootstrapping() throws Exception {
-//        bootstrapAndTest("bizur");
+        bootstrapAndTest("bizur");
     }
 
     void bootstrapAndTest(String protocol) throws Exception {
