@@ -144,7 +144,7 @@ public class NettyClientTransport implements Transport {
 
     private static int resolveClientPoolSize(int providedClientPoolSize) {
         if (providedClientPoolSize <= 0) {
-            return Runtime.getRuntime().availableProcessors() * 2;
+            return Runtime.getRuntime().availableProcessors();
         }
         return providedClientPoolSize;
     }
