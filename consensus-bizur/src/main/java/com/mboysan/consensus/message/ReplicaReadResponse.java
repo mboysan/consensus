@@ -1,13 +1,13 @@
 package com.mboysan.consensus.message;
 
-import com.mboysan.consensus.BucketView;
+import com.mboysan.consensus.Bucket;
 
 public class ReplicaReadResponse extends Message {
 
     private final boolean acked;
-    private final BucketView bucketView;
+    private final Bucket bucketView;
 
-    public ReplicaReadResponse(boolean acked, BucketView bucketView) {
+    public ReplicaReadResponse(boolean acked, Bucket bucketView) {
         this.acked = acked;
         this.bucketView = bucketView;
     }
@@ -16,7 +16,7 @@ public class ReplicaReadResponse extends Message {
         return acked;
     }
 
-    public BucketView getBucketView() {
+    public Bucket getBucket() {
         return bucketView;
     }
 

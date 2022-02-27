@@ -143,7 +143,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 } else {
                     bizurState.setVotedElectId(electId)
                             .setLeaderId(source);    // "update" vote
-                    return new ReplicaReadResponse(true, bucket.createView()).responseTo(request);
+                    return new ReplicaReadResponse(true, bucket).responseTo(request);
                 }
             }
         } finally {
@@ -153,16 +153,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public ReplicaWriteResponse replicaWrite(ReplicaWriteRequest request) {
-        BucketView bucketView = request.getBucketView();
+        Bucket reqBucket = request.getBucket();
         Bucket bucket = getBucket(request.getBucketIndex()).lock();
         try {
             synchronized (bizurState) {
-                if (bucketView.getVerElectId() < bizurState.getVotedElectId()) {
+                if (reqBucket.getVerElectId() < bizurState.getVotedElectId()) {
                     return new ReplicaWriteResponse(false).responseTo(request);
                 } else {
-                    bizurState.setVotedElectId(bucketView.getVerElectId())
+                    bizurState.setVotedElectId(reqBucket.getVerElectId())
                             .setLeaderId(request.getSenderId());     // "update" vote
-                    bucket.setBucketMap(bucketView.getBucketMap());
+                    bucket.setBucketMap(request.getBucket().getBucketMap());
                     return new ReplicaWriteResponse(true).responseTo(request);
                 }
             }

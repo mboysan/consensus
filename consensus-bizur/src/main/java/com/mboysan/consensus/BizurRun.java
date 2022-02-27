@@ -126,11 +126,9 @@ class BizurRun {
         bucket.setVerElectId(electId);
         bucket.incrementVerCounter();
 
-        BucketView bucketView = bucket.createView();
-
         AtomicInteger ackCount = new AtomicInteger(0);
         forEachPeerParallel(peer -> {
-            ReplicaWriteRequest request = new ReplicaWriteRequest(index, bucketView)
+            ReplicaWriteRequest request = new ReplicaWriteRequest(index, bucket)
                     .setCorrelationId(correlationId)
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
@@ -194,7 +192,7 @@ class BizurRun {
         }
 
         int index = bucket.getIndex();
-        AtomicReference<BucketView> maxVerBucketView = new AtomicReference<>(null);
+        AtomicReference<Bucket> maxVerBucket = new AtomicReference<>(null);
         AtomicInteger ackCount = new AtomicInteger(0);
         forEachPeerParallel(peer -> {
             ReplicaReadRequest request = new ReplicaReadRequest(index, electId)
@@ -204,11 +202,11 @@ class BizurRun {
             try {
                 ReplicaReadResponse response = getRPC(peer.peerId).replicaRead(request);
                 if (response.isAcked()) {
-                    BucketView bucketView = response.getBucketView();
-                    synchronized (maxVerBucketView) {
-                        if (!maxVerBucketView.compareAndSet(null, bucketView)
-                                && bucketView.compareTo(maxVerBucketView.get()) > 0) {
-                            maxVerBucketView.set(bucketView);
+                    Bucket respBucket = response.getBucket();
+                    synchronized (maxVerBucket) {
+                        if (!maxVerBucket.compareAndSet(null, respBucket)
+                                && respBucket.compareTo(maxVerBucket.get()) > 0) {
+                            maxVerBucket.set(respBucket);
                         }
                     }
                     ackCount.incrementAndGet();
@@ -218,10 +216,9 @@ class BizurRun {
             }
         });
         if (isMajorityAcked(ackCount.get())) {
-            BucketView bucketView = maxVerBucketView.get();
             bucket.setVerElectId(electId)
                     .setVerCounter(0)
-                    .setBucketMap(bucketView.getBucketMap());
+                    .setBucketMap(maxVerBucket.get().getBucketMap());
             write(bucket);
         } else {
             bizurState.setLeaderId(-1);  // step down
