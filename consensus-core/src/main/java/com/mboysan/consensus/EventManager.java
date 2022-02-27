@@ -37,6 +37,7 @@ public final class EventManager {
     @SuppressWarnings("unchecked")
     public <T extends IEvent> void fireEvent(T event) {
         Objects.requireNonNull(event);
+        LOGGER.debug("firing event {}", event);
         EventConsumers<T> container = (EventConsumers<T>) eventConsumerMap.get(event.getClass());
         if (container != null) {
             for (Consumer<T> consumer : container.consumers) {

@@ -46,7 +46,7 @@ public class NettyClientTransport implements Transport {
     public NettyClientTransport(NettyTransportConfig config) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
-        this.clientPoolSize = config.clientPoolSize();
+        this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
     }
 
     @Override
@@ -140,6 +140,13 @@ public class NettyClientTransport implements Transport {
 
     public synchronized boolean verifyShutdown() {
         return !isRunning && callbackMap.size() == 0 && clientPools.size() == 0;
+    }
+
+    private static int resolveClientPoolSize(int providedClientPoolSize) {
+        if (providedClientPoolSize <= 0) {
+            return Runtime.getRuntime().availableProcessors() * 2;
+        }
+        return providedClientPoolSize;
     }
 
     private static class NettyClient {

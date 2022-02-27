@@ -186,6 +186,7 @@ class NettyTransportIT {
         Properties properties = new Properties();
         properties.put("transport.netty.port", port + "");
         properties.put("transport.netty.destinations", NettyUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put("transport.netty.clientPoolSize", "2");
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyServerTransport(config);
@@ -194,6 +195,7 @@ class NettyTransportIT {
     NettyClientTransport createClientTransport() {
         Properties properties = new Properties();
         properties.put("transport.netty.destinations", NettyUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put("transport.netty.clientPoolSize", "2");
         // create new config per transport
         NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
         return new NettyClientTransport(config);

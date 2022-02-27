@@ -6,6 +6,6 @@ public interface BizurConfig extends Configuration {
     int numBuckets();
 
     @Key("bizur.updateIntervalMs")
-    @DefaultValue("5000")
+    @DefaultValue("500")
     long updateIntervalMs();
 }
