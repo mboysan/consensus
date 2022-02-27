@@ -6,10 +6,14 @@ import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
-public class NodeCLI extends CLIBase {
+public class NodeCLI {
+
+    public static final Map<Integer, AbstractNode<?>> NODE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties mainProps = new Properties();

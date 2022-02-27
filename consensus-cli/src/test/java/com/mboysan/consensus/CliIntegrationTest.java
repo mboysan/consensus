@@ -20,7 +20,7 @@ public class CliIntegrationTest {
 
     @BeforeAll
     static void setupBeforeClass() {
-        CLIBase.testingInProgress = true;
+        KVStoreClientCLI.testingInProgress = true;
     }
 
     @Test
@@ -79,7 +79,7 @@ public class CliIntegrationTest {
                     "node.id=111",   // client's id
                     "transport.netty.destinations=0-localhost:9090"
             });
-            KVStoreClient client = CLIBase.CLIENT_REFERENCES.get(111);
+            KVStoreClient client = KVStoreClientCLI.CLIENT_REFERENCES.get(111);
 
             String key = "testKey";
             String val = "testVal";
@@ -87,9 +87,9 @@ public class CliIntegrationTest {
             assertEquals(val, client.get(key));
 
         } finally {
-            CLIBase.CLIENT_REFERENCES.forEach((i, client) -> client.shutdown());
-            CLIBase.NODE_REFERENCES.forEach((i, node) -> node.shutdown());
-            CLIBase.STORE_REFERENCES.forEach((i, store) -> store.shutdown());
+            KVStoreClientCLI.CLIENT_REFERENCES.forEach((i, client) -> client.shutdown());
+            NodeCLI.NODE_REFERENCES.forEach((i, node) -> node.shutdown());
+            KVStoreServerCLI.STORE_REFERENCES.forEach((i, store) -> store.shutdown());
         }
     }
 

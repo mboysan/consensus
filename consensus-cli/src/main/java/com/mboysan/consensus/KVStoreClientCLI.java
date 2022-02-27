@@ -2,15 +2,16 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class KVStoreClientCLI extends CLIBase {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
+public class KVStoreClientCLI {
+    public static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
+    public static volatile boolean testingInProgress = false;
 
     public static void main(String[] args) throws IOException {
         Properties mainProps = new Properties();
@@ -30,7 +31,7 @@ public class KVStoreClientCLI extends CLIBase {
         client.start();
 
         if (!testingInProgress) {
-            LOGGER.info("client ready to receive commands:");
+            System.out.println("client ready to receive commands:");
 
             Scanner scanner = new Scanner(System.in);
             boolean exited = false;
@@ -40,14 +41,14 @@ public class KVStoreClientCLI extends CLIBase {
                     String[] cmd = input.split(" ");
                     switch (cmd[0]) {
                         case "set" -> client.set(cmd[1], cmd[2]);
-                        case "get" -> LOGGER.info("result -> {}", client.get(cmd[1]));
+                        case "get" -> System.out.println("result -> " + client.get(cmd[1]));
                         case "delete" -> client.delete(cmd[1]);
-                        case "iterate" -> LOGGER.info("result -> {}", client.iterateKeys());
+                        case "iterateKeys" -> System.out.println("result -> " + client.iterateKeys());
                         case "exit" -> exited = true;
                         default -> throw new IllegalArgumentException("command invalid");
                     }
                 } catch (Exception e) {
-                    LOGGER.error(e.getMessage(), e);
+                    e.printStackTrace();
                 }
             }
             client.shutdown();

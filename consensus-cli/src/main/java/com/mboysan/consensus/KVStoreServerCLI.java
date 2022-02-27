@@ -6,10 +6,14 @@ import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
-public class KVStoreServerCLI extends CLIBase {
+public class KVStoreServerCLI {
+
+    public static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties mainProps = new Properties();
