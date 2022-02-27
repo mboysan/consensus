@@ -158,12 +158,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         try {
             synchronized (bizurState) {
                 if (bucketView.getVerElectId() < bizurState.getVotedElectId()) {
-                    return new ReplicaWriteResponse(false);
+                    return new ReplicaWriteResponse(false).responseTo(request);
                 } else {
                     bizurState.setVotedElectId(bucketView.getVerElectId())
                             .setLeaderId(request.getSenderId());     // "update" vote
                     bucket.setBucketMap(bucketView.getBucketMap());
-                    return new ReplicaWriteResponse(true);
+                    return new ReplicaWriteResponse(true).responseTo(request);
                 }
             }
         } finally {

@@ -90,10 +90,10 @@ public class NettyClientTransport implements Transport {
         } catch (InterruptedException e) {
             callbackMap.remove(message.getId());
             Thread.currentThread().interrupt();
-            throw new IOException(e);
+            throw new IOException("cause: %s, failed message: %s".formatted(e.getMessage(), message.toString()), e);
         } catch (Exception e) {
             callbackMap.remove(message.getId());
-            throw new IOException(e);
+            throw new IOException("cause: %s, failed message: %s".formatted(e.getMessage(), message.toString()), e);
         }
     }
 

@@ -40,7 +40,10 @@ class BizurRun {
         bizurNode.forEachPeerParallel(peerConsumer);
     }
 
-    private BizurRPC getRPC() {
+    private BizurRPC getRPC(int peerId) {
+        if (peerId == getNodeId()) {
+            return bizurNode;   // allows calling real methods without using IO communication.
+        }
         return bizurNode.getRPC();
     }
 
@@ -94,7 +97,7 @@ class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                PleaseVoteResponse response = getRPC().pleaseVote(request);
+                PleaseVoteResponse response = getRPC(peer.peerId).pleaseVote(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -132,7 +135,7 @@ class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaWriteResponse response = getRPC().replicaWrite(request);
+                ReplicaWriteResponse response = getRPC(peer.peerId).replicaWrite(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -166,7 +169,7 @@ class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC().replicaRead(request);
+                ReplicaReadResponse response = getRPC(peer.peerId).replicaRead(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -199,7 +202,7 @@ class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC().replicaRead(request);
+                ReplicaReadResponse response = getRPC(peer.peerId).replicaRead(request);
                 if (response.isAcked()) {
                     BucketView bucketView = response.getBucketView();
                     synchronized (maxVerBucketView) {
