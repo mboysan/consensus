@@ -25,10 +25,6 @@ public interface NettyTransportConfig extends Configuration {
     @ConverterClass(DestinationsConverter.class)
     Map<Integer, Destination> destinations();
 
-    @Key("transport.netty.clientPoolSize")
-    @DefaultValue("0")
-    int clientPoolSize();
-
     class DestinationsConverter implements Converter<Map<Integer, Destination>> {
         @Override
         public Map<Integer, Destination> convert(Method method, String s) {
