@@ -4,7 +4,10 @@ import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 
 import java.io.IOException;
-import java.util.*;
+import java.security.SecureRandom;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
@@ -57,7 +60,7 @@ public class KVStoreClientCLI {
     private static int resolveClientId(Properties mainProps) {
         String clientId = mainProps.getProperty("client.id");
         if (clientId == null) {
-            return new Random().nextInt();
+            return new SecureRandom().nextInt();
         }
         return Integer.parseInt(clientId);
     }
