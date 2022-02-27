@@ -61,6 +61,7 @@ jobs:
           append consensus-bizur
           append consensus-raft
           append consensus-kvstore
+          append consensus-cli
       - name: Build failed - uploading logs (2)
         if: ${{ failure() }}
         run: curl --upload-file tests.log https://transfer.sh/tests.log
