@@ -143,7 +143,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 } else {
                     bizurState.setVotedElectId(electId)
                             .setLeaderId(source);    // "update" vote
-                    return new ReplicaReadResponse(true, bucket.createView()).responseTo(request);
+                    return new ReplicaReadResponse(true, bucket).responseTo(request);
                 }
             }
         } finally {
@@ -153,16 +153,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public ReplicaWriteResponse replicaWrite(ReplicaWriteRequest request) {
-        BucketView bucketView = request.getBucketView();
+        Bucket reqBucket = request.getBucket();
         Bucket bucket = getBucket(request.getBucketIndex()).lock();
         try {
             synchronized (bizurState) {
-                if (bucketView.getVerElectId() < bizurState.getVotedElectId()) {
+                if (reqBucket.getVerElectId() < bizurState.getVotedElectId()) {
                     return new ReplicaWriteResponse(false).responseTo(request);
                 } else {
-                    bizurState.setVotedElectId(bucketView.getVerElectId())
+                    bizurState.setVotedElectId(reqBucket.getVerElectId())
                             .setLeaderId(request.getSenderId());     // "update" vote
-                    bucket.setBucketMap(bucketView.getBucketMap());
+                    bucket.setBucketMap(request.getBucket().getBucketMap());
                     return new ReplicaWriteResponse(true).responseTo(request);
                 }
             }
@@ -178,15 +178,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVGetResponse get(KVGetRequest request) throws IOException {
         validateAction();
-        int leaderId = getLeaderId().orElse(getRandomPeerId());
-        if (leaderId == getNodeId()) {  // I am the leader
-            try {
+        int leaderId;
+        try {
+            leaderId = getLeaderId().orElseThrow(() -> new IllegalStateException("leader unresolved"));
+            if (leaderId == getNodeId()) {  // I am the leader
                 String value = new BizurRun(request.getCorrelationId(), this).apiGet(request.getKey());
                 return new KVGetResponse(true, null, value).responseTo(request);
-            } catch (Exception e) {
-                logErrorForRequest(e, request);
-                return new KVGetResponse(false, e, null).responseTo(request);
             }
+        } catch (Exception e) {
+            logErrorForRequest(e, request);
+            return new KVGetResponse(false, e, null).responseTo(request);
         }
         // route to leader/peer
         logRequestRouting(request, getNodeId(), leaderId);
@@ -197,15 +198,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVSetResponse set(KVSetRequest request) throws IOException {
         validateAction();
-        int leaderId = getLeaderId().orElse(getRandomPeerId());
-        if (leaderId == getNodeId()) {  // I am the leader
-            try {
+        int leaderId;
+        try {
+            leaderId = getLeaderId().orElse(getRandomPeerId());
+            if (leaderId == getNodeId()) {  // I am the leader
                 new BizurRun(request.getCorrelationId(), this).apiSet(request.getKey(), request.getValue());
                 return new KVSetResponse(true, null).responseTo(request);
-            } catch (Exception e) {
-                logErrorForRequest(e, request);
-                return new KVSetResponse(false, e).responseTo(request);
             }
+        } catch (Exception e) {
+            logErrorForRequest(e, request);
+            return new KVSetResponse(false, e).responseTo(request);
         }
         // route to leader/peer
         logRequestRouting(request, getNodeId(), leaderId);
@@ -216,15 +218,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
         validateAction();
-        int leaderId = getLeaderId().orElse(getRandomPeerId());
-        if (leaderId == getNodeId()) {  // I am the leader
-            try {
+        int leaderId;
+        try {
+            leaderId = getLeaderId().orElseThrow(() -> new IllegalStateException("leader unresolved"));
+            if (leaderId == getNodeId()) {  // I am the leader
                 new BizurRun(request.getCorrelationId(), this).apiDelete(request.getKey());
                 return new KVDeleteResponse(true, null).responseTo(request);
-            } catch (Exception e) {
-                logErrorForRequest(e, request);
-                return new KVDeleteResponse(false, e).responseTo(request);
             }
+        } catch (Exception e) {
+            logErrorForRequest(e, request);
+            return new KVDeleteResponse(false, e).responseTo(request);
         }
         // route to leader/peer
         logRequestRouting(request, getNodeId(), leaderId);
@@ -235,15 +238,18 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
         validateAction();
-        int leaderId = getLeaderId().orElse(getRandomPeerId());
-        if (leaderId == getNodeId()) {  // I am the leader
-            try {
+        int leaderId;
+        try {
+            leaderId = getLeaderId().orElseThrow(() -> new IllegalStateException("leader unresolved"));
+            if (leaderId == getNodeId()) {  // I am the leader
+
                 Set<String> keys = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
                 return new KVIterateKeysResponse(true, null, keys).responseTo(request);
-            } catch (Exception e) {
-                logErrorForRequest(e, request);
-                return new KVIterateKeysResponse(false, e, null).responseTo(request);
+
             }
+        } catch (Exception e) {
+            logErrorForRequest(e, request);
+            return new KVIterateKeysResponse(false, e, null).responseTo(request);
         }
         // route to leader/peer
         logRequestRouting(request, getNodeId(), leaderId);

@@ -84,14 +84,14 @@ class BizurMessagesSerializationTest {
         ReplicaReadRequest reqActual = serializeDeserialize(reqExpected);
         assertSerialized(reqExpected, reqActual);
 
-        ReplicaReadResponse respExpected = new ReplicaReadResponse(true, getTestBucketView());
+        ReplicaReadResponse respExpected = new ReplicaReadResponse(true, createTestBucket());
         ReplicaReadResponse respActual = serializeDeserialize(respExpected);
         assertSerialized(respExpected, respActual);
     }
 
     @Test
     void testSerializeReplicaWriteMessages() throws Exception {
-        ReplicaWriteRequest reqExpected = new ReplicaWriteRequest(1, getTestBucketView());
+        ReplicaWriteRequest reqExpected = new ReplicaWriteRequest(1, createTestBucket());
         ReplicaWriteRequest reqActual = serializeDeserialize(reqExpected);
         assertSerialized(reqExpected, reqActual);
 
@@ -113,13 +113,13 @@ class BizurMessagesSerializationTest {
         return keys;
     }
 
-    private BucketView getTestBucketView() {
+    private Bucket createTestBucket() {
         Bucket testBucket = new Bucket(1);
         testBucket.putOp("k0", "v0");
         testBucket.putOp("k1", "v1");
         testBucket.putOp("k2", "v2");
         testBucket.setVerElectId(2);
         testBucket.setVerCounter(3);
-        return testBucket.createView();
+        return testBucket;
     }
 }

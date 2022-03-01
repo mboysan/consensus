@@ -11,12 +11,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import org.apache.commons.pool2.BasePooledObjectFactory;
-import org.apache.commons.pool2.ObjectPool;
-import org.apache.commons.pool2.PooledObject;
-import org.apache.commons.pool2.impl.DefaultPooledObject;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,16 +31,14 @@ public class NettyClientTransport implements Transport {
 
     private final Map<Integer, Destination> destinations;
     private final long messageCallbackTimeoutMs;
-    private final int clientPoolSize;
     private volatile boolean isRunning = false;
 
-    private final Map<Integer, ObjectPool<NettyClient>> clientPools = new ConcurrentHashMap<>();
+    private final Map<Integer, NettyClient> clients = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     public NettyClientTransport(NettyTransportConfig config) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
-        this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
     }
 
     @Override
@@ -85,7 +77,8 @@ public class NettyClientTransport implements Transport {
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
         callbackMap.put(message.getId(), msgFuture);
         try {
-            sendUsingClientPool(message);
+            NettyClient client = getOrCreateClient(message.getReceiverId());
+            client.send(message);
             return msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             callbackMap.remove(message.getId());
@@ -97,32 +90,16 @@ public class NettyClientTransport implements Transport {
         }
     }
 
-    private void sendUsingClientPool(Message message) throws IOException {
-        ObjectPool<NettyClient> pool = getOrCreateClientPool(message.getReceiverId());
-        NettyClient client = null;
-        try {
-            client = pool.borrowObject();
-            client.send(message);
-        } catch (Exception e) {
-            throw new IOException(e);
-        } finally {
-            if (client != null) {
-                try {
-                    pool.returnObject(client);
-                } catch (Exception e) {
-                    LOGGER.error(e.getMessage());
-                }
-            }
-        }
-    }
-
-    private ObjectPool<NettyClient> getOrCreateClientPool(int receiverId) {
-        return clientPools.computeIfAbsent(receiverId, id -> {
+    private NettyClient getOrCreateClient(int receiverId) {
+        return clients.computeIfAbsent(receiverId, id -> {
             Destination dest = destinations.get(id);
-            NettyClientFactory clientFactory = new NettyClientFactory(dest, callbackMap);
-            GenericObjectPoolConfig<NettyClient> poolConfig = new GenericObjectPoolConfig<>();
-            poolConfig.setMaxTotal(clientPoolSize);
-            return new GenericObjectPool<>(clientFactory, poolConfig);
+            NettyClient client = new NettyClient(dest, callbackMap);
+            try {
+                client.connect();
+                return client;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 
@@ -132,21 +109,14 @@ public class NettyClientTransport implements Transport {
             return;
         }
         isRunning = false;
-        clientPools.forEach((i, pool) -> pool.close());
-        clientPools.clear();
+        clients.forEach((i, client) -> client.shutdown());
+        clients.clear();
         callbackMap.forEach((s, f) -> f.cancel(true));
         callbackMap.clear();
     }
 
     public synchronized boolean verifyShutdown() {
-        return !isRunning && callbackMap.size() == 0 && clientPools.size() == 0;
-    }
-
-    private static int resolveClientPoolSize(int providedClientPoolSize) {
-        if (providedClientPoolSize <= 0) {
-            return Runtime.getRuntime().availableProcessors() * 2;
-        }
-        return providedClientPoolSize;
+        return !isRunning && callbackMap.size() == 0 && clients.size() == 0;
     }
 
     private static class NettyClient {
@@ -157,7 +127,7 @@ public class NettyClientTransport implements Transport {
 
         NettyClient(Destination destination, Map<String, CompletableFuture<Message>> callbackMap) {
             this.destination = destination;
-            this.group = new NioEventLoopGroup(1);
+            this.group = new NioEventLoopGroup();
             this.callbackMap = callbackMap;
         }
 
@@ -193,14 +163,6 @@ public class NettyClientTransport implements Transport {
             }
         }
 
-        boolean isValid() {
-            return channel != null && isConnected();
-        }
-
-        boolean isConnected() {
-            return channel.isActive();
-        }
-
         void send(Message message) {
             LOGGER.debug("OUT (request): {}", message);
             channel.writeAndFlush(message);
@@ -208,41 +170,6 @@ public class NettyClientTransport implements Transport {
 
         synchronized void shutdown() {
             group.shutdownGracefully();
-        }
-    }
-
-    private static class NettyClientFactory extends BasePooledObjectFactory<NettyClient> {
-        private final Destination destination;
-        private final Map<String, CompletableFuture<Message>> callbackMap;
-
-        private NettyClientFactory(Destination destination, Map<String, CompletableFuture<Message>> callbackMap) {
-            this.destination = destination;
-            this.callbackMap = callbackMap;
-        }
-
-        @Override
-        public NettyClient create() {
-            return new NettyClient(destination, callbackMap);
-        }
-
-        @Override
-        public void activateObject(PooledObject<NettyClient> p) throws IOException {
-            p.getObject().connect();
-        }
-
-        @Override
-        public void destroyObject(PooledObject<NettyClient> p) {
-            p.getObject().shutdown();
-        }
-
-        @Override
-        public boolean validateObject(PooledObject<NettyClient> p) {
-            return p.getObject().isValid();
-        }
-
-        @Override
-        public PooledObject<NettyClient> wrap(NettyClient nettyClient) {
-            return new DefaultPooledObject<>(nettyClient);
         }
     }
 }

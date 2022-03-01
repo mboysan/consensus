@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
@@ -20,11 +21,12 @@ public class KVStoreClientCLI {
             String[] kv = arg.split("=");
             mainProps.put(kv[0], kv[1]);
         }
+        int clientId = resolveClientId(mainProps);
 
         NettyTransportConfig clientTransportConfig = Configuration.newInstance(NettyTransportConfig.class, mainProps);
         Transport clientTransport = new NettyClientTransport(clientTransportConfig);
         KVStoreClient client = new KVStoreClient(clientTransport);
-        CLIENT_REFERENCES.put(clientTransportConfig.nodeId(), client);
+        CLIENT_REFERENCES.put(clientId, client);
 
         Runtime.getRuntime().addShutdownHook(new Thread(client::shutdown));
 
@@ -53,5 +55,13 @@ public class KVStoreClientCLI {
             }
             client.shutdown();
         }
+    }
+
+    private static int resolveClientId(Properties mainProps) {
+        String clientId = mainProps.getProperty("client.id");
+        if (clientId == null) {
+            return new SecureRandom().nextInt();
+        }
+        return Integer.parseInt(clientId);
     }
 }

@@ -3,16 +3,17 @@ package com.mboysan.consensus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
-class Bucket implements Comparable<Bucket> {
+public class Bucket implements Serializable, Comparable<Bucket> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
+    private transient static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
 
-    private final ReentrantLock bucketLock = new ReentrantLock();
+    private transient final ReentrantLock bucketLock = new ReentrantLock();
 
     private final int index;
 
@@ -66,6 +67,10 @@ class Bucket implements Comparable<Bucket> {
         return this;
     }
 
+    public Map<String, String> getBucketMap() {
+        return bucketMap;
+    }
+
     int getVerElectId() {
         return verElectId;
     }
@@ -90,17 +95,6 @@ class Bucket implements Comparable<Bucket> {
 
     int getIndex() {
         return index;
-    }
-
-    /*----------------------------------------------------------------------------------
-     * Bucket View
-     *----------------------------------------------------------------------------------*/
-    BucketView createView() {
-        return new BucketView()
-                .setBucketMap(new HashMap<>(bucketMap))
-                .setIndex(getIndex())
-                .setVerElectId(getVerElectId())
-                .setVerCounter(getVerCounter());
     }
 
     /*----------------------------------------------------------------------------------
