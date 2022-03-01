@@ -6,6 +6,16 @@ class BizurState {
     private int electId = 0;
     private int votedElectId = -1;
 
+    BizurState() {
+        reset();
+    }
+
+    void reset() {
+        leaderId = -1;
+        electId = 0;
+        votedElectId = -1;
+    }
+
     int getLeaderId() {
         return leaderId;
     }

@@ -78,6 +78,13 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         });
     }
 
+    @Override
+    void shutdownNode() {
+        synchronized (this) {
+            state.reset();
+        }
+    }
+
     /*----------------------------------------------------------------------------------
      * Rules for Servers
      * ----------------------------------------------------------------------------------*/
