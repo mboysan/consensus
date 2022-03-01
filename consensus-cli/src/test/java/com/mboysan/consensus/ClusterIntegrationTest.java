@@ -14,8 +14,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ClusterIntegrationTest {
 
@@ -36,27 +35,33 @@ public class ClusterIntegrationTest {
     }
 
     @Test
-    void testRaftKVOperationsSimple() throws IOException, InterruptedException, KVOperationException {
+    void testRaftKVOperationsSimple() throws Exception {
         testKVOperationsSimple("raft");
     }
 
     @Test
-    void testRaftKVOperationsMultiThreaded()
-            throws InterruptedException, KVOperationException, ExecutionException, IOException
-    {
+    void testRaftKVOperationsMultiThreaded() throws Exception {
         testKVOperationsMultiThreaded("raft");
     }
 
     @Test
-    void testBizurKVOperationsSimple() throws IOException, InterruptedException, KVOperationException {
+    void testRaftShutdownAndStart() throws Exception {
+        testShutdownAndStart("raft");
+    }
+
+    @Test
+    void testBizurKVOperationsSimple() throws Exception {
         testKVOperationsSimple("bizur");
     }
 
     @Test
-    void testBizurKVOperationsMultiThreaded()
-            throws InterruptedException, KVOperationException, ExecutionException, IOException
-    {
+    void testBizurKVOperationsMultiThreaded() throws Exception {
         testKVOperationsMultiThreaded("bizur");
+    }
+
+    @Test
+    void testBizurShutdownAndStart() throws Exception {
+//        testShutdownAndStart("bizur");
     }
 
     /**
@@ -186,8 +191,35 @@ public class ClusterIntegrationTest {
         assertEntriesForAllConnectedClients(expectedEntries);
     }
 
-    private void testShutdownAndStart() throws Exception {
-        // TODO: implement this with event dispatches
+    private void testShutdownAndStart(String protocol)
+            throws IOException, InterruptedException, KVOperationException, ExecutionException
+    {
+        bootstrapCluster(protocol);
+
+        getStore(0).shutdown();
+
+        setRetrying(1, "k0", "v0");
+
+        getStore(0).start().get();
+
+        getClient(0).set("k1", "v1");
+
+        assertEquals("v1", getClient(0).get("k1"));
+        assertEquals("v0", getClient(1).get("k0"));
+    }
+
+    private void setRetrying(int clientId, String key, String value) throws InterruptedException {
+        int retries = 5;
+        for (int i = 0; i < retries; i++) {
+            try {
+                getClient(clientId).set(key, value);
+                return;
+            } catch (KVOperationException e) {
+                LOGGER.info("set failed, waiting for new election. received error={}", e.getMessage());
+                Thread.sleep(5000);
+            }
+        }
+        fail("set by client-%d failed after %d retries".formatted(clientId, retries));
     }
 
     private void assertEntriesForAllConnectedClients(Map<String, String> expectedEntries) throws KVOperationException {

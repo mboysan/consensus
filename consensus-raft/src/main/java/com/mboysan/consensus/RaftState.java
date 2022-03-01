@@ -36,6 +36,17 @@ class RaftState {
     boolean seenLeader = false;
     Role role = Role.FOLLOWER;
 
+    void reset() {
+        this.currentTerm = 0;
+        this.votedFor = -1;
+        this.raftLog.reset();
+        this.commitIndex = -1;
+        this.lastApplied = -1;
+        this.leaderId = -1;
+        this.seenLeader = false;
+        this.role = Role.FOLLOWER;
+    }
+
     @Override
     public String toString() {
         return "State{" +

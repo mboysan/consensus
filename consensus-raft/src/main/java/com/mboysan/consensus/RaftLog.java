@@ -78,6 +78,9 @@ class RaftLog implements Comparable<RaftLog> {
         return List.copyOf(entries.subList(indexIncluded, size));
     }
 
+    void reset() {
+        this.entries.clear();
+    }
 
     /**
      * @param o other log

@@ -63,6 +63,13 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         });
     }
 
+    @Override
+    void shutdownNode() {
+        synchronized (bizurState) {
+            bizurState.reset();
+        }
+    }
+
     /*----------------------------------------------------------------------------------
      * Algorithms
      * ----------------------------------------------------------------------------------*/
