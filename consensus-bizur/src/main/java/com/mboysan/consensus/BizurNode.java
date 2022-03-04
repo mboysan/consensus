@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +20,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private final BizurClient rpcClient;
 
+    private final int numPeers;
     private final int numBuckets;
     private long updateIntervalMs;
 
@@ -30,6 +32,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         super(config, transport);
         this.rpcClient = new BizurClient(transport);
 
+        this.numPeers = config.numPeers();
         this.numBuckets = config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
     }
@@ -185,6 +188,41 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVGetResponse get(KVGetRequest request) throws IOException {
         validateAction();
+
+        BucketRun.Result result;
+
+        String key = request.getKey();
+        int bucketIndex = hashKey(key);
+        Bucket bucket = getBucket(bucketIndex).lock();
+        try {
+            BucketRun bucketRun = new BucketRun(request.getCorrelationId(), bucket, this);
+            bucketRun.read();
+            String value = bucket.getOp(key);
+
+            result = BucketRun.Result.ok(value);
+        } catch (BizurException e) {
+            result = BucketRun.Result.error(e);
+        } finally {
+            bucket.unlock();
+        }
+
+        if (result.isOk()) {
+            return new KVGetResponse(true, null, (String) result.payload()).responseTo(request);
+        }
+        Exception err = result.error();
+        if (err instanceof IllegalLeaderException leaderErr) {
+            int leaderId = leaderErr.getLeaderId();
+            if (leaderId == -1) {
+                // TODO: startElection
+
+
+
+            }
+            return route(request, leaderId);
+        }
+        return new KVGetResponse(false, err, null).responseTo(request);
+
+
         int leaderId;
         try {
             leaderId = getLeaderId().orElseThrow(() -> new IllegalStateException("leader unresolved"));
@@ -192,6 +230,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 String value = new BizurRun(request.getCorrelationId(), this).apiGet(request.getKey());
                 return new KVGetResponse(true, null, value).responseTo(request);
             }
+        } catch (IllegalLeaderException e) {
+            //
         } catch (Exception e) {
             logErrorForRequest(e, request);
             return new KVGetResponse(false, e, null).responseTo(request);
@@ -249,10 +289,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         try {
             leaderId = getLeaderId().orElseThrow(() -> new IllegalStateException("leader unresolved"));
             if (leaderId == getNodeId()) {  // I am the leader
-
                 Set<String> keys = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
                 return new KVIterateKeysResponse(true, null, keys).responseTo(request);
-
             }
         } catch (Exception e) {
             logErrorForRequest(e, request);
@@ -264,9 +302,101 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .responseTo(request);
     }
 
+    private void enterElectionFlow(int bucketIndex, String correlationId) throws BizurException {
+        // node = 0
+        // peers = 3
+        // buckets = 5
+        // index = 0
+
+        // 0 -> 0
+        // 1 -> 0
+        // 2 -> 1
+        // 3 -> 1
+        // 4 -> 2
+
+        // buckets/peers = 5/3 = 2 per node
+        // (index) % (buckets/peers)
+        // 0 % 3 = 0
+        // 1 % 3 = 1
+        // 2 % 3 = 2
+        // 3 % 3 = 0
+        // 4 % 3 = 1
+
+        int peersCount = peers.size();
+        int supposedLeaderId = peers.get(bucketIndex % peersCount).peerId;
+        int retriedNode = supposedLeaderId;
+        do {
+            Bucket bucket = getBucket(bucketIndex).lock();
+            try {
+                if (bucket.getLeaderId() == -1) {   // leader might've already been changed, hence this check
+                    if (retriedNode == getNodeId()) {  // I am the supposed leader
+                        BucketRun bucketRun = new BucketRun(correlationId, bucket, this);
+                        bucketRun.startElection();
+                    }
+                }
+                return; // success
+            } catch (BizurException ignore) {
+
+            } finally {
+                bucket.unlock();
+            }
+            retriedNode = (retriedNode + 1) % peersCount;   // try next node
+
+            if (heartbeat(retriedNode)) {
+                continue;
+            }
+
+
+            try {
+                // TODO: use semaphores
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new BizurException(e.getMessage());
+            }
+        } while (retriedNode != supposedLeaderId);  // rolled over
+        throw new BizurException("a leader could not be elected for bucket=" + bucketIndex);
+    }
+
+    private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {
+        logRequestRouting(request, getNodeId(), receiverId);
+        if (request instanceof KVGetRequest) {
+            return getRPC().get(request.setReceiverId(receiverId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        if (request instanceof KVSetRequest) {
+            return getRPC().set(request.setReceiverId(receiverId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        if (request instanceof KVDeleteRequest) {
+            return getRPC().delete(request.setReceiverId(receiverId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        if (request instanceof KVIterateKeysRequest) {
+            return getRPC().iterateKeys(request.setReceiverId(receiverId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        throw new IllegalArgumentException("unrecognized request=" + request.toString());
+    }
+
     /*----------------------------------------------------------------------------------
      * Helper Functions
      * ----------------------------------------------------------------------------------*/
+
+    private void resolveBucketLeader(int bucketIdx) {
+        // 10
+        // 3
+        Bucket bucket = getBucket(bucketIdx).lock();
+        try {
+
+        } finally {
+            bucket.unlock();
+        }
+    }
+
+    private int hashKey(String key) {
+        return key.hashCode() % getNumBuckets();
+    }
 
     private Optional<Integer> getLeaderId() {
         int leaderId;
@@ -314,5 +444,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     Map<Integer, Bucket> getBucketMap() {
         return bucketMap;
+    }
+
+    /*----------------------------------------------------------------------------------*/
+
+    private static final class RunResult {
+        private final Objects payload;
+
     }
 }

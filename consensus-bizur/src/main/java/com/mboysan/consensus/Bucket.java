@@ -7,6 +7,8 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Bucket implements Serializable, Comparable<Bucket> {
@@ -15,7 +17,13 @@ public class Bucket implements Serializable, Comparable<Bucket> {
 
     private transient final ReentrantLock bucketLock = new ReentrantLock();
 
+    private transient final Semaphore electionSemaphore = new Semaphore(-1);
+
     private final int index;
+
+    private int leaderId = -1;
+    private int electId = 0;
+    private int votedElectId = -1;
 
     private int verElectId = 0;
     private int verCounter = 0;
@@ -30,11 +38,11 @@ public class Bucket implements Serializable, Comparable<Bucket> {
      * Map Operations
      *----------------------------------------------------------------------------------*/
 
-    String putOp(String key, String val) {
+    void putOp(String key, String val) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("put key={},val={} in bucket={}", key, val, this);
         }
-        return bucketMap.put(key, val);
+        bucketMap.put(key, val);
     }
 
     String getOp(String key) {
@@ -44,11 +52,11 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         return bucketMap.get(key);
     }
 
-    String removeOp(String key) {
+    void removeOp(String key) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("remove key={} from bucket={}", key, this);
         }
-        return bucketMap.remove(key);
+        bucketMap.remove(key);
     }
 
     Set<String> getKeySetOp() {
@@ -59,34 +67,59 @@ public class Bucket implements Serializable, Comparable<Bucket> {
      * Getters/Setters
      *----------------------------------------------------------------------------------*/
 
-    Bucket setBucketMap(Map<String, String> bucketMap) {
+    void setBucketMap(Map<String, String> bucketMap) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("replacing bucketMap={} with map={} in bucket={}", this.bucketMap, bucketMap, this);
         }
         this.bucketMap = bucketMap;
-        return this;
     }
 
     public Map<String, String> getBucketMap() {
         return bucketMap;
     }
 
+    public int getLeaderId() {
+        return leaderId;
+    }
+
+    public void setLeaderId(int leaderId) {
+        this.leaderId = leaderId;
+    }
+
+    public int incrementAndGetElectId() {
+        return ++electId;
+    }
+
+    public int getElectId() {
+        return electId;
+    }
+
+    public void setElectId(int electId) {
+        this.electId = electId;
+    }
+
+    public int getVotedElectId() {
+        return votedElectId;
+    }
+
+    public void setVotedElectId(int votedElectId) {
+        this.votedElectId = votedElectId;
+    }
+
     int getVerElectId() {
         return verElectId;
     }
 
-    Bucket setVerElectId(int verElectId) {
+    void setVerElectId(int verElectId) {
         this.verElectId = verElectId;
-        return this;
     }
 
     int getVerCounter() {
         return verCounter;
     }
 
-    Bucket setVerCounter(int verCounter) {
+    void setVerCounter(int verCounter) {
         this.verCounter = verCounter;
-        return this;
     }
 
     void incrementVerCounter() {
@@ -108,6 +141,10 @@ public class Bucket implements Serializable, Comparable<Bucket> {
 
     void unlock() {
         bucketLock.unlock();
+    }
+
+    public Semaphore electionSemaphore() {
+        return electionSemaphore;
     }
 
     @Override

@@ -69,7 +69,7 @@ class BizurMessagesSerializationTest {
 
     @Test
     void testSerializePleaseVoteMessages() throws Exception {
-        PleaseVoteRequest reqExpected = new PleaseVoteRequest(3);
+        PleaseVoteRequest reqExpected = new PleaseVoteRequest(3, 1);
         PleaseVoteRequest reqActual = serializeDeserialize(reqExpected);
         assertSerialized(reqExpected, reqActual);
 

@@ -5,29 +5,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-class BizurRun {
+class BucketRun {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BizurRun.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BucketRun.class);
 
     private final String correlationId;
+    private final Bucket bucket;
     private final BizurNode bizurNode;
-    private final BizurState bizurState;
 
-    BizurRun(BizurNode bizurNode) {
-        this(Message.generateId(), bizurNode);
+    BucketRun(Bucket lockedBucket, BizurNode bizurNode) {
+        this(Message.generateId(), lockedBucket, bizurNode);
     }
 
-    BizurRun(String correlationId, BizurNode bizurNode) {
+    BucketRun(String correlationId, Bucket lockedBucket, BizurNode bizurNode) {
         this.correlationId = correlationId;
+        this.bucket = lockedBucket;
         this.bizurNode = bizurNode;
-        this.bizurState = bizurNode.getBizurStateUnprotected();
     }
 
     /*------------------------------ Method delegations & Helper functions ------------------------------*/
@@ -47,26 +44,14 @@ class BizurRun {
         return bizurNode.getRPC();
     }
 
-    private void validateIAmTheLeader() throws BizurException {
-        if (bizurState.getLeaderId() != getNodeId()) {
-            throw new BizurException(String.format("node-%d is not the leader", getNodeId()));
+    private void validateIAmTheLeader() throws IllegalLeaderException {
+        if (bucket.getLeaderId() != getNodeId()) {
+            throw new IllegalLeaderException(bucket.getLeaderId());
         }
-    }
-
-    private int getNumBuckets() {
-        return bizurNode.getNumBuckets();
-    }
-
-    private Bucket getBucket(int index) {
-        return bizurNode.getBucket(index);
     }
 
     private boolean isMajorityAcked(int voteCount) {
         return voteCount > bizurNode.getPeerSize() / 2;
-    }
-
-    private int hashKey(String key) {
-        return key.hashCode() % bizurNode.getNumBuckets();
     }
 
     private String contextInfo() {
@@ -80,19 +65,18 @@ class BizurRun {
         }
     }
 
-    /*------------------------------------------- Algorithms -------------------------------------------*/
-
     /*----------------------------------------------------------------------------------
      * Algorithm 1: Leader Election
      * ----------------------------------------------------------------------------------*/
 
-    void startElection() {
+    void startElection() throws BizurException {
         LOGGER.info("{} - starting new election", contextInfo());
 
-        int electId = bizurState.incrementAndGetElectId();
+        int index = bucket.getIndex();
+        int electId = bucket.incrementAndGetElectId();
         AtomicInteger ackCount = new AtomicInteger(0);
         forEachPeerParallel(peer -> {
-            PleaseVoteRequest request = new PleaseVoteRequest(electId)
+            PleaseVoteRequest request = new PleaseVoteRequest(index, electId)
                     .setCorrelationId(correlationId)
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
@@ -106,21 +90,22 @@ class BizurRun {
             }
         });
         if (isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(getNodeId());
+            bucket.setLeaderId(getNodeId());
             LOGGER.info("{} - I am leader", contextInfo());
         } else {
-            bizurState.setLeaderId(-1);
+            throw new BizurException(String.format("%s - election failed for bucket index=%d, electId=%d",
+                    contextInfo(), index, electId));
         }
     }
-
 
     /*----------------------------------------------------------------------------------
      * Algorithm 2: Bucket Replication: Write
      * ----------------------------------------------------------------------------------*/
 
-    private void write(Bucket bucket) throws BizurException {
+    void write() throws BizurException {
         validateIAmTheLeader();
-        int electId = bizurState.getElectId();
+
+        int electId = bucket.getElectId();
         int index = bucket.getIndex();
 
         bucket.setVerElectId(electId);
@@ -142,7 +127,7 @@ class BizurRun {
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(-1);  // step down
+            bucket.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - write failed for bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
@@ -152,12 +137,12 @@ class BizurRun {
      * Algorithm 3: Bucket Replication: Read
      * ----------------------------------------------------------------------------------*/
 
-    private void read(Bucket bucket) throws BizurException {
+    void read() throws BizurException {
         validateIAmTheLeader();
 
-        int electId = bizurState.getElectId();
+        int electId = bucket.getElectId();
 
-        ensureRecovery(bucket, electId);
+        ensureRecovery(electId);
 
         int index = bucket.getIndex();
         AtomicInteger ackCount = new AtomicInteger(0);
@@ -176,7 +161,7 @@ class BizurRun {
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(-1);  // step down
+            bucket.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - read failed for bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
@@ -186,7 +171,7 @@ class BizurRun {
      * Algorithm 4: Bucket Replication: Recovery
      * ----------------------------------------------------------------------------------*/
 
-    private void ensureRecovery(Bucket bucket, int electId) throws BizurException {
+    private void ensureRecovery(int electId) throws BizurException, IllegalLeaderException {
         if (electId == bucket.getVerElectId()) {
             return;
         }
@@ -219,89 +204,46 @@ class BizurRun {
             bucket.setVerElectId(electId);
             bucket.setVerCounter(0);
             bucket.setBucketMap(maxVerBucket.get().getBucketMap());
-            write(bucket);
+            write();
         } else {
-            bizurState.setLeaderId(-1);  // step down
+            bucket.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - could not ensure recovery of bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
     }
 
-    /*----------------------------------------------------------------------------------
-     * Algorithm 5: Key-Value API
-     * ----------------------------------------------------------------------------------*/
+    /*----------------------------------------------------------------------------------*/
 
-    String apiGet(String key) throws BizurException, IllegalLeaderException {
-        Objects.requireNonNull(key);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
-        try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                return bucket.getOp(key);
-            }
-        } finally {
-            bucket.unlock();
+    static class Result {
+
+        private final boolean isOk;
+        private final Object payload;
+        private final BizurException error;
+
+        private Result(boolean isOk, Object payload, BizurException error) {
+            this.isOk = isOk;
+            this.payload = payload;
+            this.error = error;
+        }
+
+        public boolean isOk() {
+            return isOk;
+        }
+
+        public Object payload() {
+            return payload;
+        }
+
+        public BizurException error() {
+            return error;
+        }
+
+        static Result ok(Object payload) {
+            return new Result(true, payload, null);
+        }
+
+        static Result error(BizurException err) {
+            return new Result(false, null, err);
         }
     }
-
-    void apiSet(String key, String value) throws BizurException, IllegalLeaderException {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(value);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
-        try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                bucket.putOp(key, value);
-                write(bucket);  // TODO: investigate if we need to revert if write fails
-            }
-        } finally {
-            bucket.unlock();
-        }
-    }
-
-    void apiDelete(String key) throws BizurException, IllegalLeaderException {
-        Objects.requireNonNull(key);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
-        try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                bucket.removeOp(key);
-                write(bucket);  // TODO: investigate if we need to revert if write fails
-            }
-        } finally {
-            bucket.unlock();
-        }
-    }
-
-    Set<String> apiIterateKeys() throws BizurException, IllegalLeaderException {
-        Set<String> keys = new HashSet<>();
-        for (int index = 0; index < getNumBuckets(); index++) {
-            Bucket bucket = getBucket(index).lock();
-            try {
-                checkLeader(bucket);
-                synchronized (bizurState) {
-                    read(bucket);
-                    keys.addAll(bucket.getKeySetOp());
-                }
-            } finally {
-                bucket.unlock();
-            }
-        }
-        return keys;
-    }
-
-    private void checkLeader(Bucket bucket) throws IllegalLeaderException {
-        int bucketLeaderId = bucket.getLeaderId();
-        if (bucketLeaderId == getNodeId()) {
-            return;
-        }
-        throw new IllegalLeaderException(bucketLeaderId);
-    }
-
 }
