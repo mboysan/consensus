@@ -85,7 +85,9 @@ public class ClusterIntegrationTest {
                     "node.id=0",
                     "node.consensus.protocol=%s".formatted(protocol),
                     "transport.netty.ports=%d,%d".formatted(node0Port, store0Port),  // nodes will connect to first port and client to second
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port)
+                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "bizur.numPeers=5",  // only used if protocol is bizur
+                    "bizur.numBuckets=1"  // only used if protocol is bizur
             });
         }));
 
@@ -95,7 +97,9 @@ public class ClusterIntegrationTest {
                     "node.id=1",
                     "node.consensus.protocol=%s".formatted(protocol),
                     "transport.netty.ports=%d,%d".formatted(node1Port, store1Port),  // nodes will connect to first port and client to second
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port)
+                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "bizur.numPeers=5",  // only used if protocol is bizur
+                    "bizur.numBuckets=1"  // only used if protocol is bizur
             });
         }));
 
@@ -105,7 +109,9 @@ public class ClusterIntegrationTest {
                     "node.id=2",
                     "node.consensus.protocol=%s".formatted(protocol),
                     "transport.netty.port=%d".formatted(node2Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port)
+                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "bizur.numPeers=5",  // only used if protocol is bizur
+                    "bizur.numBuckets=1"  // only used if protocol is bizur
             });
         }));
 
@@ -115,7 +121,9 @@ public class ClusterIntegrationTest {
                     "node.id=3",
                     "node.consensus.protocol=%s".formatted(protocol),
                     "transport.netty.port=%d".formatted(node3Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port)
+                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "bizur.numPeers=5",  // only used if protocol is bizur
+                    "bizur.numBuckets=1"  // only used if protocol is bizur
             });
         }));
 
@@ -125,7 +133,9 @@ public class ClusterIntegrationTest {
                     "node.id=4",
                     "node.consensus.protocol=%s".formatted(protocol),
                     "transport.netty.port=%d".formatted(node4Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port)
+                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "bizur.numPeers=5",  // only used if protocol is bizur
+                    "bizur.numBuckets=1"  // only used if protocol is bizur
             });
         }));
 

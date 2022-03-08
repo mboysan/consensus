@@ -1,21 +1,57 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.configuration.BizurConfig;
+import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.message.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
 
+    private BizurNode[] nodes;
+    private InVMTransport transport;
+
+    private void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
+        List<Future<Void>> futures = new ArrayList<>();
+        nodes = new BizurNode[numNodes];
+        transport = new InVMTransport();
+        for (int i = 0; i < numNodes; i++) {
+            Properties properties = new Properties();
+            properties.put("node.id", i + "");
+            properties.put("bizur.numPeers", numNodes + "");
+            properties.put("bizur.numBuckets", numBuckets + "");
+
+            BizurConfig bizurConfig = Configuration.newInstance(BizurConfig.class, properties);
+            BizurNode node = new BizurNode(bizurConfig, transport);
+            nodes[i] = node;
+
+            futures.add(node.start());
+        }
+
+        advanceTimeForElections();
+        for (Future<Void> future : futures) {
+            future.get();
+        }
+    }
+
+    private BizurConfig bizurConfig(int nodeId, int numPeers, int numBuckets) {
+        Properties properties = new Properties();
+        properties.put("node.id", nodeId + "");
+        properties.put("bizur.numPeers", numPeers + "");
+        properties.put("bizur.numBuckets", numBuckets + "");
+        return Configuration.newInstance(BizurConfig.class, properties);
+    }
+
     @Test
-    void testWhenServerNotReadyThenThrowsException() {
+    void testWhenNodeNotReadyThenThrowsException() {
         Transport transport = new InVMTransport();
-        BizurNode node = createNode(0, transport, null);
+        BizurNode node = new BizurNode(bizurConfig(0, 3, 1), transport);
 
         KVGetRequest request = new KVGetRequest("some-key");
         assertThrows(IllegalStateException.class, () -> node.get(request));
@@ -23,6 +59,12 @@ class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
         node.shutdown();
         transport.shutdown();
         skipTeardown = true;
+    }
+
+    @Test
+    void testLeaderElectedForAllBuckets() throws IOException, ExecutionException, InterruptedException {
+        initCluster(3, 3);
+        System.out.println();
     }
 
     @Test
@@ -239,11 +281,12 @@ class BizurNodeTest extends NodeTestBase<BizurNode> implements BizurInternals {
 
     private void assertBucketIntegrity(BizurNode node, Map<String, String> expectedBucketMap) throws Exception {
         int totalSize = 0;
-        for (Integer bucketIndex : node.getBucketMap().keySet()) {
-            Bucket bucket = node.getBucketMap().get(bucketIndex);
-            for (String key : bucket.getKeySetOp()) {
-                assertEquals(expectedBucketMap.get(key), bucket.getOp(key));
-                totalSize++;
+        for (BucketRange range : node.getBucketRanges().values()) {
+            for (Bucket bucket : range.getBucketMap().values()) {
+                for (String key : bucket.getKeySetOp()) {
+                    assertEquals(expectedBucketMap.get(key), bucket.getOp(key));
+                    totalSize++;
+                }
             }
         }
         assertEquals(expectedBucketMap.size(), totalSize);

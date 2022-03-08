@@ -8,9 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStoreClient extends AbstractClient {
+
+    private final Semaphore throttler = new Semaphore(1);
+
     private final List<Integer> nodeIds;
     private final AtomicInteger currIndex = new AtomicInteger(-1);
 
@@ -77,9 +81,12 @@ public class KVStoreClient extends AbstractClient {
 
     private <T> T exec(CheckedSupplier<T, Exception> supplier) throws KVOperationException {
         try {
+            throttler.acquire();
             return supplier.get();
         } catch (Exception e) {
             throw new KVOperationException(e);
+        } finally {
+            throttler.release();
         }
     }
 }

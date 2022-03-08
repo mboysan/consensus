@@ -1,59 +1,33 @@
 package com.mboysan.consensus;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * numPeers = 3
- * numBuckets = 1000
- * range = 3
- *
- * numPeers = 1
- * numBuckets = 1000
- * range = 1
- *
- * numPeers = 5
- * numBuckets = 5
- * range = 5
- *
- * numPeers = 5
- * numBuckets = 1
- * range = 1
- *
- * ----- Range resolution:
- * key = abc
- * hash = 123456
- * belongs to bucket (bucketIndex) = hash % numBuckets
- * belongs to range (rangeIndex) = ranges.get(bucketIndex % peersCount);
- *
- * ----- how many ranges?
- * (numBuckets % peersCount) + 1 ?
- *
- * - example-1:
- * numBuckets = 1
- * numPeers = 5
- * numRanges = 1
- *
- * - example-2:
- * numBuckets = 5
- * numPeers = 3
- * numRanges = 3
- */
 class BucketRange {
 
-    private final Map<Integer, Bucket> bucketMap = new HashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+
+    private final int rangeIndex;
 
     private int leaderId = -1;
     private int electId = 0;
     private int votedElectId = -1;
 
-    BucketRange() {
+    private final Map<Integer, Bucket> bucketMap = new HashMap<>();
+
+    BucketRange(int rangeIndex) {
+        this.rangeIndex = rangeIndex;
         reset();
     }
 
-    //----------------------------------------------------
-    // state
-    // ----------------------------------------------------
+    public int getRangeIndex() {
+        return rangeIndex;
+    }
+
+    //------------------------------- state -------------------------------//
 
     void reset() {
         leaderId = -1;
@@ -85,4 +59,34 @@ class BucketRange {
         this.votedElectId = votedElectId;
     }
 
+    //------------------------------- bucket -------------------------------//
+
+    Bucket getBucket(int index) {
+        return bucketMap.computeIfAbsent(index, Bucket::new);
+    }
+
+    Set<String> getKeysOfAllBuckets() {
+        Set<String> keys = new HashSet<>();
+        for (Bucket bucket : bucketMap.values()) {
+            keys.addAll(bucket.getKeySetOp());
+        }
+        return keys;
+    }
+
+    //------------------------------- utils -------------------------------//
+
+    BucketRange lock() {
+        lock.lock();
+        return this;
+    }
+
+    void unlock() {
+        lock.unlock();
+    }
+
+    //------------------------------- for testing -------------------------------//
+
+    Map<Integer, Bucket> getBucketMap() {
+        return bucketMap;
+    }
 }

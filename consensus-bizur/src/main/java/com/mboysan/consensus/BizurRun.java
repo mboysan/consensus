@@ -5,20 +5,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-class BizurRun {
+final class BizurRun {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurRun.class);
 
     private final String correlationId;
     private final BizurNode bizurNode;
-    private final BizurState bizurState;
 
     BizurRun(BizurNode bizurNode) {
         this(Message.generateId(), bizurNode);
@@ -27,10 +24,9 @@ class BizurRun {
     BizurRun(String correlationId, BizurNode bizurNode) {
         this.correlationId = correlationId;
         this.bizurNode = bizurNode;
-        this.bizurState = bizurNode.getBizurStateUnprotected();
     }
 
-    /*------------------------------ Method delegations & Helper functions ------------------------------*/
+    /*------------------------------ Method delegations ------------------------------*/
 
     private int getNodeId() {
         return bizurNode.getNodeId();
@@ -41,33 +37,30 @@ class BizurRun {
     }
 
     private BizurRPC getRPC(int peerId) {
-        if (peerId == getNodeId()) {
-            return bizurNode;   // allows calling real methods without using IO communication.
-        }
-        return bizurNode.getRPC();
-    }
-
-    private void validateIAmTheLeader() throws BizurException {
-        if (bizurState.getLeaderId() != getNodeId()) {
-            throw new BizurException(String.format("node-%d is not the leader", getNodeId()));
-        }
-    }
-
-    private int getNumBuckets() {
-        return bizurNode.getNumBuckets();
-    }
-
-    private Bucket getBucket(int index) {
-        return bizurNode.getBucket(index);
+        return bizurNode.getRPC(peerId);
     }
 
     private boolean isMajorityAcked(int voteCount) {
-        return voteCount > bizurNode.getPeerSize() / 2;
+        return voteCount > bizurNode.getNumPeers() / 2;
     }
 
     private int hashKey(String key) {
-        return key.hashCode() % bizurNode.getNumBuckets();
+        return bizurNode.hashKey(key);
     }
+
+    private int rangeIndexForKey(String key) {
+        return bizurNode.rangeIndexForKey(key);
+    }
+
+    private BucketRange getBucketRange(int rangeIndex) {
+        return bizurNode.getBucketRange(rangeIndex);
+    }
+
+    private int getNumRanges() {
+        return bizurNode.getNumRanges();
+    }
+
+    /*------------------------------ Helper functions ------------------------------*/
 
     private String contextInfo() {
         return String.format("[node-%d, corrId=%s]", getNodeId(), correlationId);
@@ -80,47 +73,58 @@ class BizurRun {
         }
     }
 
+    private void validateIamTheLeader(BucketRange bucketRange) throws IllegalLeaderException {
+        int bucketLeaderId = bucketRange.getLeaderId();
+        if (bucketLeaderId == getNodeId()) {
+            return;
+        }
+        throw new IllegalLeaderException(bucketLeaderId);
+    }
+
     /*------------------------------------------- Algorithms -------------------------------------------*/
 
     /*----------------------------------------------------------------------------------
      * Algorithm 1: Leader Election
      * ----------------------------------------------------------------------------------*/
 
-    void startElection() {
-        LOGGER.info("{} - starting new election", contextInfo());
+    void startElection(int bucketRangeIndex) {
+        BucketRange range = getBucketRange(bucketRangeIndex).lock();
+        try {
+            LOGGER.info("{} - starting new election on bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
 
-        int electId = bizurState.incrementAndGetElectId();
-        AtomicInteger ackCount = new AtomicInteger(0);
-        forEachPeerParallel(peer -> {
-            PleaseVoteRequest request = new PleaseVoteRequest(electId)
-                    .setCorrelationId(correlationId)
-                    .setSenderId(getNodeId())
-                    .setReceiverId(peer.peerId);
-            try {
-                PleaseVoteResponse response = getRPC(peer.peerId).pleaseVote(request);
-                if (response.isAcked()) {
-                    ackCount.incrementAndGet();
+            int electId = range.incrementAndGetElectId();
+            AtomicInteger ackCount = new AtomicInteger(0);
+            forEachPeerParallel(peer -> {
+                PleaseVoteRequest request = new PleaseVoteRequest(range.getRangeIndex(), electId)
+                        .setCorrelationId(correlationId)
+                        .setSenderId(getNodeId())
+                        .setReceiverId(peer.peerId);
+                try {
+                    PleaseVoteResponse response = getRPC(peer.peerId).pleaseVote(request);
+                    if (response.isAcked()) {
+                        ackCount.incrementAndGet();
+                    }
+                } catch (IOException e) {
+                    logPeerIOException(peer.peerId, request, e);
                 }
-            } catch (IOException e) {
-                logPeerIOException(peer.peerId, request, e);
+            });
+            if (isMajorityAcked(ackCount.get())) {
+                range.setLeaderId(getNodeId());
+                LOGGER.info("{} - I am leader of bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
+            } else {
+                range.setLeaderId(-1);
             }
-        });
-        if (isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(getNodeId());
-            LOGGER.info("{} - I am leader", contextInfo());
-        } else {
-            bizurState.setLeaderId(-1);
+        } finally {
+            range.unlock();
         }
     }
-
 
     /*----------------------------------------------------------------------------------
      * Algorithm 2: Bucket Replication: Write
      * ----------------------------------------------------------------------------------*/
 
-    private void write(Bucket bucket) throws BizurException {
-        validateIAmTheLeader();
-        int electId = bizurState.getElectId();
+    private void write(BucketRange range, Bucket bucket) throws BizurException {
+        int electId = range.getElectId();
         int index = bucket.getIndex();
 
         bucket.setVerElectId(electId);
@@ -142,7 +146,7 @@ class BizurRun {
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(-1);  // step down
+            range.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - write failed for bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
@@ -152,12 +156,10 @@ class BizurRun {
      * Algorithm 3: Bucket Replication: Read
      * ----------------------------------------------------------------------------------*/
 
-    private void read(Bucket bucket) throws BizurException {
-        validateIAmTheLeader();
+    private void read(BucketRange range, Bucket bucket) throws BizurException {
+        int electId = range.getElectId();
 
-        int electId = bizurState.getElectId();
-
-        ensureRecovery(bucket, electId);
+        ensureRecovery(range, bucket, electId);
 
         int index = bucket.getIndex();
         AtomicInteger ackCount = new AtomicInteger(0);
@@ -176,7 +178,7 @@ class BizurRun {
             }
         });
         if (!isMajorityAcked(ackCount.get())) {
-            bizurState.setLeaderId(-1);  // step down
+            range.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - read failed for bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
@@ -186,7 +188,7 @@ class BizurRun {
      * Algorithm 4: Bucket Replication: Recovery
      * ----------------------------------------------------------------------------------*/
 
-    private void ensureRecovery(Bucket bucket, int electId) throws BizurException {
+    private void ensureRecovery(BucketRange range, Bucket bucket, int electId) throws BizurException {
         if (electId == bucket.getVerElectId()) {
             return;
         }
@@ -219,9 +221,9 @@ class BizurRun {
             bucket.setVerElectId(electId);
             bucket.setVerCounter(0);
             bucket.setBucketMap(maxVerBucket.get().getBucketMap());
-            write(bucket);
+            write(range, bucket);
         } else {
-            bizurState.setLeaderId(-1);  // step down
+            range.setLeaderId(-1);  // step down
             throw new BizurException(String.format("%s - could not ensure recovery of bucket index=%d, electId=%d",
                     contextInfo(), index, electId));
         }
@@ -231,77 +233,93 @@ class BizurRun {
      * Algorithm 5: Key-Value API
      * ----------------------------------------------------------------------------------*/
 
-    String apiGet(String key) throws BizurException, IllegalLeaderException {
+    String apiGet(String key) throws BizurException {
         Objects.requireNonNull(key);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
+        int rangeIndex = rangeIndexForKey(key);
+        BucketRange range = getBucketRange(rangeIndex).lock();
         try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                return bucket.getOp(key);
-            }
+            validateIamTheLeader(range);
+            int bucketIndex = hashKey(key);
+            Bucket bucket = range.getBucket(bucketIndex);
+            read(range, bucket);
+            return bucket.getOp(key);
         } finally {
-            bucket.unlock();
+            range.unlock();
         }
     }
 
-    void apiSet(String key, String value) throws BizurException, IllegalLeaderException {
+    void apiSet(String key, String value) throws BizurException {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
+        int rangeIndex = rangeIndexForKey(key);
+        BucketRange range = getBucketRange(rangeIndex).lock();
         try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                bucket.putOp(key, value);
-                write(bucket);  // TODO: investigate if we need to revert if write fails
-            }
+            validateIamTheLeader(range);
+            int bucketIndex = hashKey(key);
+            Bucket bucket = range.getBucket(bucketIndex);
+            read(range, bucket);
+            bucket.putOp(key, value);
+            write(range, bucket);
         } finally {
-            bucket.unlock();
+            range.unlock();
         }
     }
 
-    void apiDelete(String key) throws BizurException, IllegalLeaderException {
+    void apiDelete(String key) throws BizurException {
         Objects.requireNonNull(key);
-        int index = hashKey(key);
-        Bucket bucket = getBucket(index).lock();
+        int rangeIndex = rangeIndexForKey(key);
+        BucketRange range = getBucketRange(rangeIndex).lock();
         try {
-            checkLeader(bucket);
-            synchronized (bizurState) {
-                read(bucket);
-                bucket.removeOp(key);
-                write(bucket);  // TODO: investigate if we need to revert if write fails
-            }
+            validateIamTheLeader(range);
+            int bucketIndex = hashKey(key);
+            Bucket bucket = range.getBucket(bucketIndex);
+            read(range, bucket);
+            bucket.removeOp(key);
+            write(range, bucket);
         } finally {
-            bucket.unlock();
+            range.unlock();
         }
     }
 
-    Set<String> apiIterateKeys() throws BizurException, IllegalLeaderException {
-        Set<String> keys = new HashSet<>();
-        for (int index = 0; index < getNumBuckets(); index++) {
-            Bucket bucket = getBucket(index).lock();
-            try {
-                checkLeader(bucket);
-                synchronized (bizurState) {
-                    read(bucket);
-                    keys.addAll(bucket.getKeySetOp());
+    Set<String> apiIterateKeys() throws BizurException {
+        Set<String> keySet = new HashSet<>();
+        Map<Integer, Set<Integer>> rangeLeaders = collectRangeLeaders();
+        forEachPeerParallel(peer -> {
+            Set<Integer> rangeIndexes = rangeLeaders.get(peer.peerId);
+            if (rangeIndexes != null && rangeIndexes.size() > 0) {
+                CollectKeysRequest req = new CollectKeysRequest(rangeLeaders.get(peer.peerId))
+                        .setCorrelationId(correlationId)
+                        .setSenderId(getNodeId())
+                        .setReceiverId(peer.peerId);
+                try {
+                    CollectKeysResponse response = getRPC(peer.peerId).collectKeys(req);
+                    synchronized (keySet) {
+                        keySet.addAll(response.keySet());
+                    }
+                } catch (IOException e) {
+                    logPeerIOException(peer.peerId, req, e);
                 }
+            }
+        });
+        return keySet;
+    }
+
+    Map<Integer, Set<Integer>> collectRangeLeaders() throws BizurException {
+        Map<Integer, Set<Integer>> rangeLeaders = new HashMap<>();
+        for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
+            BucketRange range = getBucketRange(rangeIndex).lock();
+            try {
+                if (range.getLeaderId() == -1) {
+                    // the operation cannot be completed successfully, hence we throw exception
+                    throw new IllegalLeaderException(-1);
+                }
+                Set<Integer> rangeIndexes = rangeLeaders.computeIfAbsent(range.getLeaderId(), HashSet::new);
+                rangeIndexes.add(rangeIndex);
             } finally {
-                bucket.unlock();
+                range.unlock();
             }
         }
-        return keys;
-    }
-
-    private void checkLeader(Bucket bucket) throws IllegalLeaderException {
-        int bucketLeaderId = bucket.getLeaderId();
-        if (bucketLeaderId == getNodeId()) {
-            return;
-        }
-        throw new IllegalLeaderException(bucketLeaderId);
+        return rangeLeaders;
     }
 
 }

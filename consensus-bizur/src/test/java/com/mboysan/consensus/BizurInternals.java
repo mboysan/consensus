@@ -30,6 +30,6 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
 
     @Override
     default int getLeaderIdOf(BizurNode node) {
-        return node.getBizurStateUnprotected().getLeaderId();
+        throw new UnsupportedOperationException("");
     }
 }

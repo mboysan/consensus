@@ -7,23 +7,12 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class Bucket implements Serializable, Comparable<Bucket> {
 
     private transient static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
 
-    private transient final ReentrantLock bucketLock = new ReentrantLock();
-
-    private transient final Semaphore electionSemaphore = new Semaphore(-1);
-
     private final int index;
-
-    private int leaderId = -1;
-    private int electId = 0;
-    private int votedElectId = -1;
 
     private int verElectId = 0;
     private int verCounter = 0;
@@ -78,34 +67,6 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         return bucketMap;
     }
 
-    public int getLeaderId() {
-        return leaderId;
-    }
-
-    public void setLeaderId(int leaderId) {
-        this.leaderId = leaderId;
-    }
-
-    public int incrementAndGetElectId() {
-        return ++electId;
-    }
-
-    public int getElectId() {
-        return electId;
-    }
-
-    public void setElectId(int electId) {
-        this.electId = electId;
-    }
-
-    public int getVotedElectId() {
-        return votedElectId;
-    }
-
-    public void setVotedElectId(int votedElectId) {
-        this.votedElectId = votedElectId;
-    }
-
     int getVerElectId() {
         return verElectId;
     }
@@ -133,19 +94,6 @@ public class Bucket implements Serializable, Comparable<Bucket> {
     /*----------------------------------------------------------------------------------
      * Utils
      *----------------------------------------------------------------------------------*/
-
-    Bucket lock() {
-        bucketLock.lock();
-        return this;
-    }
-
-    void unlock() {
-        bucketLock.unlock();
-    }
-
-    public Semaphore electionSemaphore() {
-        return electionSemaphore;
-    }
 
     @Override
     public int compareTo(Bucket o) {
