@@ -2,6 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.netty.NettyClientTransport;
 
 import java.io.IOException;
 import java.security.SecureRandom;

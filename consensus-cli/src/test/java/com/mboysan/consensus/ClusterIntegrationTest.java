@@ -2,7 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.CheckedRunnable;
 import com.mboysan.consensus.util.MultiThreadExecutor;
-import com.mboysan.consensus.util.NettyUtil;
+import com.mboysan.consensus.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -71,13 +71,13 @@ public class ClusterIntegrationTest {
     private void bootstrapCluster(String protocol) throws InterruptedException, IOException {
         List<Thread> threads = new ArrayList<>();
 
-        int store0Port = NettyUtil.findFreePort();
-        int store1Port = NettyUtil.findFreePort();
-        int node0Port = NettyUtil.findFreePort();
-        int node1Port = NettyUtil.findFreePort();
-        int node2Port = NettyUtil.findFreePort();
-        int node3Port = NettyUtil.findFreePort();
-        int node4Port = NettyUtil.findFreePort();
+        int store0Port = NetUtil.findFreePort();
+        int store1Port = NetUtil.findFreePort();
+        int node0Port = NetUtil.findFreePort();
+        int node1Port = NetUtil.findFreePort();
+        int node2Port = NetUtil.findFreePort();
+        int node3Port = NetUtil.findFreePort();
+        int node4Port = NetUtil.findFreePort();
 
         threads.add(exec(() -> {
             // KV Store server with node-0 for client-0 to connect

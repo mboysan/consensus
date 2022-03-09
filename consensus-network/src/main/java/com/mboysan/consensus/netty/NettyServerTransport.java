@@ -1,5 +1,6 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.netty;
 
+import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.message.Message;

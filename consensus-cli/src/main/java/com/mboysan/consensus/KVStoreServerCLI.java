@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.NettyTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.netty.NettyServerTransport;
 
 import java.io.IOException;
 import java.util.Map;

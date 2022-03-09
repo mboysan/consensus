@@ -1,6 +1,6 @@
 package com.mboysan.consensus.configuration;
 
-import com.mboysan.consensus.util.NettyUtil;
+import com.mboysan.consensus.util.NetUtil;
 import org.aeonbits.owner.Converter;
 
 import java.lang.reflect.Method;
@@ -28,7 +28,7 @@ public interface NettyTransportConfig extends Configuration {
     class DestinationsConverter implements Converter<Map<Integer, Destination>> {
         @Override
         public Map<Integer, Destination> convert(Method method, String s) {
-            return NettyUtil.convertPropsToDestinationsMap(s);
+            return NetUtil.convertPropsToDestinationsMap(s);
         }
     }
 }

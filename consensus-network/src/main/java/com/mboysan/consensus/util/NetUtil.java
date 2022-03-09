@@ -9,9 +9,9 @@ import java.util.stream.Collectors;
 
 import static java.util.function.Function.identity;
 
-public final class NettyUtil {
+public final class NetUtil {
 
-    private NettyUtil(){}
+    private NetUtil(){}
 
     public static String convertDestinationsListToProps(List<Destination> destinations) {
         Objects.requireNonNull(destinations);
