@@ -2,7 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.Configuration;
-import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.netty.NettyServerTransport;
 
@@ -65,10 +65,10 @@ public class KVStoreServerCLI {
             if (arg.contains("ports")) {
                 arg = arg.substring(arg.indexOf("=") + 1);
                 String[] ports = arg.split(",");
-                transportProperties.put("transport.netty.port", ports[portIndex] + "");
+                transportProperties.put("transport.tcp.server.port", ports[portIndex] + "");
             }
         }
-        NettyTransportConfig serverTransportConfig = Configuration.newInstance(NettyTransportConfig.class, transportProperties);
+        TcpTransportConfig serverTransportConfig = Configuration.newInstance(TcpTransportConfig.class, transportProperties);
         return new NettyServerTransport(serverTransportConfig);
     }
 }

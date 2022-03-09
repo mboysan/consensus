@@ -6,9 +6,9 @@ import org.aeonbits.owner.Converter;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-public interface NettyTransportConfig extends Configuration {
+public interface TcpTransportConfig extends Configuration {
 
-    @Key("transport.netty.port")
+    @Key("transport.tcp.server.port")
     int port();
 
     /**
@@ -21,7 +21,7 @@ public interface NettyTransportConfig extends Configuration {
      * localhost on port 8081 and so on...
      * @return map of nodeId and destination pairs.
      */
-    @Key("transport.netty.destinations")
+    @Key("transport.tcp.destinations")
     @ConverterClass(DestinationsConverter.class)
     Map<Integer, Destination> destinations();
 

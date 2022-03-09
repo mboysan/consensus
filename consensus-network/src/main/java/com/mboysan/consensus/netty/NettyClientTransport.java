@@ -2,7 +2,7 @@ package com.mboysan.consensus.netty;
 
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
-import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -37,7 +37,7 @@ public class NettyClientTransport implements Transport {
     private final Map<Integer, NettyClient> clients = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
-    public NettyClientTransport(NettyTransportConfig config) {
+    public NettyClientTransport(TcpTransportConfig config) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
     }

@@ -6,7 +6,7 @@ import com.mboysan.consensus.netty.NettyServerTransport;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.Destination;
-import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
@@ -184,18 +184,18 @@ class NettyTransportIT {
 
     NettyServerTransport createServerTransport(int port) {
         Properties properties = new Properties();
-        properties.put("transport.netty.port", port + "");
-        properties.put("transport.netty.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put("transport.tcp.server.port", port + "");
+        properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
-        NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
+        TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
         return new NettyServerTransport(config);
     }
 
     NettyClientTransport createClientTransport() {
         Properties properties = new Properties();
-        properties.put("transport.netty.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
-        NettyTransportConfig config = Configuration.newInstance(NettyTransportConfig.class, properties);
+        TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
         return new NettyClientTransport(config);
     }
 
