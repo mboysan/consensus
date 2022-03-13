@@ -137,7 +137,7 @@ public class VanillaTcpServerTransport implements Transport {
         shutdown(() -> clientHandlerExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
     }
 
-    private void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
         } catch (Exception e) {
@@ -194,11 +194,13 @@ public class VanillaTcpServerTransport implements Transport {
                             }
                         } catch (IOException e) {
                             LOGGER.error(e.getMessage(), e);
+                            VanillaTcpServerTransport.shutdown(this::shutdown);
                         }
                     });
                 } catch (EOFException ignore) {
                 } catch (Exception e) {
                     LOGGER.error("request could not be processed, err={}", e.getMessage());
+                    VanillaTcpServerTransport.shutdown(this::shutdown);
                 }
             }
         }

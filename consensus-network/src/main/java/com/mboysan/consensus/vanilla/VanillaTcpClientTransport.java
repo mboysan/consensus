@@ -129,7 +129,7 @@ public class VanillaTcpClientTransport implements Transport {
         clientPools.clear();
     }
 
-    private void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
         } catch (Exception e) {
@@ -184,8 +184,10 @@ public class VanillaTcpClientTransport implements Transport {
                 } catch (EOFException ignore) {
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage(), e);
+                    VanillaTcpClientTransport.shutdown(this::shutdown);
                 } catch (InterruptedException e) {
                     LOGGER.error(e.getMessage(), e);
+                    VanillaTcpClientTransport.shutdown(this::shutdown);
                     Thread.currentThread().interrupt();
                 }
             }
