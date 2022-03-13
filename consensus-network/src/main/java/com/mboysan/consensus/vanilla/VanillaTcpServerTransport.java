@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpServerTransport implements Transport {
@@ -128,11 +129,12 @@ public class VanillaTcpServerTransport implements Transport {
             return;
         }
         isRunning = false;
-        shutdown(clientTransport::shutdown);
+        shutdown(serverSocket::close);
+        shutdown(clientHandlerExecutor::shutdown);
         clientHandlers.forEach((s, ch) -> shutdown(ch::shutdown));
         clientHandlers.clear();
-        shutdown(clientHandlerExecutor::shutdownNow);
-        shutdown(serverSocket::close);
+        shutdown(clientTransport::shutdown);
+        shutdown(() -> clientHandlerExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
     }
 
     private void shutdown(CheckedRunnable<Exception> toShutdown) {
@@ -212,13 +214,8 @@ public class VanillaTcpServerTransport implements Transport {
             requestExecutor.submit(runnable);
         }
 
-        synchronized void shutdown() throws IOException {
-            if (requestExecutor != null) {
-                requestExecutor.shutdownNow();
-            }
-            if (socket != null) {
-                socket.close();
-            }
+        synchronized void shutdown() throws IOException, InterruptedException {
+            isRunning = false;
             if (os != null) {
                 synchronized (os) {
                     os.close();
@@ -227,7 +224,13 @@ public class VanillaTcpServerTransport implements Transport {
             if (is != null) {
                 is.close();
             }
-            isRunning = false;
+            if (socket != null) {
+                socket.close();
+            }
+            if (requestExecutor != null) {
+                requestExecutor.shutdown();
+                requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
+            }
         }
     }
 }
