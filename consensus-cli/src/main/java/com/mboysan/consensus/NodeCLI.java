@@ -2,8 +2,9 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.Configuration;
-import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.io.IOException;
 import java.util.Map;
@@ -23,8 +24,8 @@ public class NodeCLI {
             mainProps.put(kv[0], kv[1]);
         }
 
-        NettyTransportConfig serverTransportConfig = Configuration.newInstance(NettyTransportConfig.class, mainProps);
-        Transport nodeServingTransport = new NettyServerTransport(serverTransportConfig);
+        TcpTransportConfig serverTransportConfig = Configuration.newInstance(TcpTransportConfig.class, mainProps);
+        Transport nodeServingTransport = new VanillaTcpServerTransport(serverTransportConfig);
 
         AbstractNode<?> node;
 

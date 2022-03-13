@@ -1,7 +1,8 @@
-package com.mboysan.consensus;
+package com.mboysan.consensus.netty;
 
+import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
-import com.mboysan.consensus.configuration.NettyTransportConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.CheckedSupplier;
 import io.netty.bootstrap.ServerBootstrap;
@@ -37,7 +38,7 @@ public class NettyServerTransport implements Transport {
     private final NettyClientTransport clientTransport;
     private UnaryOperator<Message> messageProcessor;
 
-    public NettyServerTransport(NettyTransportConfig config) {
+    public NettyServerTransport(TcpTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
         this.clientTransport = new NettyClientTransport(config);
