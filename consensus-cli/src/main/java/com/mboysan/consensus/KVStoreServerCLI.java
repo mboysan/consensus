@@ -4,7 +4,7 @@ import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.netty.NettyServerTransport;
+import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.io.IOException;
 import java.util.Map;
@@ -69,6 +69,6 @@ public class KVStoreServerCLI {
             }
         }
         TcpTransportConfig serverTransportConfig = Configuration.newInstance(TcpTransportConfig.class, transportProperties);
-        return new NettyServerTransport(serverTransportConfig);
+        return new VanillaTcpServerTransport(serverTransportConfig);
     }
 }

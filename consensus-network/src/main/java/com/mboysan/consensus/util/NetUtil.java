@@ -22,16 +22,16 @@ public final class NetUtil {
         return sj.toString();
     }
 
-    public static Map<Integer, Destination> convertPropsToDestinationsMap(String nettyDestProps) {
-        List<Destination> destinations = convertPropsToDestinationsList(nettyDestProps);
+    public static Map<Integer, Destination> convertPropsToDestinationsMap(String destinationProps) {
+        List<Destination> destinations = convertPropsToDestinationsList(destinationProps);
         return destinations.stream().collect(Collectors.toMap(Destination::nodeId, identity()));
     }
 
-    public static List<Destination> convertPropsToDestinationsList(String nettyDestProps) {
-        Objects.requireNonNull(nettyDestProps);
+    public static List<Destination> convertPropsToDestinationsList(String destinationProps) {
+        Objects.requireNonNull(destinationProps);
         List<Destination> destinations = new ArrayList<>();
-        nettyDestProps = nettyDestProps.replaceAll("\\s+","");    // remove whitespace
-        String[] dests = nettyDestProps.split(",");
+        destinationProps = destinationProps.replaceAll("\\s+","");    // remove whitespace
+        String[] dests = destinationProps.split(",");
         for (String dest : dests) {
             String[] idIp = dest.split("-");
             int id = Integer.parseInt(idIp[0]);

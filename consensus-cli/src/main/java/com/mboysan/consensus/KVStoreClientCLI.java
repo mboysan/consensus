@@ -2,7 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
-import com.mboysan.consensus.netty.NettyClientTransport;
+import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -25,7 +25,7 @@ public class KVStoreClientCLI {
         int clientId = resolveClientId(mainProps);
 
         TcpTransportConfig clientTransportConfig = Configuration.newInstance(TcpTransportConfig.class, mainProps);
-        Transport clientTransport = new NettyClientTransport(clientTransportConfig);
+        Transport clientTransport = new VanillaTcpClientTransport(clientTransportConfig);
         KVStoreClient client = new KVStoreClient(clientTransport);
         CLIENT_REFERENCES.put(clientId, client);
 
