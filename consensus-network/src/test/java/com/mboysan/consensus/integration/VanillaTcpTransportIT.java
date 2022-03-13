@@ -184,13 +184,15 @@ class VanillaTcpTransportIT {
     }
 
     @Test
-    void testIOErrorOnReceiverShutdown() throws IOException {
+    void testIOErrorOnReceiverShutdown() throws IOException, InterruptedException {
         TestMessage request = testMessage(0, 0, 1);
 
         serverTransports[1].shutdown();
+        Thread.sleep(2500L);
         assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request));
 
         serverTransports[1].start();
+        Thread.sleep(2500L);
         TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
         assertResponse(request, response);
     }
