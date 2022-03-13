@@ -23,7 +23,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpClientTransport implements Transport {
@@ -178,8 +182,11 @@ public class VanillaTcpClientTransport implements Transport {
                         future.complete(response);
                     }
                 } catch (EOFException ignore) {
-                } catch (IOException | ClassNotFoundException | InterruptedException e) {
+                } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage(), e);
+                } catch (InterruptedException e) {
+                    LOGGER.error(e.getMessage(), e);
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -206,6 +213,7 @@ public class VanillaTcpClientTransport implements Transport {
             if (socket != null) {
                 socket.close();
             }
+            semaphore.release();
         }
     }
 

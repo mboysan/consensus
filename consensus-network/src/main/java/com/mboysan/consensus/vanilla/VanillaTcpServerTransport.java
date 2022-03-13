@@ -9,14 +9,21 @@ import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpServerTransport implements Transport {
@@ -124,7 +131,7 @@ public class VanillaTcpServerTransport implements Transport {
         shutdown(clientTransport::shutdown);
         clientHandlers.forEach((s, ch) -> shutdown(ch::shutdown));
         clientHandlers.clear();
-        shutdown(clientHandlerExecutor::shutdown);
+        shutdown(clientHandlerExecutor::shutdownNow);
         shutdown(serverSocket::close);
     }
 
@@ -207,7 +214,7 @@ public class VanillaTcpServerTransport implements Transport {
 
         synchronized void shutdown() throws IOException {
             if (requestExecutor != null) {
-                requestExecutor.shutdown();
+                requestExecutor.shutdownNow();
             }
             if (socket != null) {
                 socket.close();
