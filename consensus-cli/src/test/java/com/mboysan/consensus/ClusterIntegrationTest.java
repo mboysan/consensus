@@ -2,7 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.CheckedRunnable;
 import com.mboysan.consensus.util.MultiThreadExecutor;
-import com.mboysan.consensus.util.NettyUtil;
+import com.mboysan.consensus.util.NetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -71,21 +71,21 @@ public class ClusterIntegrationTest {
     private void bootstrapCluster(String protocol) throws InterruptedException, IOException {
         List<Thread> threads = new ArrayList<>();
 
-        int store0Port = NettyUtil.findFreePort();
-        int store1Port = NettyUtil.findFreePort();
-        int node0Port = NettyUtil.findFreePort();
-        int node1Port = NettyUtil.findFreePort();
-        int node2Port = NettyUtil.findFreePort();
-        int node3Port = NettyUtil.findFreePort();
-        int node4Port = NettyUtil.findFreePort();
+        int store0Port = NetUtil.findFreePort();
+        int store1Port = NetUtil.findFreePort();
+        int node0Port = NetUtil.findFreePort();
+        int node1Port = NetUtil.findFreePort();
+        int node2Port = NetUtil.findFreePort();
+        int node3Port = NetUtil.findFreePort();
+        int node4Port = NetUtil.findFreePort();
 
         threads.add(exec(() -> {
             // KV Store server with node-0 for client-0 to connect
             KVStoreServerCLI.main(new String[]{
                     "node.id=0",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "transport.netty.ports=%d,%d".formatted(node0Port, store0Port),  // nodes will connect to first port and client to second
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "transport.tcp.server.ports=%d,%d".formatted(node0Port, store0Port),  // nodes will connect to first port and client to second
+                    "transport.tcp.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
                     "bizur.numPeers=5",  // only used if protocol is bizur
                     "bizur.numBuckets=1"  // only used if protocol is bizur
             });
@@ -96,8 +96,8 @@ public class ClusterIntegrationTest {
             KVStoreServerCLI.main(new String[]{
                     "node.id=1",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "transport.netty.ports=%d,%d".formatted(node1Port, store1Port),  // nodes will connect to first port and client to second
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "transport.tcp.server.ports=%d,%d".formatted(node1Port, store1Port),  // nodes will connect to first port and client to second
+                    "transport.tcp.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
                     "bizur.numPeers=5",  // only used if protocol is bizur
                     "bizur.numBuckets=1"  // only used if protocol is bizur
             });
@@ -108,8 +108,8 @@ public class ClusterIntegrationTest {
             NodeCLI.main(new String[]{
                     "node.id=2",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "transport.netty.port=%d".formatted(node2Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "transport.tcp.server.port=%d".formatted(node2Port),
+                    "transport.tcp.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
                     "bizur.numPeers=5",  // only used if protocol is bizur
                     "bizur.numBuckets=1"  // only used if protocol is bizur
             });
@@ -120,8 +120,8 @@ public class ClusterIntegrationTest {
             NodeCLI.main(new String[]{
                     "node.id=3",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "transport.netty.port=%d".formatted(node3Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "transport.tcp.server.port=%d".formatted(node3Port),
+                    "transport.tcp.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
                     "bizur.numPeers=5",  // only used if protocol is bizur
                     "bizur.numBuckets=1"  // only used if protocol is bizur
             });
@@ -132,8 +132,8 @@ public class ClusterIntegrationTest {
             NodeCLI.main(new String[]{
                     "node.id=4",
                     "node.consensus.protocol=%s".formatted(protocol),
-                    "transport.netty.port=%d".formatted(node4Port),
-                    "transport.netty.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
+                    "transport.tcp.server.port=%d".formatted(node4Port),
+                    "transport.tcp.destinations=0-localhost:%d,1-localhost:%d,2-localhost:%d,3-localhost:%d,4-localhost:%d".formatted(node0Port, node1Port, node2Port, node3Port, node4Port),
                     "bizur.numPeers=5",  // only used if protocol is bizur
                     "bizur.numBuckets=1"  // only used if protocol is bizur
             });
@@ -150,13 +150,13 @@ public class ClusterIntegrationTest {
         // client-0
         KVStoreClientCLI.main(new String[]{
                 "client.id=0",
-                "transport.netty.destinations=0-localhost:%d".formatted(store0Port)
+                "transport.tcp.destinations=0-localhost:%d".formatted(store0Port)
         });
 
         // client-1
         KVStoreClientCLI.main(new String[]{
                 "client.id=1",
-                "transport.netty.destinations=0-localhost:%d".formatted(store1Port)
+                "transport.tcp.destinations=0-localhost:%d".formatted(store1Port)
         });
     }
 

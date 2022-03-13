@@ -1,8 +1,6 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.EchoRPCProtocol;
-import com.mboysan.consensus.netty.NettyClientTransport;
-import com.mboysan.consensus.netty.NettyServerTransport;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.configuration.Destination;
@@ -11,8 +9,11 @@ import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import com.mboysan.consensus.util.NetUtil;
+import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
+import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class NettyTransportIT {
+class VanillaTcpTransportIT {
 
     private static final String HOST_NAME = "localhost";
 
@@ -38,8 +39,8 @@ class NettyTransportIT {
         addDestination(1, NetUtil.findFreePort());
         addDestination(2, NetUtil.findFreePort());
     }
-    private NettyServerTransport[] serverTransports;
-    private NettyClientTransport[] clientTransports;
+    private VanillaTcpServerTransport[] serverTransports;
+    private VanillaTcpClientTransport[] clientTransports;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -48,10 +49,10 @@ class NettyTransportIT {
     }
 
     private void setupServers() throws IOException {
-        serverTransports = new NettyServerTransport[NUM_SERVERS];
+        serverTransports = new VanillaTcpServerTransport[NUM_SERVERS];
         for (int i = 0; i < serverTransports.length; i++) {
             int port = DESTINATIONS.get(i).port();
-            NettyServerTransport serverTransport = createServerTransport(port);
+            VanillaTcpServerTransport serverTransport = createServerTransport(port);
             serverTransport.registerMessageProcessor(new EchoRPCProtocol());
             serverTransports[i] = serverTransport;
             serverTransport.start();
@@ -59,9 +60,9 @@ class NettyTransportIT {
     }
 
     private void setupClients() {
-        clientTransports = new NettyClientTransport[NUM_CLIENTS];
+        clientTransports = new VanillaTcpClientTransport[NUM_CLIENTS];
         for (int i = 0; i < clientTransports.length; i++) {
-            NettyClientTransport clientTransport = createClientTransport();
+            VanillaTcpClientTransport clientTransport = createClientTransport();
             clientTransports[i] = clientTransport;
             clientTransport.start();
         }
@@ -74,14 +75,14 @@ class NettyTransportIT {
     }
 
     private void teardownServers() {
-        for (NettyServerTransport serverTransport : serverTransports) {
+        for (VanillaTcpServerTransport serverTransport : serverTransports) {
             serverTransport.shutdown();
             assertTrue(serverTransport.verifyShutdown());
         }
     }
 
     private void teardownClients() {
-        for (NettyClientTransport clientTransport : clientTransports) {
+        for (VanillaTcpClientTransport clientTransport : clientTransports) {
             clientTransport.shutdown();
             assertTrue(clientTransport.verifyShutdown());
         }
@@ -90,7 +91,7 @@ class NettyTransportIT {
     @Test
     void testSomeUnhappyPaths() {
         // --- server transport unhappy paths
-        NettyServerTransport server = serverTransports[0];
+        VanillaTcpServerTransport server = serverTransports[0];
         assertFalse(server.verifyShutdown());   // server should be running
 
         assertDoesNotThrow(server::start); // 2nd start does nothing (increase code cov)
@@ -103,7 +104,7 @@ class NettyTransportIT {
         assertTrue(server.verifyShutdown());   // server should be shut down
 
         // --- client transport unhappy paths
-        NettyClientTransport client = createClientTransport();
+        VanillaTcpClientTransport client = createClientTransport();
         assertTrue(client.verifyShutdown());    // client is not started yet.
 
         TestMessage testMsg2 = new TestMessage("");
@@ -124,6 +125,30 @@ class NettyTransportIT {
         client.shutdown();
         assertDoesNotThrow(client::shutdown); // 2nd shutdown does nothing (increase code cov)
         assertTrue(client.verifyShutdown());   // server should be shut down
+    }
+
+    @Test
+    void testClientToServerSimple() throws IOException {
+        Transport sender = clientTransports[0];
+        TestMessage request = testMessage(0, 0, 0);
+        TestMessage response = (TestMessage) sender.sendRecv(request);
+        assertResponse(request, response);
+    }
+
+    @Test
+    void testMultiThreadClientToServerSimple() throws Exception {
+        Transport sender = clientTransports[0];
+
+        MultiThreadExecutor executor = new MultiThreadExecutor();
+        for (int i = 0; i < 100; i++) {
+            int finalI = i;
+            executor.execute(() -> {
+                TestMessage request = testMessage(finalI, 0, 0);
+                TestMessage response = (TestMessage) sender.sendRecv(request);
+                assertResponse(request, response);
+            });
+        }
+        executor.endExecution();
     }
 
     @Test
@@ -159,13 +184,15 @@ class NettyTransportIT {
     }
 
     @Test
-    void testIOErrorOnReceiverShutdown() throws IOException {
+    void testIOErrorOnReceiverShutdown() throws IOException, InterruptedException {
         TestMessage request = testMessage(0, 0, 1);
 
         serverTransports[1].shutdown();
+        Thread.sleep(2500L);
         assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request));
 
         serverTransports[1].start();
+        Thread.sleep(2500L);
         TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
         assertResponse(request, response);
     }
@@ -182,21 +209,21 @@ class NettyTransportIT {
         assertEquals(request.getReceiverId(), response.getSenderId());
     }
 
-    NettyServerTransport createServerTransport(int port) {
+    VanillaTcpServerTransport createServerTransport(int port) {
         Properties properties = new Properties();
         properties.put("transport.tcp.server.port", port + "");
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
         TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
-        return new NettyServerTransport(config);
+        return new VanillaTcpServerTransport(config);
     }
 
-    NettyClientTransport createClientTransport() {
+    VanillaTcpClientTransport createClientTransport() {
         Properties properties = new Properties();
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
         TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
-        return new NettyClientTransport(config);
+        return new VanillaTcpClientTransport(config);
     }
 
     private static void addDestination(int nodeId, int port) {
