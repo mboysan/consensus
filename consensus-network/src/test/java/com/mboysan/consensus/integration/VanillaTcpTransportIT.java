@@ -183,6 +183,7 @@ class VanillaTcpTransportIT {
         assertEquals(expectedMsgCount, actualMsgCount.get());
     }
 
+    @Disabled
     @Test
     void testIOErrorOnReceiverShutdown() throws IOException {
         TestMessage request = testMessage(0, 0, 1);
