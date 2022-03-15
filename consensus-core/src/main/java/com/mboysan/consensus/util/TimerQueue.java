@@ -3,18 +3,14 @@ package com.mboysan.consensus.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 public class TimerQueue implements Timers {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimerQueue.class);
 
-    private volatile boolean isRunning;
-    private final Timer queue = new Timer(true);
-    private final Map<String, TimerTask> taskMap = new HashMap<>();
-
-    public TimerQueue() {
-        isRunning = true;
-    }
+    private final Map<String, TimerThread> taskMap = new HashMap<>();
 
     @Override
     public synchronized void schedule(String taskName, Runnable task, long delay, long period) {
@@ -23,21 +19,13 @@ public class TimerQueue implements Timers {
         if (delay <= 0 || period <= 0) {
             throw new IllegalArgumentException("delay or period must be greater than zero");
         }
-        if (!isRunning) {
-            return;
-        }
-        TimerTask prevTask = taskMap.get(taskName);
+        TimerThread prevTask = taskMap.get(taskName);
         if (prevTask != null) {
             prevTask.cancel();
         }
-        TimerTask newTask = new TimerTask() {
-            @Override
-            public void run() {
-                task.run();
-            }
-        };
+        TimerThread newTask = new TimerThread(task, taskName, delay, period);
         taskMap.put(taskName, newTask);
-        queue.schedule(newTask, delay, period);
+        newTask.start();
         LOGGER.info("Timer for task={} scheduled with delay={} and period={}", taskName, delay, period);
     }
 
@@ -48,9 +36,8 @@ public class TimerQueue implements Timers {
 
     @Override
     public synchronized void shutdown() {
-        isRunning = false;
+        taskMap.forEach((s, t) -> t.cancel());
         taskMap.clear();
-        queue.cancel();
     }
 
     @Override
@@ -60,6 +47,51 @@ public class TimerQueue implements Timers {
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage());
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private static final class TimerThread extends Thread {
+        private volatile boolean isRunning = true;
+        private final Runnable runnable;
+        private final long delay;
+        private final long period;
+
+        private TimerThread(Runnable runnable, String name, long delay, long period) {
+            this.runnable = runnable;
+            this.delay = delay;
+            this.period = period;
+            setDaemon(false);
+            setName(name);
+        }
+
+        @Override
+        public void run() {
+            doSleep(delay);
+            while (isRunning) {
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    if (isInterrupted()) {
+                        return;
+                    }
+                    LOGGER.error(e.getMessage(), e);
+                }
+                doSleep(period);
+            }
+        }
+
+        public void cancel() {
+            isRunning = false;
+            interrupt();
+        }
+
+        private void doSleep(long timeout) {
+            try {
+                sleep(timeout);
+            } catch (InterruptedException e) {
+                isRunning = false;
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

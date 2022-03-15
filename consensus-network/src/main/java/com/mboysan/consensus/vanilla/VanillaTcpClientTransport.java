@@ -84,7 +84,7 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             return sendRecvUsingClientPool(message);
         } catch (Exception e) {
-            throw new IOException("err on message=" + message, e);
+            throw new IOException(e);
         }
     }
 
@@ -96,15 +96,15 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             client = pool.borrowObject();
             client.send(message);
-            return msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
-        } finally {
+            Message response = msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
+            pool.returnObject(client);
+            return response;
+        } catch (Exception e) {
             if (client != null) {
-                try {
-                    pool.returnObject(client);
-                } catch (Exception e) {
-                    LOGGER.error(e.getMessage());
-                }
+                pool.invalidateObject(client);
             }
+            throw e;
+        } finally {
             callbackMap.remove(message.getId());
         }
     }
@@ -183,10 +183,10 @@ public class VanillaTcpClientTransport implements Transport {
                     }
                 } catch (EOFException ignore) {
                 } catch (IOException | ClassNotFoundException e) {
-                    LOGGER.error(e.getMessage(), e);
+                    LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
                 } catch (InterruptedException e) {
-                    LOGGER.error(e.getMessage(), e);
+                    LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
                     Thread.currentThread().interrupt();
                 }
@@ -200,21 +200,14 @@ public class VanillaTcpClientTransport implements Transport {
             os.flush();
         }
 
-        synchronized boolean isValid() {
-            return socket != null && os != null && is != null && isConnected;
-        }
-
         synchronized void shutdown() throws IOException {
+            if (!isConnected) {
+                return;
+            }
             isConnected = false;
-            if (os != null) {
-                os.close();
-            }
-            if (is != null) {
-                is.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
+            VanillaTcpClientTransport.shutdown(() -> {if (os != null) os.close();});
+            VanillaTcpClientTransport.shutdown(() -> {if (is != null) is.close();});
+            VanillaTcpClientTransport.shutdown(() -> {if (socket != null) socket.close();});
             semaphore.release();
         }
     }
@@ -239,11 +232,6 @@ public class VanillaTcpClientTransport implements Transport {
         @Override
         public void destroyObject(PooledObject<TcpClient> p) throws IOException {
             p.getObject().shutdown();
-        }
-
-        @Override
-        public boolean validateObject(PooledObject<TcpClient> p) {
-            return p.getObject().isValid();
         }
 
         @Override

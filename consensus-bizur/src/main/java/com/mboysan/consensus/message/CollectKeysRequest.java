@@ -17,6 +17,6 @@ public class CollectKeysRequest extends Message {
     public String toString() {
         return "CollectKeysRequest{" +
                 "rangeIndexes=" + rangeIndexes +
-                '}';
+                "} " + super.toString();
     }
 }

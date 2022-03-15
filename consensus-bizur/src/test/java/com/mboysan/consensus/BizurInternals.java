@@ -15,6 +15,7 @@ public interface BizurInternals extends NodeInternals<BizurNode> {
 
     @Override
     default BizurNode createNode(Properties properties, Transport transport, Timers timer) {
+        properties.put("bizur.numPeers", transport.getDestinationNodeIds().size() + "");
         return new BizurNode(Configuration.newInstance(BizurConfig.class, properties), transport) {
             @Override
             Timers createTimers() {

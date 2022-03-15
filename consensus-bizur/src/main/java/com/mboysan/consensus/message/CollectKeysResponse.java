@@ -19,6 +19,6 @@ public class CollectKeysResponse extends KVOperationResponse {
     public String toString() {
         return "CollectKeysResponse{" +
                 "keySet=" + keySet +
-                '}';
+                "} " + super.toString();
     }
 }

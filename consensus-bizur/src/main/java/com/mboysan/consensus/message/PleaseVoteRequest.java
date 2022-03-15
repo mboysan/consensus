@@ -23,6 +23,6 @@ public class PleaseVoteRequest extends Message {
         return "PleaseVoteRequest{" +
                 "bucketRangeIndex=" + bucketRangeIndex +
                 ", electId=" + electId +
-                '}';
+                "} " + super.toString();
     }
 }

@@ -61,7 +61,7 @@ public class ClusterIntegrationTest {
 
     @Test
     void testBizurShutdownAndStart() throws Exception {
-//        testShutdownAndStart("bizur");
+        testShutdownAndStart("bizur");
     }
 
     /**

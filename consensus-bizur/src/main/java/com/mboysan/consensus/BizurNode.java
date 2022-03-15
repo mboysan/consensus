@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,12 @@ import java.util.concurrent.Future;
 public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BizurNode.class);
+
+    private static final String SEED = UUID.randomUUID().toString();
+    static {
+        LOGGER.info("seed={}", SEED);
+    }
+    private static final SecureRandom RNG = new SecureRandom(SEED.getBytes());
 
     private final BizurClient rpcClient;
 
@@ -54,6 +61,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
         this.updateIntervalMs = updateIntervalMs * electId;
+        this.updateIntervalMs = RNG.nextLong(this.updateIntervalMs, this.updateIntervalMs * 2);
         LOGGER.info("node-{} modified updateIntervalMs={}", getNodeId(), updateIntervalMs);
         getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
 

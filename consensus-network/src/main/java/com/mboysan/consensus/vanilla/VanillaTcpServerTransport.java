@@ -103,7 +103,7 @@ public class VanillaTcpServerTransport implements Transport {
                 clientHandlerExecutor.submit(clientHandler);
                 ++clientCount;
             } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
+                LOGGER.error(e.getMessage());
             }
         }
     }
@@ -193,13 +193,13 @@ public class VanillaTcpServerTransport implements Transport {
                                 os.flush();
                             }
                         } catch (IOException e) {
-                            LOGGER.error(e.getMessage(), e);
+                            LOGGER.error(e.getMessage());
                             VanillaTcpServerTransport.shutdown(this::shutdown);
                         }
                     });
                 } catch (EOFException ignore) {
-                } catch (Exception e) {
-                    LOGGER.error("request could not be processed, err={}", e.getMessage());
+                } catch (IOException | ClassNotFoundException e) {
+                    LOGGER.error(e.getMessage());
                     VanillaTcpServerTransport.shutdown(this::shutdown);
                 }
             }
@@ -216,23 +216,26 @@ public class VanillaTcpServerTransport implements Transport {
             requestExecutor.submit(runnable);
         }
 
-        synchronized void shutdown() throws IOException, InterruptedException {
+        synchronized void shutdown() throws IOException {
+            if (!isRunning) {
+                return;
+            }
             isRunning = false;
-            if (os != null) {
-                synchronized (os) {
-                    os.close();
+            VanillaTcpServerTransport.shutdown(() -> {
+                if (os != null) {
+                    synchronized (os) {
+                        os.close();
+                    }
                 }
-            }
-            if (is != null) {
-                is.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
-            if (requestExecutor != null) {
-                requestExecutor.shutdown();
-                requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
-            }
+            });
+            VanillaTcpServerTransport.shutdown(() -> {if (is != null) is.close();});
+            VanillaTcpServerTransport.shutdown(() -> {if (socket != null) socket.close();});
+            VanillaTcpServerTransport.shutdown(() -> {
+                if (requestExecutor != null) {
+                    requestExecutor.shutdown();
+                    requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
+                }
+            });
         }
     }
 }

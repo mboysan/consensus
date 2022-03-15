@@ -42,8 +42,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         LOGGER.info("node-{} config={}", nodeId, nodeConfig);
 
         EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
-        // register known peer destinations
-        onNodeListChanged(new NodeListChangedEvent(nodeId, transport.getDestinationNodeIds()));
     }
 
     Timers createTimers() {
@@ -58,6 +56,9 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             transport.start();
         }
         isRunning = true;
+
+        // register known peer destinations
+        onNodeListChanged(new NodeListChangedEvent(nodeId, transport.getDestinationNodeIds()));
 
         transport.registerMessageProcessor(this);
 
