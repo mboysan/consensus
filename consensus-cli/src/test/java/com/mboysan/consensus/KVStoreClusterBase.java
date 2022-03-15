@@ -47,6 +47,10 @@ public abstract class KVStoreClusterBase {
         return KVStoreClientCLI.CLIENT_REFERENCES.get(clientId);
     }
 
+    public KVStoreClient getRandomClient() {
+        return getClient(randomClientId());
+    }
+
     public Collection<KVStoreClient> getClients() {
         return KVStoreClientCLI.CLIENT_REFERENCES.values();
     }

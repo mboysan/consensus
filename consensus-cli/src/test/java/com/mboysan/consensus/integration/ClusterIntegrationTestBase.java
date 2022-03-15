@@ -45,9 +45,9 @@ public class ClusterIntegrationTestBase {
             exec.execute(() -> {
                 String key = "k" + finalI;
                 String val = "v" + finalI;
-                cluster.getClient(cluster.randomClientId()).set(key, val);
+                cluster.getRandomClient().set(key, val);
                 if (new SecureRandom().nextBoolean()) {   // in some cases, remove the entry
-                    cluster.getClient(cluster.randomClientId()).delete(key);
+                    cluster.getRandomClient().delete(key);
                 } else {    // in other cases, just leave it inserted.
                     expectedEntries.put(key, val);
                 }
