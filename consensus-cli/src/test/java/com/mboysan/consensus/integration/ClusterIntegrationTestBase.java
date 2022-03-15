@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class ClusterIntegrationTestBase {
+abstract class ClusterIntegrationTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterIntegrationTestBase.class);
 
