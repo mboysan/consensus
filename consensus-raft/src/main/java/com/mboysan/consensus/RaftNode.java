@@ -172,7 +172,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private void sendAppendEntriesToPeers() {
         if (state.role == LEADER) {
-            LOGGER.info("node-{} sending AppendEntries to peers", getNodeId());
+            LOGGER.debug("node-{} sending AppendEntries to peers", getNodeId());
 
             final Object lock = new Object();
 

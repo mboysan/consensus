@@ -9,7 +9,7 @@ import java.util.Map;
 public interface TcpTransportConfig extends Configuration {
 
     @Key("transport.tcp.clientPoolSize")
-    @DefaultValue("1")
+    @DefaultValue("2")
     int clientPoolSize();
 
     @Key("transport.tcp.server.port")
