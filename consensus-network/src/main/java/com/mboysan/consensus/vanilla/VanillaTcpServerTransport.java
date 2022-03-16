@@ -49,11 +49,11 @@ public class VanillaTcpServerTransport implements Transport {
     public VanillaTcpServerTransport(TcpTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
-        this.clientTransport = new VanillaTcpClientTransport(config);
         this.nodeId = destinations.values().stream()
                 .filter(dest -> dest.port() == port)
                 .mapToInt(Destination::nodeId)
                 .findFirst().orElse(port);
+        this.clientTransport = new VanillaTcpClientTransport(config, nodeId);
     }
 
     @Override

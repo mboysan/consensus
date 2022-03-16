@@ -41,11 +41,17 @@ public class VanillaTcpClientTransport implements Transport {
     private final long messageCallbackTimeoutMs;
     private final Map<Integer, ObjectPool<TcpClient>> clientPools = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
+    private final Integer associatedNodeId;
 
     public VanillaTcpClientTransport(TcpTransportConfig config) {
+        this(config, null);
+    }
+
+    VanillaTcpClientTransport(TcpTransportConfig config, Integer associatedNodeId) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
+        this.associatedNodeId = associatedNodeId;
     }
 
     @Override
@@ -112,7 +118,7 @@ public class VanillaTcpClientTransport implements Transport {
     private ObjectPool<TcpClient> getOrCreateClientPool(int receiverId) {
         return clientPools.computeIfAbsent(receiverId, id -> {
             Destination dest = destinations.get(id);
-            TcpClientFactory clientFactory = new TcpClientFactory(dest, callbackMap);
+            TcpClientFactory clientFactory = new TcpClientFactory(dest, callbackMap, associatedNodeId);
             GenericObjectPoolConfig<TcpClient> poolConfig = new GenericObjectPoolConfig<>();
             poolConfig.setMaxTotal(clientPoolSize);
             return new GenericObjectPool<>(clientFactory, poolConfig);
@@ -158,7 +164,8 @@ public class VanillaTcpClientTransport implements Transport {
 
         TcpClient(
                 Destination destination,
-                Map<String, CompletableFuture<Message>> callbackMap) throws IOException
+                Map<String, CompletableFuture<Message>> callbackMap,
+                Integer associatedNodeId) throws IOException
         {
             this.callbackMap = callbackMap;
             this.socket = new Socket(destination.ip(), destination.port());
@@ -166,7 +173,9 @@ public class VanillaTcpClientTransport implements Transport {
             this.is = new ObjectInputStream(socket.getInputStream());
             this.isConnected = true;
 
-            String receiverThreadName = "client-receiver-for-" + destination.nodeId();
+            String receiverThreadName = associatedNodeId == null
+                    ? "client-receiver-for-%d".formatted(destination.nodeId())
+                    : "client-%d-receiver-for-%d".formatted(associatedNodeId, destination.nodeId());
             Thread receiverThread = new Thread(this::receive, receiverThreadName);
             receiverThread.start();
         }
@@ -215,18 +224,21 @@ public class VanillaTcpClientTransport implements Transport {
     private static class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {
         private final Destination destination;
         private final Map<String, CompletableFuture<Message>> callbackMap;
+        private final Integer associatedNodeId;
 
         private TcpClientFactory(
                 Destination destination,
-                Map<String, CompletableFuture<Message>> callbackMap)
+                Map<String, CompletableFuture<Message>> callbackMap,
+                Integer associatedNodeId)
         {
             this.destination = destination;
             this.callbackMap = callbackMap;
+            this.associatedNodeId = associatedNodeId;
         }
 
         @Override
         public TcpClient create() throws IOException {
-            return new TcpClient(destination, callbackMap);
+            return new TcpClient(destination, callbackMap, associatedNodeId);
         }
 
         @Override
