@@ -103,7 +103,9 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             client = pool.borrowObject();
             client.send(message);
-            Message response = msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
+            Message response = messageCallbackTimeoutMs > 0
+                    ? msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS)
+                    : msgFuture.get();  // wait indefinitely
             pool.returnObject(client);
             return response;
         } catch (Exception e) {
@@ -149,7 +151,7 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static int resolveClientPoolSize(int providedClientPoolSize) {
-        if (providedClientPoolSize <= 0) {
+        if (providedClientPoolSize == 0) {
             return Runtime.getRuntime().availableProcessors() * 2;
         }
         return providedClientPoolSize;

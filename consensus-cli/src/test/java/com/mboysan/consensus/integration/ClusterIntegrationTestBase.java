@@ -35,12 +35,30 @@ abstract class ClusterIntegrationTestBase {
         assertNull(client0.get("toDelete"));
     }
 
+    void testKVOperationsSequential(KVStoreClusterBase cluster) throws KVOperationException {
+        long startTime = System.currentTimeMillis();
+        Map<String, String> expectedEntries = new ConcurrentHashMap<>();
+        for (int i = 0; i < 100; i++) {
+            String key = "k" + i;
+            String val = "v" + i;
+            cluster.getRandomClient().set(key, val);
+            if (new SecureRandom().nextBoolean()) {   // in some cases, remove the entry
+                cluster.getRandomClient().delete(key);
+            } else {    // in other cases, just leave it inserted.
+                expectedEntries.put(key, val);
+            }
+        }
+        assertEntriesForAllConnectedClients(cluster, expectedEntries);
+        LOGGER.info("testKVOperationsSequential exec time : {}", (System.currentTimeMillis() - startTime));
+    }
+
     void testKVOperationsMultiThreaded(KVStoreClusterBase cluster)
             throws InterruptedException, KVOperationException, ExecutionException
     {
+        long startTime = System.currentTimeMillis();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
-        MultiThreadExecutor exec = new MultiThreadExecutor();
-        for (int i = 0; i < 1000; i++) {
+        MultiThreadExecutor exec = new MultiThreadExecutor(4);
+        for (int i = 0; i < 100; i++) {
             int finalI = i;
             exec.execute(() -> {
                 String key = "k" + finalI;
@@ -55,6 +73,7 @@ abstract class ClusterIntegrationTestBase {
         }
         exec.endExecution();
         assertEntriesForAllConnectedClients(cluster, expectedEntries);
+        LOGGER.info("testKVOperationsMultiThreaded exec time : {}", (System.currentTimeMillis() - startTime));
     }
 
     void testKVStoreShutdownAndStart(KVStoreClusterBase cluster)
@@ -75,7 +94,7 @@ abstract class ClusterIntegrationTestBase {
     private void setRetrying(KVStoreClusterBase cluster, int clientId, String key, String value)
             throws InterruptedException
     {
-        int retries = 5;
+        int retries = 10;
         for (int i = 0; i < retries; i++) {
             try {
                 cluster.getClient(clientId).set(key, value);

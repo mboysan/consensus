@@ -22,6 +22,14 @@ public class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     }
 
     @Test
+    void testKVOperationsSequential() throws Exception {
+        this.raftCluster = new RaftKVStoreCluster.Builder()
+                .setNumNodes(5)
+                .build();
+        testKVOperationsSequential(raftCluster);
+    }
+
+    @Test
     void testKVOperationsMultiThreaded() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
                 .setNumNodes(5)

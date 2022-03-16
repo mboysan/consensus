@@ -25,10 +25,28 @@ public class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsSimpleMultiBuckets() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(100)
+                .setNumBuckets(5)
                 .setNumNodes(5)
                 .build();
         testKVOperationsSimple(bizurCluster);
+    }
+
+    @Test
+    void testKVOperationsSequentialSingleBucket() throws Exception {
+        this.bizurCluster = new BizurKVStoreCluster.Builder()
+                .setNumBuckets(1)
+                .setNumNodes(5)
+                .build();
+        testKVOperationsSequential(bizurCluster);
+    }
+
+    @Test
+    void testKVOperationsSequentialMultiBucket() throws Exception {
+        this.bizurCluster = new BizurKVStoreCluster.Builder()
+                .setNumBuckets(5)
+                .setNumNodes(5)
+                .build();
+        testKVOperationsSequential(bizurCluster);
     }
 
     @Test
@@ -43,7 +61,7 @@ public class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsMultiThreadedMultiBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(100)
+                .setNumBuckets(5)
                 .setNumNodes(5)
                 .build();
         testKVOperationsMultiThreaded(bizurCluster);
