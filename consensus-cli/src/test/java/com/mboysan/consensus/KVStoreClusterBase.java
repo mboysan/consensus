@@ -2,12 +2,16 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.CheckedRunnable;
 import com.mboysan.consensus.util.NetUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.StringJoiner;
 
 public abstract class KVStoreClusterBase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClusterBase.class);
 
     static {
         KVStoreClientCLI.testingInProgress = true;
@@ -36,15 +40,11 @@ public abstract class KVStoreClusterBase {
 
 
     public AbstractKVStore<?> getStore(int nodeId) {
-        return KVStoreServerCLI.STORE_REFERENCES.get(nodeId);
-    }
-
-    public AbstractNode<?> getNode(int nodeId) {
-        return NodeCLI.NODE_REFERENCES.get(nodeId);
+        return KVStoreServerCLI.getStore(nodeId);
     }
 
     public KVStoreClient getClient(int clientId) {
-        return KVStoreClientCLI.CLIENT_REFERENCES.get(clientId);
+        return KVStoreClientCLI.getClient(clientId);
     }
 
     public KVStoreClient getRandomClient() {
@@ -52,7 +52,7 @@ public abstract class KVStoreClusterBase {
     }
 
     public Collection<KVStoreClient> getClients() {
-        return KVStoreClientCLI.CLIENT_REFERENCES.values();
+        return KVStoreClientCLI.getClients();
     }
 
     public int randomClientId() {
@@ -60,12 +60,12 @@ public abstract class KVStoreClusterBase {
     }
 
     public void cleanup() {
-        KVStoreClientCLI.CLIENT_REFERENCES.forEach((i, client) -> client.shutdown());
-        NodeCLI.NODE_REFERENCES.forEach((i, node) -> node.shutdown());
-        KVStoreServerCLI.STORE_REFERENCES.forEach((i, store) -> store.shutdown());
+        KVStoreClientCLI.getClients().forEach(client -> exec(client::shutdown));
+        NodeCLI.getNodes().forEach(node -> exec(node::shutdown));
+        KVStoreServerCLI.getStores().forEach(store -> exec(store::shutdown));
     }
 
-    static Thread exec(CheckedRunnable<Exception> runnable) {
+    static Thread newThread(CheckedRunnable<Exception> runnable) {
         return new Thread(() -> {
             try {
                 runnable.run();
@@ -73,5 +73,13 @@ public abstract class KVStoreClusterBase {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private static void exec(CheckedRunnable<Exception> runnable) {
+        try {
+            runnable.run();
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+        }
     }
 }

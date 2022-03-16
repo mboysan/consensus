@@ -21,7 +21,7 @@ public class BizurKVStoreCluster extends KVStoreClusterBase {
                     "bizur.numPeers=%d".formatted(builder.numNodes),
                     "bizur.numBuckets=%d".formatted(builder.numBuckets),
             };
-            threads.add(exec(() -> KVStoreServerCLI.main(args)));
+            threads.add(newThread(() -> KVStoreServerCLI.main(args)));
 
             String storeDestination = "%d-localhost:%d".formatted(i, ports[i][1]);
             String[] clientArgs = new String[]{

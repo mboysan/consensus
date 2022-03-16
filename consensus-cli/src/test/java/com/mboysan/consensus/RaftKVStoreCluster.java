@@ -19,7 +19,7 @@ public class RaftKVStoreCluster extends KVStoreClusterBase {
                     "transport.tcp.server.ports=%d,%d".formatted(ports[i][0], ports[i][1]),  // nodes will connect to first port and client to second
                     "transport.tcp.destinations=%s".formatted(destinations)
             };
-            threads.add(exec(() -> KVStoreServerCLI.main(storeArgs)));
+            threads.add(newThread(() -> KVStoreServerCLI.main(storeArgs)));
 
             String storeDestination = "%d-localhost:%d".formatted(i, ports[i][1]);
             String[] clientArgs = new String[]{
