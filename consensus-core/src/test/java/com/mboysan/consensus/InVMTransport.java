@@ -24,7 +24,7 @@ public class InVMTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool(
-            new BasicThreadFactory.Builder().namingPattern("ServerExec-%d").daemon(true).build()
+            new BasicThreadFactory.Builder().namingPattern("invm-exec-%d").daemon(true).build()
     );
 
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();

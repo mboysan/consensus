@@ -63,7 +63,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         transport.registerMessageProcessor(this);
 
         peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("PeerExec-" + nodeId + "-%d").daemon(true).build()
+                new BasicThreadFactory.Builder().namingPattern("node-" + nodeId + "-peer-exec-%d").daemon(true).build()
         );
 
         EventManager.getInstance().fireEvent(new NodeStartedEvent(nodeId));

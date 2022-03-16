@@ -98,7 +98,7 @@ public class VanillaTcpServerTransport implements Transport {
             try {
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setKeepAlive(true);
-                ClientHandler clientHandler = new ClientHandler(clientSocket, messageProcessor, clientCount, nodeId);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);
                 clientHandlers.put(clientCount + "", clientHandler);
                 clientHandlerExecutor.submit(clientHandler);
                 ++clientCount;
@@ -149,30 +149,20 @@ public class VanillaTcpServerTransport implements Transport {
         return !isRunning && clientTransport.verifyShutdown();
     }
 
-    private static final class ClientHandler implements Runnable {
-
+    private final class ClientHandler implements Runnable {
         private volatile boolean isRunning = true;
         private final Socket socket;
         private final ObjectOutputStream os;
         private final ObjectInputStream is;
-        private final UnaryOperator<Message> messageProcessor;
         private final int handlerId;
-        private final int nodeId;
 
         private ExecutorService requestExecutor;
 
-        private ClientHandler(
-                Socket socket,
-                UnaryOperator<Message> messageProcessor,
-                int handlerId,
-                int nodeId) throws IOException
-        {
+        private ClientHandler(Socket socket, int handlerId) throws IOException {
             this.socket = socket;
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
-            this.messageProcessor = messageProcessor;
             this.handlerId = handlerId;
-            this.nodeId = nodeId;
         }
 
         @Override
