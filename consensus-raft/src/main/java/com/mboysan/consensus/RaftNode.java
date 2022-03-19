@@ -64,7 +64,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         this.nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
         LOGGER.info("node-{} modified electionTimeoutMs={}, nextElectionTime={}",
                 getNodeId(), electionTimeoutMs, nextElectionTime);
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
+        getTimers().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -91,6 +91,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     @Override
     synchronized void update() {
+        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
         startNewElection();
         sendRequestVoteToPeers();
         becomeLeader();

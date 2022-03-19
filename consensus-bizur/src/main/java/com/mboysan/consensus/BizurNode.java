@@ -78,7 +78,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         this.updateIntervalMs = updateIntervalMs * electId;
         this.updateIntervalMs = RNG.nextLong(this.updateIntervalMs, this.updateIntervalMs * 2);
         LOGGER.info("node-{} modified updateIntervalMs={}", getNodeId(), updateIntervalMs);
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::tryUpdate, updateIntervalMs, updateIntervalMs);
+        getTimers().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -114,6 +114,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     synchronized void update() {
+        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
         for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
             int currentRangeLeader = getRangeLeader(rangeIndex);
 

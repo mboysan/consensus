@@ -5,6 +5,7 @@ import com.mboysan.consensus.message.KVGetRequest;
 import com.mboysan.consensus.message.KVIterateKeysRequest;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -166,6 +167,10 @@ abstract class KVStoreTestBase<N extends AbstractNode<?>> extends NodeTestBase<N
     private int randomFollowerId(int leaderId) {
         int id = randomNodeId();
         return id != leaderId ? id : randomFollowerId(leaderId);
+    }
+
+    int assertOneLeader() {
+        throw new NotImplementedException();
     }
 
     void assertEntriesForAll(Map<String, String> expectedEntries) throws IOException {

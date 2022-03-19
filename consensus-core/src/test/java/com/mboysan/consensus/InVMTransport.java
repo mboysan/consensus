@@ -78,8 +78,9 @@ public class InVMTransport implements Transport {
         if (server != null) {
             Set<Integer> idsTmp = new HashSet<>(serverMap.keySet());
             idsTmp.remove(nodeId);
-            eventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
+            server.shutdown();
             serverMap.remove(nodeId);
+            eventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
         }
         LOGGER.info("server-{} removed", nodeId);
     }

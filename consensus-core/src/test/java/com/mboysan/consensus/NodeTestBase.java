@@ -82,59 +82,9 @@ abstract class NodeTestBase<N extends AbstractNode<?>> implements NodeInternals<
         disconnect(nodeId);
     }
 
-    void revive(int nodeId) {
+    void revive(int nodeId) throws Exception {
         TIMER.resume("updateTimer-node" + nodeId);
         connect(nodeId);
-    }
-
-    void assertLeaderNotChanged(int currentLeaderId) {
-        assertEquals(currentLeaderId, assertOneLeader());
-    }
-
-    int assertOneLeader() {
-        int leaderId = -1;
-        for (N node : nodes) {
-            if (leaderId == -1) {
-                leaderId = getLeaderIdOf(node);
-            }
-            assertEquals(leaderId, getLeaderIdOf(node));
-        }
-        assertNotEquals(-1, leaderId);
-        return leaderId;
-    }
-
-    int assertLeaderChanged(int oldLeader, boolean isChangeVisibleOnOldLeader) {
-        int newLeaderId;
-        if (isChangeVisibleOnOldLeader) {
-            newLeaderId = assertOneLeader();
-        } else {
-            newLeaderId = -1;
-            for (N node : nodes) {
-                if (node.getNodeId() == oldLeader) {
-                    // the old leader should still think its the leader
-                    assertEquals(oldLeader, getLeaderIdOf(node));
-                } else {
-                    if (newLeaderId == -1) {
-                        newLeaderId = getLeaderIdOf(node);
-                    }
-                    assertEquals(newLeaderId, getLeaderIdOf(node));
-                }
-            }
-            assertNotEquals(-1, newLeaderId);
-        }
-        assertNotEquals(oldLeader, newLeaderId);
-        return newLeaderId;
-    }
-
-    int findLeaderOfMajority() {
-        N node = Arrays.stream(nodes).sorted(Comparator.comparingInt(this::getLeaderIdOf))
-                .toList()
-                .get(nodes.length / 2);
-        return getLeaderIdOf(node);
-    }
-
-    void assertLeaderOfMajority(int majorityLeaderId) {
-        assertEquals(majorityLeaderId, findLeaderOfMajority());
     }
 
     @AfterEach

@@ -22,8 +22,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -31,7 +29,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractNode.class);
 
     private volatile boolean isRunning;
-    private final Lock updateLock = new ReentrantLock();
 
     private final int nodeId;
     private final Transport transport;
@@ -103,19 +100,6 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     public synchronized boolean isRunning() {
         return isRunning;
-    }
-
-    void tryUpdate() {
-        if (updateLock.tryLock()) {
-            try {
-                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
-                update();
-            } finally {
-                updateLock.unlock();
-            }
-        } else {
-            LOGGER.debug("update in progress, skipped.");
-        }
     }
 
     abstract void update();

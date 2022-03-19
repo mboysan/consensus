@@ -43,7 +43,7 @@ public class BizurNodeTest {
     private void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
         nodes = new BizurNode[numNodes];
-        transport = new InVMTransport();
+        transport = createTransport();
         for (int i = 0; i < numNodes; i++) {
             BizurConfig bizurConfig = bizurConfig(i, numNodes, numBuckets);
             BizurNode node = new BizurNode(bizurConfig, transport);
@@ -60,10 +60,16 @@ public class BizurNodeTest {
         assertAllNodesAgreedOnRangeLeaders();
     }
 
+    private InVMTransport createTransport() {
+        Properties properties = new Properties();
+        properties.put("transport.message.callbackTimeoutMs", 100 + "");
+        Configuration.getCached(Configuration.class, properties); // InVMTransport's callbackTimeout will be overridden
+        return new InVMTransport();
+    }
+
     private BizurConfig bizurConfig(int nodeId, int numPeers, int numBuckets) {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
-        properties.put("transport.message.callbackTimeoutMs", 100 + "");
         properties.put("bizur.numPeers", numPeers + "");
         properties.put("bizur.numBuckets", numBuckets + "");
         properties.put("bizur.updateIntervalMs", 50 * (nodeId + 1) + "");
@@ -369,6 +375,8 @@ public class BizurNodeTest {
             throw new BizurException("failed response=[%s] for request=[%s]".formatted(response, forRequest));
         }
     }
+
+    // ------------------------------------------------------------- utils
 
     private void assertAwaiting(ThrowingRunnable runnable) {
         await().atMost(5, SECONDS).untilAsserted(runnable);
