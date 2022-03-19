@@ -32,7 +32,7 @@ public class VanillaTcpServerTransport implements Transport {
 
     private final int port;
     private final Map<Integer, Destination> destinations;
-    private final int nodeId;
+    private final int nodeIdOrPort;
     private final Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
 
     private ServerSocket serverSocket;
@@ -49,11 +49,11 @@ public class VanillaTcpServerTransport implements Transport {
     public VanillaTcpServerTransport(TcpTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
-        this.nodeId = destinations.values().stream()
+        this.nodeIdOrPort = destinations.values().stream()
                 .filter(dest -> dest.port() == port)
                 .mapToInt(Destination::nodeId)
                 .findFirst().orElse(port);
-        this.clientTransport = new VanillaTcpClientTransport(config, nodeId);
+        this.clientTransport = new VanillaTcpClientTransport(config, nodeIdOrPort);
     }
 
     @Override
@@ -79,11 +79,11 @@ public class VanillaTcpServerTransport implements Transport {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + nodeId);
+        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + nodeIdOrPort);
         serverThread.setDaemon(false);
         this.clientHandlerExecutor = Executors.newCachedThreadPool(
                 new BasicThreadFactory.Builder()
-                        .namingPattern("server-" + nodeId +"-handler-" + "%d")
+                        .namingPattern("server-" + nodeIdOrPort +"-handler-" + "%d")
                         .daemon(false)
                         .build());
 
@@ -120,6 +120,10 @@ public class VanillaTcpServerTransport implements Transport {
 
     @Override
     public Message sendRecv(Message message) throws IOException {
+        if (message.getSenderId() == message.getReceiverId()) {
+            LOGGER.debug("IN (self): {}", message);
+            return messageProcessor.apply(message);
+        }
         return clientTransport.sendRecv(message);
     }
 
@@ -199,7 +203,7 @@ public class VanillaTcpServerTransport implements Transport {
             if (this.requestExecutor == null) {
                 this.requestExecutor = Executors.newCachedThreadPool(
                         new BasicThreadFactory.Builder()
-                                .namingPattern("server-" + nodeId +"-handler-" + handlerId + "-exec-" + "%d")
+                                .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
                                 .daemon(false)
                                 .build());
             }

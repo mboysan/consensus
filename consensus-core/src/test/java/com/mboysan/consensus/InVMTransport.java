@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.util.SerializationTestUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,15 +98,17 @@ public class InVMTransport implements Transport {
     public Message sendRecv(Message message) throws IOException {
         Future<Message> msgFuture = sendRecvAsync(message);
         try {
-
-            // fixme: possible memory leak due to msgFuture not being removed from callbackMap in case of Exception
-            return msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            Message response = msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            LOGGER.debug("IN (response): {}", response);
+            return response;
         } catch (Exception e) {
             LOGGER.error("sendRecv failed for message={}", message, e);
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             throw new IOException(e);
+        } finally {
+            callbackMap.remove(message.getId());
         }
     }
 
@@ -114,40 +117,44 @@ public class InVMTransport implements Transport {
         verifySenderAlive(message);
         verifyReceiverAlive(message);
 
-        LOGGER.debug("OUT : {}", message);
-        if (message.getSenderId() == message.getReceiverId()) {
-            return CompletableFuture.completedFuture(sendRecvSelf(message));
+        try {
+            LOGGER.debug("OUT (request) : {}", message);
+            if (message.getSenderId() == message.getReceiverId()) {
+                return CompletableFuture.completedFuture(sendRecvSelf(message));
+            }
+            CompletableFuture<Message> msgFuture = new CompletableFuture<>();
+            callbackMap.put(message.getId(), msgFuture);
+            Server receivingServer = serverMap.get(message.getReceiverId());
+            if (receivingServer == null) {
+                throw new IOException("server-" + message.getReceiverId() + " is dead.");
+            }
+            receivingServer.add(message);
+            return msgFuture;
+        } catch (Exception e) {
+            throw new IOException(e);
         }
-
-        CompletableFuture<Message> msgFuture = new CompletableFuture<>();
-        callbackMap.put(message.getId(), msgFuture);
-        serverMap.get(message.getReceiverId()).add(message);
-        return msgFuture;
     }
 
     private Message sendRecvSelf(Message message) throws IOException {
-        if (message.getSenderId() != message.getReceiverId()) {
-            throw new IllegalArgumentException("sender is not the receiver");
-        }
         // this is the local server, no need to create a separate thread/task, so we do the processing
         // on the current thread.
         try {
-            Message resp = serverMap.get(message.getReceiverId()).messageProcessor.apply(message);
-            LOGGER.debug("IN (self) : {}", resp);
-            return resp;
+            return serverMap.get(message.getReceiverId()).messageProcessor.apply(message);
         } catch (Exception e) {
             throw new IOException(e);
         }
     }
 
     private void verifySenderAlive(Message message) throws IOException {
-        if (!serverMap.get(message.getSenderId()).isConnectedToNetwork) {
+        Server sendingServer = serverMap.get(message.getSenderId());
+        if (sendingServer == null || !sendingServer.isConnectedToNetwork) {
             throw new IOException("sender is down, cannot send msg=" + message);
         }
     }
 
     private void verifyReceiverAlive(Message message) throws IOException {
-        if (!serverMap.get(message.getReceiverId()).isConnectedToNetwork) {
+        Server receivingServer = serverMap.get(message.getReceiverId());
+        if (receivingServer == null || !receivingServer.isConnectedToNetwork) {
             throw new IOException("receiver is down, cannot receive msg=" + message);
         }
     }
@@ -166,6 +173,7 @@ public class InVMTransport implements Transport {
         volatile boolean isRunning = true;
         final BlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
         final Function<Message, Message> messageProcessor;
+        final ExecutorService requestExecutor = Executors.newCachedThreadPool();
 
         Server(Function<Message, Message> messageProcessor) {
             this.messageProcessor = messageProcessor;
@@ -188,7 +196,7 @@ public class InVMTransport implements Transport {
             while (isRunning) {
                 try {
                     Message message = messageQueue.take();
-                    LOGGER.debug("IN (req) : {}", message);
+                    LOGGER.debug("IN (request) : {}", message);
                     String correlationId = message.getId();
                     if (correlationId == null) {
                         LOGGER.error("correlationId must not be null");
@@ -199,15 +207,21 @@ public class InVMTransport implements Transport {
                         break;
                     }
 
-                    // we first process the message
-                    Message response = messageProcessor.apply(message);
+                    // we also test if a received message can be serialized and deserialized successfully.
+                    Message request = SerializationTestUtil.serializeDeserialize(message);
 
-                    // we send the response to the callback
-                    CompletableFuture<Message> msgFuture = callbackMap.remove(message.getId());
-                    if (msgFuture != null) {
-                        LOGGER.debug("OUT (resp) : {}", response);
-                        msgFuture.complete(response);
-                    }
+                    // don't block request processing
+                    requestExecutor.submit(() -> {
+                        // we first process the message
+                        Message response = messageProcessor.apply(request);
+
+                        // we send the response to the callback
+                        CompletableFuture<Message> msgFuture = callbackMap.remove(request.getId());
+                        if (msgFuture != null) {
+                            LOGGER.debug("OUT (response) : {}", response);
+                            msgFuture.complete(response);
+                        }
+                    });
                 } catch (InterruptedException e) {
                     LOGGER.error(e.getMessage(), e);
                     Thread.currentThread().interrupt();
@@ -220,6 +234,7 @@ public class InVMTransport implements Transport {
         public synchronized void shutdown() {
             isConnectedToNetwork = false;
             isRunning = false;
+            requestExecutor.shutdown();
             messageQueue.offer(new Message() {
             }.setCorrelationId("closingServer"));
         }

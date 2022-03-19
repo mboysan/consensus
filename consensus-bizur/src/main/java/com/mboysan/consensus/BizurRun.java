@@ -36,8 +36,8 @@ final class BizurRun {
         bizurNode.forEachPeerParallel(peerConsumer);
     }
 
-    private BizurRPC getRPC(int peerId) {
-        return bizurNode.getRPC(peerId);
+    private BizurRPC getRPC() {
+        return bizurNode.getRPC();
     }
 
     private boolean isMajorityAcked(int voteCount) {
@@ -102,7 +102,7 @@ final class BizurRun {
                         .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    PleaseVoteResponse response = getRPC(peer.peerId).pleaseVote(request);
+                    PleaseVoteResponse response = getRPC().pleaseVote(request);
                     if (response.isAcked()) {
                         ackCount.incrementAndGet();
                     }
@@ -139,7 +139,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaWriteResponse response = getRPC(peer.peerId).replicaWrite(request);
+                ReplicaWriteResponse response = getRPC().replicaWrite(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -171,7 +171,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC(peer.peerId).replicaRead(request);
+                ReplicaReadResponse response = getRPC().replicaRead(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -204,7 +204,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC(peer.peerId).replicaRead(request);
+                ReplicaReadResponse response = getRPC().replicaRead(request);
                 if (response.isAcked()) {
                     Bucket respBucket = response.getBucket();
                     synchronized (maxVerBucket) {
@@ -294,7 +294,7 @@ final class BizurRun {
                         .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    CollectKeysResponse response = getRPC(peer.peerId).collectKeys(req);
+                    CollectKeysResponse response = getRPC().collectKeys(req);
                     synchronized (keySet) {
                         keySet.addAll(response.keySet());
                     }

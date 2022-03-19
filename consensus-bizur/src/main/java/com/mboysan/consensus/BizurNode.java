@@ -1,13 +1,35 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
-import com.mboysan.consensus.message.*;
+import com.mboysan.consensus.message.CollectKeysRequest;
+import com.mboysan.consensus.message.CollectKeysResponse;
+import com.mboysan.consensus.message.HeartbeatRequest;
+import com.mboysan.consensus.message.HeartbeatResponse;
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVDeleteResponse;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVGetResponse;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVIterateKeysResponse;
+import com.mboysan.consensus.message.KVOperationResponse;
+import com.mboysan.consensus.message.KVSetRequest;
+import com.mboysan.consensus.message.KVSetResponse;
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.PleaseVoteRequest;
+import com.mboysan.consensus.message.PleaseVoteResponse;
+import com.mboysan.consensus.message.ReplicaReadRequest;
+import com.mboysan.consensus.message.ReplicaReadResponse;
+import com.mboysan.consensus.message.ReplicaWriteRequest;
+import com.mboysan.consensus.message.ReplicaWriteResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -43,13 +65,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     BizurRPC getRPC() {
         return rpcClient;
-    }
-
-    BizurRPC getRPC(int peerId) {
-        if (peerId == getNodeId()) {
-            return this;   // allows calling real methods without using IO communication.
-        }
-        return getRPC();
     }
 
     @Override
@@ -99,26 +114,33 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     synchronized void update() {
-        boolean[] checkedLeaders = new boolean[getNumPeers()];
         for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
-            int rangeLeader = getRangeLeader(rangeIndex);
+            int currentRangeLeader = getRangeLeader(rangeIndex);
 
-            if (rangeLeader == getNodeId()) {
+            if (currentRangeLeader == getNodeId()) {
                 // I'm the leader of the range, all good
                 continue;
             }
 
-            int supposedLeader = nodeIdForRangeIndex(rangeIndex);
-            if (checkedLeaders[supposedLeader]) {
-                continue;   // already checked this one
-            } else {
-                checkedLeaders[supposedLeader] = true;
-            }
-            if (supposedLeader == getNodeId() || rangeLeader == -1 || !heartbeat(supposedLeader)) {
-                // If I am the supposed leader OR there's no leader OR supposed leader is unreachable
-                // Then, I'll try to be the new leader
-                LOGGER.info("node-{} needs a new election on bucket rangeIdx={}", getNodeId(), rangeIndex);
-                new BizurRun(this).startElection(rangeIndex);
+            int supposedRangeLeader = nodeIdForRangeIndex(rangeIndex);
+
+            boolean iAmSupposedLeader = false;
+            boolean noRangeLeader = false;
+            boolean currentLeaderDead = false;
+            boolean supposedLeaderDead = false;
+            if ((iAmSupposedLeader = supposedRangeLeader == getNodeId())
+                    || (noRangeLeader = currentRangeLeader == -1)
+                    || ((currentLeaderDead = !heartbeat(currentRangeLeader))
+                        && (supposedLeaderDead = !heartbeat(supposedRangeLeader)))) {
+                // If I am the supposed leader OR there's no leader OR current and supposed leader unreachable,
+                // then, I'll try to be the new leader
+                String correlationId = Message.generateId();
+                LOGGER.info("node-{} needs a new election on bucket rangeIdx={}, " +
+                                "reason=[iAmSupposedLeader={}, noRangeLeader={}, currentLeaderDead={}, supposedLeaderDead={}], corrId={}",
+                        getNodeId(), rangeIndex,
+                        iAmSupposedLeader, noRangeLeader, currentLeaderDead, supposedLeaderDead,
+                        correlationId);
+                new BizurRun(correlationId, this).startElection(rangeIndex);
             }
         }
     }
