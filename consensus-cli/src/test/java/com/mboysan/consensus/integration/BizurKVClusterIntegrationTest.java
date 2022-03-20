@@ -4,7 +4,7 @@ import com.mboysan.consensus.BizurKVStoreCluster;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-public class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
+class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private BizurKVStoreCluster bizurCluster;
 

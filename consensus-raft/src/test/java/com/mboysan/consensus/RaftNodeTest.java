@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
+import static com.mboysan.consensus.util.AwaitUtil.awaitingAtLeast;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -80,8 +81,7 @@ class RaftNodeTest extends NodeTestBase {
         int leaderId = this.assertOneLeader();
 
         // wait a while and check again to see if leader remained unchanged
-        Thread.sleep(2000);
-        assertEquals(leaderId, assertOneLeader());
+        awaitingAtLeast(2000L, () -> assertEquals(leaderId, assertOneLeader()));
     }
 
     /**

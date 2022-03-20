@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
+import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
 
 abstract class ClusterIntegrationTestBase {
 
@@ -81,7 +81,7 @@ abstract class ClusterIntegrationTestBase {
     {
         cluster.getStore(0).shutdown();
 
-        setRetrying(cluster, 1, "k0", "v0");
+        awaiting(KVOperationException.class, () -> cluster.getClient(1).set("k0", "v0"));
 
         cluster.getStore(0).start().get();
 
@@ -89,22 +89,6 @@ abstract class ClusterIntegrationTestBase {
 
         assertEquals("v1", cluster.getClient(0).get("k1"));
         assertEquals("v0", cluster.getClient(1).get("k0"));
-    }
-
-    private void setRetrying(KVStoreClusterBase cluster, int clientId, String key, String value)
-            throws InterruptedException
-    {
-        int retries = 10;
-        for (int i = 0; i < retries; i++) {
-            try {
-                cluster.getClient(clientId).set(key, value);
-                return;
-            } catch (KVOperationException e) {
-                LOGGER.info("set failed, waiting for new election. received error={}", e.getMessage());
-                Thread.sleep(5000);
-            }
-        }
-        fail("set by client-%d failed after %d retries".formatted(clientId, retries));
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {

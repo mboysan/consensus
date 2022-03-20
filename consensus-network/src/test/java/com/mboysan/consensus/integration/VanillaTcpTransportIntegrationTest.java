@@ -22,7 +22,12 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.mboysan.consensus.util.AwaitUtil.awaiting;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -183,17 +188,17 @@ class VanillaTcpTransportIntegrationTest {
     }
 
     @Test
-    void testIOErrorOnReceiverShutdown() throws IOException, InterruptedException {
+    void testIOErrorOnReceiverShutdown() throws IOException {
         TestMessage request = testMessage(0, 0, 1);
 
         serverTransports[1].shutdown();
-        Thread.sleep(2500L);
-        assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request));
+        awaiting(() -> assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request)));
 
         serverTransports[1].start();
-        Thread.sleep(2500L);
-        TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
-        assertResponse(request, response);
+        awaiting(() -> {
+            TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
+            assertResponse(request, response);
+        });
     }
 
     private TestMessage testMessage(int payloadId, int senderId, int receiverId) {

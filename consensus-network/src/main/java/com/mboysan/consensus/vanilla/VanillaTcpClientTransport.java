@@ -4,7 +4,7 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.CheckedRunnable;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
@@ -138,10 +138,10 @@ public class VanillaTcpClientTransport implements Transport {
         clientPools.clear();
     }
 
-    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(ThrowingRunnable toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
@@ -188,6 +188,7 @@ public class VanillaTcpClientTransport implements Transport {
                         future.complete(response);
                     }
                 } catch (EOFException ignore) {
+                    // ignoring EOFException-s
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
@@ -206,7 +207,7 @@ public class VanillaTcpClientTransport implements Transport {
             os.flush();
         }
 
-        synchronized void shutdown() throws IOException {
+        synchronized void shutdown() {
             if (!isConnected) {
                 return;
             }
@@ -232,7 +233,7 @@ public class VanillaTcpClientTransport implements Transport {
         }
 
         @Override
-        public void destroyObject(PooledObject<TcpClient> p) throws IOException {
+        public void destroyObject(PooledObject<TcpClient> p) {
             p.getObject().shutdown();
         }
 

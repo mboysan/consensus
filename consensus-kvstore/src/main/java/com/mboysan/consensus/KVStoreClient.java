@@ -1,19 +1,24 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.*;
-import com.mboysan.consensus.util.CheckedSupplier;
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVDeleteResponse;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVGetResponse;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVIterateKeysResponse;
+import com.mboysan.consensus.message.KVOperationResponse;
+import com.mboysan.consensus.message.KVSetRequest;
+import com.mboysan.consensus.message.KVSetResponse;
+import com.mboysan.consensus.util.ThrowingSupplier;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStoreClient extends AbstractClient {
-
-//    private final Semaphore throttler = new Semaphore(2);
 
     private final List<Integer> nodeIds;
     private final AtomicInteger currIndex = new AtomicInteger(-1);
@@ -79,14 +84,11 @@ public class KVStoreClient extends AbstractClient {
         }
     }
 
-    private <T> T exec(CheckedSupplier<T, Exception> supplier) throws KVOperationException {
+    private <T> T exec(ThrowingSupplier<T> supplier) throws KVOperationException {
         try {
-//            throttler.acquire();
             return supplier.get();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new KVOperationException(e);
-        } finally {
-//            throttler.release();
         }
     }
 }

@@ -4,7 +4,7 @@ import com.mboysan.consensus.RaftKVStoreCluster;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-public class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
+class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private RaftKVStoreCluster raftCluster;
 

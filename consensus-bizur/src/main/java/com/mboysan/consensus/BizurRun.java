@@ -92,7 +92,9 @@ final class BizurRun {
     void startElection(int bucketRangeIndex) {
         BucketRange range = getBucketRange(bucketRangeIndex).lock();
         try {
-            LOGGER.info("{} - starting new election on bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("{} - starting new election on bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
+            }
 
             int electId = range.incrementAndGetElectId();
             AtomicInteger ackCount = new AtomicInteger(0);
@@ -112,7 +114,9 @@ final class BizurRun {
             });
             if (isMajorityAcked(ackCount.get())) {
                 range.setLeaderId(getNodeId());
-                LOGGER.info("{} - I am leader of bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("{} - I am leader of bucket rangeIdx={}", contextInfo(), range.getRangeIndex());
+                }
             } else {
                 range.setLeaderId(-1);
             }
@@ -288,7 +292,7 @@ final class BizurRun {
         Map<Integer, Set<Integer>> rangeLeaders = collectRangeLeaders();
         forEachPeerParallel(peer -> {
             Set<Integer> rangeIndexes = rangeLeaders.get(peer.peerId);
-            if (rangeIndexes != null && rangeIndexes.size() > 0) {
+            if (rangeIndexes != null && !rangeIndexes.isEmpty()) {
                 CollectKeysRequest req = new CollectKeysRequest(rangeLeaders.get(peer.peerId))
                         .setCorrelationId(correlationId)
                         .setSenderId(getNodeId())
@@ -315,7 +319,7 @@ final class BizurRun {
                     // the operation cannot be completed successfully, hence we throw exception
                     throw new IllegalLeaderException(-1);
                 }
-                Set<Integer> rangeIndexes = rangeLeaders.computeIfAbsent(range.getLeaderId(), HashSet::new);
+                Set<Integer> rangeIndexes = rangeLeaders.computeIfAbsent(range.getLeaderId(), id -> new HashSet<>());
                 rangeIndexes.add(rangeIndex);
             } finally {
                 range.unlock();

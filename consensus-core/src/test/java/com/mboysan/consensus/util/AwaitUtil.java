@@ -13,13 +13,13 @@ public final class AwaitUtil {
 
     }
 
-    public static <T> T awaiting(CheckedSupplier<T, Throwable> supplier) {
+    public static <T> T awaiting(ThrowingSupplier<T> supplier) {
         return awaiting(null, supplier);
     }
 
     public static <T> T awaiting(
             Class<? extends Exception> expectedExceptionType,
-            CheckedSupplier<T, Throwable> supplier)
+            ThrowingSupplier<T> supplier)
     {
         AtomicReference<T> ref = new AtomicReference<>();
         await().atMost(DEFAULT_AWAIT_SECONDS, SECONDS).untilAsserted(() -> {
@@ -35,13 +35,13 @@ public final class AwaitUtil {
         return ref.get();
     }
 
-    public static void awaiting(CheckedRunnable<Throwable> runnable) {
+    public static void awaiting(ThrowingRunnable runnable) {
         awaiting(null, runnable);
     }
 
     public static void awaiting(
             Class<? extends Exception> expectedExceptionType,
-            CheckedRunnable<Throwable> runnable)
+            ThrowingRunnable runnable)
     {
         await().atMost(DEFAULT_AWAIT_SECONDS, SECONDS).untilAsserted(() -> {
             try {
@@ -53,5 +53,14 @@ public final class AwaitUtil {
                 throw t;
             }
         });
+    }
+
+    public static void awaitingAtLeast(long milliseconds, ThrowingRunnable runnable) throws Exception {
+        Thread.sleep(milliseconds);
+        try {
+            runnable.run();
+        } catch (Throwable t) {
+            throw new Error(t);
+        }
     }
 }

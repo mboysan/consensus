@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BizurNodeTest extends NodeTestBase {
+class BizurNodeTest extends NodeTestBase {
 
     private boolean skipTeardown;
     private BizurNode[] nodes;

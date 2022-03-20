@@ -4,7 +4,7 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.CheckedRunnable;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,10 +141,10 @@ public class VanillaTcpServerTransport implements Transport {
         shutdown(() -> clientHandlerExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
     }
 
-    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(ThrowingRunnable toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
@@ -192,6 +192,7 @@ public class VanillaTcpServerTransport implements Transport {
                         }
                     });
                 } catch (EOFException ignore) {
+                    // ignoring EOFException-s
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
                     VanillaTcpServerTransport.shutdown(this::shutdown);
@@ -210,7 +211,7 @@ public class VanillaTcpServerTransport implements Transport {
             requestExecutor.submit(runnable);
         }
 
-        synchronized void shutdown() throws IOException {
+        synchronized void shutdown() {
             if (!isRunning) {
                 return;
             }

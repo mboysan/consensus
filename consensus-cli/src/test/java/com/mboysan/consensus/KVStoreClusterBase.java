@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.util.CheckedRunnable;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import com.mboysan.consensus.util.NetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,21 +65,21 @@ public abstract class KVStoreClusterBase {
         KVStoreServerCLI.getStores().forEach(store -> exec(store::shutdown));
     }
 
-    static Thread newThread(CheckedRunnable<Exception> runnable) {
+    static Thread newThread(ThrowingRunnable runnable) {
         return new Thread(() -> {
             try {
                 runnable.run();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (Throwable t) {
+                throw new RuntimeException(t);
             }
         });
     }
 
-    private static void exec(CheckedRunnable<Exception> runnable) {
+    private static void exec(ThrowingRunnable runnable) {
         try {
             runnable.run();
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
+        } catch (Throwable t) {
+            LOGGER.error(t.getMessage(), t);
         }
     }
 }
