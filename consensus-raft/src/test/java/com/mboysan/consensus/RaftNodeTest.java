@@ -143,9 +143,11 @@ class RaftNodeTest extends NodeTestBase {
         assertLeaderNotChanged(leaderId);
         assertLogsEquals(expectedCommands);
 
-        Thread.sleep(2000); // everything should stay the same even after some time passes
-        assertLeaderNotChanged(leaderId);
-        assertLogsEquals(expectedCommands);
+        // everything should stay the same even after some time passes
+        awaitingAtLeast(2000L, () -> {
+            assertLeaderNotChanged(leaderId);
+            assertLogsEquals(expectedCommands);
+        });
     }
 
     /**
@@ -179,9 +181,11 @@ class RaftNodeTest extends NodeTestBase {
         assertLeaderNotChanged(leaderId);
         assertLogsEquals(expectedCommands);
 
-        Thread.sleep(2000); // everything should stay the same even after some time passes
-        assertLeaderNotChanged(leaderId);
-        assertLogsEquals(expectedCommands);
+        // everything should stay the same even after some time passes
+        awaitingAtLeast(2000L, () -> {
+            assertLeaderNotChanged(leaderId);
+            assertLogsEquals(expectedCommands);
+        });
     }
 
     /**
