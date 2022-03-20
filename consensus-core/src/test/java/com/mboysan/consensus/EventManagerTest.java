@@ -14,13 +14,13 @@ class EventManagerTest {
 
     @Test
     void testSingleInstance() throws ExecutionException, InterruptedException {
-        MultiThreadExecutor executor = new MultiThreadExecutor();
         EventManager[] emArr = new EventManager[10];
-        for (int i = 0; i < emArr.length; i++) {
-            int finalI = i;
-            executor.execute(() -> emArr[finalI] = EventManager.getInstance());
+        try (MultiThreadExecutor executor = new MultiThreadExecutor()) {
+            for (int i = 0; i < emArr.length; i++) {
+                int finalI = i;
+                executor.execute(() -> emArr[finalI] = EventManager.getInstance());
+            }
         }
-        executor.endExecution();
 
         EventManager expected = EventManager.getInstance();
         for (EventManager actual : emArr) {

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * A utility class that is used as an executor but used to report any exceptions caught when
  * {@link #execute(ThrowingRunnable)} method is run.
  */
-public class MultiThreadExecutor {
+public class MultiThreadExecutor implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MultiThreadExecutor.class);
 
@@ -64,10 +64,10 @@ public class MultiThreadExecutor {
 
     /**
      * Waits for all the executions to complete.
-     * @throws InterruptedException if latch await fails.
      */
-    public void endExecution() throws InterruptedException, ExecutionException {
-        LOGGER.info("ending execution id=" + execId);
+    @Override
+    public void close() throws ExecutionException, InterruptedException {
+        LOGGER.info("ending execution id={}", execId);
         latch.countDown();
         for (Future<Optional<Throwable>> future : futures) {
             Optional<Throwable> optEx = future.get();
