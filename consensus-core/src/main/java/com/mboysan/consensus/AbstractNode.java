@@ -4,8 +4,7 @@ import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
-import com.mboysan.consensus.util.TimerQueue;
-import com.mboysan.consensus.util.Timers;
+import com.mboysan.consensus.util.Scheduler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +31,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     private final int nodeId;
     private final Transport transport;
-    private final Timers timers;
+    private final Scheduler scheduler;
 
     private ExecutorService peerExecutor;
 
@@ -43,15 +42,11 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     AbstractNode(Configuration config, Transport transport) {
         this.nodeId = config.nodeId();
         this.transport = transport;
-        this.timers = createTimers();
+        this.scheduler = new Scheduler();
         this.nodeConfig = config;
         LOGGER.info("node-{} config={}", nodeId, nodeConfig);
 
         EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
-    }
-
-    Timers createTimers() {
-        return new TimerQueue();
     }
 
     public synchronized Future<Void> start() throws IOException {
@@ -84,7 +79,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             return;
         }
         isRunning = false;
-        timers.shutdown();
+        scheduler.shutdown();
         peerExecutor.shutdown();
         peers.clear();
         EventManager.getInstance().fireEvent(new NodeStoppedEvent(nodeId));
@@ -149,8 +144,8 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     abstract RPCProtocol getRPC();
 
-    Timers getTimers() {
-        return timers;
+    Scheduler getScheduler() {
+        return scheduler;
     }
 
     public int getNodeId() {

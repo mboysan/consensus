@@ -61,10 +61,10 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     Future<Void> startNode() {
         int electId = (getNodeId() % (peers.size() + 1)) + 1;
         this.electionTimeoutMs = electionTimeoutMs * electId;
-        this.nextElectionTime = getTimers().currentTime() + electionTimeoutMs;
+        this.nextElectionTime = getScheduler().currentTime() + electionTimeoutMs;
         LOGGER.info("node-{} modified electionTimeoutMs={}, nextElectionTime={}",
                 getNodeId(), electionTimeoutMs, nextElectionTime);
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
+        getScheduler().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -73,7 +73,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         return null;
                     }
                 }
-                getTimers().sleep(updateIntervalMs);
+                getScheduler().sleep(updateIntervalMs);
             }
         });
     }
@@ -91,7 +91,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     @Override
     synchronized void update() {
-        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
+        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getScheduler().currentTime());
         startNewElection();
         sendRequestVoteToPeers();
         becomeLeader();
@@ -114,7 +114,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     private boolean isElectionNeeded() {
-        long currentTime = getTimers().currentTime();
+        long currentTime = getScheduler().currentTime();
         if (currentTime >= nextElectionTime) {
             nextElectionTime = currentTime + electionTimeoutMs;
             boolean isElectionNeeded = state.role != LEADER && !state.seenLeader;

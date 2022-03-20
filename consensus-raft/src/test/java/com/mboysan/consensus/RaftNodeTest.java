@@ -14,11 +14,8 @@ import java.util.OptionalInt;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
+import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -26,16 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RaftNodeTest {
+class RaftNodeTest extends NodeTestBase {
 
     private boolean skipTeardown;
     private RaftNode[] nodes;
     private InVMTransport transport;
 
-    private void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
+    void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
         nodes = new RaftNode[numNodes];
-        transport = createTransport();
+        transport = new InVMTransport();
         for (int i = 0; i < numNodes; i++) {
             RaftConfig raftConfig = raftConfig(i);
             RaftNode node = new RaftNode(raftConfig, transport);
@@ -49,19 +46,22 @@ class RaftNodeTest {
         }
     }
 
-    private InVMTransport createTransport() {
-        Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 100 + "");
-        Configuration.getCached(Configuration.class, properties); // InVMTransport's callbackTimeout will be overridden
-        return new InVMTransport();
-    }
-
     private RaftConfig raftConfig(int nodeId) {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
         properties.put("raft.updateIntervalMs", 50 + "");
         properties.put("raft.electionTimeoutMs", 1000 + "");
         return Configuration.newInstance(RaftConfig.class, properties);
+    }
+
+    @Override
+    InVMTransport getTransport() {
+        return transport;
+    }
+
+    @Override
+    RaftNode getNode(int nodeId) {
+        return nodes[nodeId];
     }
 
     @Test
@@ -441,52 +441,10 @@ class RaftNodeTest {
         return leaderId;
     }
 
-    // ------------------------------------------------------------- node kill & revive operations
-
-    void kill(int nodeId) {
-        nodes[nodeId].shutdown();
-    }
-
-    void revive(int nodeId) throws IOException, ExecutionException, InterruptedException {
-        nodes[nodeId].start().get();
-    }
-
-    void disconnect(int nodeId) {
-        transport.connectedToNetwork(nodeId, false);
-    }
-
-    void connect(int nodeId) {
-        transport.connectedToNetwork(nodeId, true);
-    }
-
     // ------------------------------------------------------------- node operations
 
     private boolean append(int nodeId, String command) throws IOException {
         return nodes[nodeId].stateMachineRequest(new StateMachineRequest(command)).isApplied();
-    }
-
-    // ------------------------------------------------------------- utils
-
-    private <T> T awaiting(Supplier<T> supplier) {
-        AtomicReference<T> ref = new AtomicReference<>();
-        await().atMost(10, SECONDS).untilAsserted(() -> {
-            try {
-                ref.set(supplier.get());
-            } catch (Throwable t) {
-                throw new AssertionError(t);
-            }
-        });
-        return ref.get();
-    }
-
-    private void awaiting(Runnable runnable) {
-        await().atMost(10, SECONDS).untilAsserted(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable t) {
-                throw new AssertionError(t);
-            }
-        });
     }
 
     @AfterEach

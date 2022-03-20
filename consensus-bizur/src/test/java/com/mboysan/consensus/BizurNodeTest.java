@@ -12,7 +12,6 @@ import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
-import org.awaitility.core.ThrowingRunnable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,23 +26,23 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
+import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BizurNodeTest {
+public class BizurNodeTest extends NodeTestBase {
 
     private boolean skipTeardown;
     private BizurNode[] nodes;
     private InVMTransport transport;
 
-    private void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
+    void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
         nodes = new BizurNode[numNodes];
-        transport = createTransport();
+        transport = new InVMTransport();
         for (int i = 0; i < numNodes; i++) {
             BizurConfig bizurConfig = bizurConfig(i, numNodes, numBuckets);
             BizurNode node = new BizurNode(bizurConfig, transport);
@@ -60,13 +59,6 @@ public class BizurNodeTest {
         assertAllNodesAgreedOnRangeLeaders();
     }
 
-    private InVMTransport createTransport() {
-        Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 100 + "");
-        Configuration.getCached(Configuration.class, properties); // InVMTransport's callbackTimeout will be overridden
-        return new InVMTransport();
-    }
-
     private BizurConfig bizurConfig(int nodeId, int numPeers, int numBuckets) {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
@@ -74,6 +66,16 @@ public class BizurNodeTest {
         properties.put("bizur.numBuckets", numBuckets + "");
         properties.put("bizur.updateIntervalMs", 50 * (nodeId + 1) + "");
         return Configuration.newInstance(BizurConfig.class, properties);
+    }
+
+    @Override
+    InVMTransport getTransport() {
+        return transport;
+    }
+
+    @Override
+    BizurNode getNode(int nodeId) {
+        return nodes[nodeId];
     }
 
     @Test
@@ -171,8 +173,8 @@ public class BizurNodeTest {
         // since we have only 1 bucket, all key-values will be written on bucket-0 which is on range-0,
         // for which node-0 will be elected as its leader.
         kill(0);
-        assertThrows(Exception.class, () -> set(0, "k0", "v0"));
-        retrying(() -> set(1, "k0", "v0"));
+        assertThrows(IllegalStateException.class, () -> set(0, "k0", "v0"));
+        awaiting(() -> set(1, "k0", "v0"));
 
         revive(0);
         set(0, "k1", "v1");
@@ -196,7 +198,7 @@ public class BizurNodeTest {
         // since we have only 1 bucket, all key-values will be written on bucket-0 which is on range-0,
         // for which node-0 will be elected as its leader.
         kill(1);    // follower of range-0
-        assertThrows(Exception.class, () -> set(1, "k0", "v0"));
+        assertThrows(IllegalStateException.class, () -> set(1, "k0", "v0"));
         set(0, "k0", "v0");
 
         revive(1);
@@ -222,11 +224,11 @@ public class BizurNodeTest {
         // since we have only 1 bucket, all key-values will be written on bucket-0 which is on range-0,
         // for which node-0 will be elected as its leader.
         disconnect(0);
-        assertThrows(Exception.class, () -> set(0, "k0", "v0"));
-        retrying(() -> set(1, "k0", "v0"));
+        assertThrows(BizurException.class, () -> set(0, "k0", "v0"));
+        awaiting(() -> set(1, "k0", "v0"));
 
         connect(0);
-        retrying(() -> set(0, "k1", "v1"));
+        awaiting(() -> set(0, "k1", "v1"));
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
@@ -248,7 +250,7 @@ public class BizurNodeTest {
         // since we have only 1 bucket, all key-values will be written on bucket-0 which is on range-0,
         // for which node-0 will be elected as its leader.
         disconnect(1);  // follower of range-0
-        assertThrows(Exception.class, () -> set(1, "k0", "v0"));
+        assertThrows(IOException.class, () -> set(1, "k0", "v0"));
         set(0, "k0", "v0");
 
         connect(1);
@@ -276,7 +278,7 @@ public class BizurNodeTest {
      * asserts that a given range has the supposed leader assigned at the node being checked.
      */
     private void assertRangeLeaderIsSupposedLeaderAtNode(int nodeId, int rangeIndex) {
-        assertAwaiting(() -> {
+        awaiting(() -> {
             int supposedLeader = nodes[nodeId].nodeIdForRangeIndex(rangeIndex);
             assertEquals(supposedLeader, nodes[nodeId].getBucketRange(rangeIndex).getLeaderId());
         });
@@ -297,7 +299,7 @@ public class BizurNodeTest {
      * asserts that for the majority of the nodes, the leader is chosen as the leader of the given range.
      */
     private void assertMajorityAgreedOnLeaderOfRange(int rangeIndex) {
-        assertAwaiting(() -> {
+        awaiting(() -> {
             int discrepancyCount = 0;
             int majorityLeader = -1;
             for (BizurNode node : nodes) {
@@ -324,25 +326,7 @@ public class BizurNodeTest {
         }
     }
 
-    // ------------------------------------------------------------- node kill & revive operations
-
-    private void kill(int nodeId) {
-        nodes[nodeId].shutdown();
-    }
-
-    private void revive(int nodeId) throws IOException, ExecutionException, InterruptedException {
-        nodes[nodeId].start().get();
-    }
-
-    private void disconnect(int nodeId) {
-        transport.connectedToNetwork(nodeId, false);
-    }
-
-    private void connect(int nodeId) {
-        transport.connectedToNetwork(nodeId, true);
-    }
-
-    // ------------------------------------------------------------- KV operations
+    // ------------------------------------------------------------- node operations
 
     private String get(int byNodeId, String key) throws Exception {
         KVGetRequest request = new KVGetRequest(key);
@@ -376,27 +360,13 @@ public class BizurNodeTest {
         }
     }
 
-    // ------------------------------------------------------------- utils
-
-    private void assertAwaiting(ThrowingRunnable runnable) {
-        await().atMost(5, SECONDS).untilAsserted(runnable);
-    }
-
-    private void retrying(ThrowingRunnable runnable) {
-        await().atMost(5, SECONDS).untilAsserted(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable e) {
-                throw new AssertionError(e);
-            }
-        });
-    }
-
     @AfterEach
     void tearDown() {
         if (skipTeardown) {
             return;
         }
+        assertNotNull(transport);
+        assertNotNull(nodes);
         Arrays.stream(nodes).forEach(AbstractNode::shutdown);
         transport.shutdown();
     }

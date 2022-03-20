@@ -78,7 +78,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         this.updateIntervalMs = updateIntervalMs * electId;
         this.updateIntervalMs = RNG.nextLong(this.updateIntervalMs, this.updateIntervalMs * 2);
         LOGGER.info("node-{} modified updateIntervalMs={}", getNodeId(), updateIntervalMs);
-        getTimers().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
+        getScheduler().schedule("updateTimer-node" + getNodeId(), this::update, updateIntervalMs, updateIntervalMs);
 
         return CompletableFuture.supplyAsync(() -> {
             while (true) {
@@ -91,7 +91,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 if (allRangesHaveCorrectLeader) {
                     return null;
                 }
-                getTimers().sleep(updateIntervalMs);
+                getScheduler().sleep(updateIntervalMs);
             }
         });
     }
@@ -114,7 +114,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     synchronized void update() {
-        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
+        LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getScheduler().currentTime());
         for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
             int currentRangeLeader = getRangeLeader(rangeIndex);
 
@@ -231,7 +231,10 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             } else {
                 range.setVotedElectId(bucketReceived.getVerElectId());
                 range.setLeaderId(request.getSenderId());     // "update" vote
-                bucket.setBucketMap(request.getBucket().getBucketMap());
+                // finally, local buckets[bucket.index] ← bucket
+                bucket.setVerElectId(bucketReceived.getVerElectId());
+                bucket.setVerCounter(bucketReceived.getVerCounter());
+                bucket.setBucketMap(bucketReceived.getBucketMap());
                 return new ReplicaWriteResponse(true).responseTo(request);
             }
         } finally {
@@ -368,7 +371,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
      * ----------------------------------------------------------------------------------*/
 
     int hashKey(String key) {
-        return key.hashCode() % numBuckets;
+        return Math.abs(key.hashCode()) % numBuckets;
     }
 
     int rangeIndexForKey(String key) {

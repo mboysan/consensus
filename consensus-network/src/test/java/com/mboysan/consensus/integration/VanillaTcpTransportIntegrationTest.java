@@ -13,7 +13,6 @@ import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -27,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class VanillaTcpTransportIT {
+class VanillaTcpTransportIntegrationTest {
 
     private static final String HOST_NAME = "localhost";
 

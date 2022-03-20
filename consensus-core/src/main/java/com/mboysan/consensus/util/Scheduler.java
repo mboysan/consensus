@@ -7,12 +7,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class TimerQueue implements Timers {
-    private static final Logger LOGGER = LoggerFactory.getLogger(TimerQueue.class);
+public class Scheduler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Scheduler.class);
 
     private final Map<String, TimerThread> taskMap = new HashMap<>();
 
-    @Override
     public synchronized void schedule(String taskName, Runnable task, long delay, long period) {
         Objects.requireNonNull(taskName);
         Objects.requireNonNull(task);
@@ -29,18 +28,15 @@ public class TimerQueue implements Timers {
         LOGGER.info("Timer for task={} scheduled with delay={} and period={}", taskName, delay, period);
     }
 
-    @Override
     public long currentTime() {
         return System.currentTimeMillis();
     }
 
-    @Override
     public synchronized void shutdown() {
         taskMap.forEach((s, t) -> t.cancel());
         taskMap.clear();
     }
 
-    @Override
     public void sleep(long ms) {
         try {
             Thread.sleep(ms);

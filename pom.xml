@@ -27,7 +27,6 @@
         <slf4j.version>1.7.30</slf4j.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-pool2.version>2.10.0</commons-pool2.version>
-        <netty.version>4.1.65.Final</netty.version>
 
         <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
         <jacoco.maven.plugin.version>0.8.7</jacoco.maven.plugin.version>
@@ -73,11 +72,6 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
                 <version>${commons-pool2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
             </dependency>
 
             <dependency>

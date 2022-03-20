@@ -32,10 +32,16 @@ public class InVMTransport implements Transport {
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
     private final EventManager eventManager;
+    private final int associatedNodeId;
 
     public InVMTransport() {
+        this(-1);
+    }
+
+    public InVMTransport(int associatedNodeId) {
         this.eventManager = EventManager.getInstance();
-        eventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+        this.eventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+        this.associatedNodeId = associatedNodeId;
     }
 
     @Override
@@ -67,6 +73,7 @@ public class InVMTransport implements Transport {
             LOGGER.info("server-{} added", nodeId);
         } else {
             Server server = new Server(messageProcessor);
+            serverMap.put(associatedNodeId, server);
             serverExecutor.execute(server);
             LOGGER.info("messageProcessor added");
         }
@@ -92,7 +99,7 @@ public class InVMTransport implements Transport {
 
     public synchronized void connectedToNetwork(int nodeId, boolean isConnected) {
         serverMap.get(nodeId).isConnectedToNetwork = isConnected;
-        LOGGER.info("server-{} network connected={} ===================", nodeId, isConnected);
+        LOGGER.info("server-{} connected to network={} ===================", nodeId, isConnected);
     }
 
     @Override
@@ -147,6 +154,10 @@ public class InVMTransport implements Transport {
     }
 
     private void verifySenderAlive(Message message) throws IOException {
+        if (message.getSenderId() == -1) {
+            // sender is a client, we won't check client liveliness.
+            return;
+        }
         Server sendingServer = serverMap.get(message.getSenderId());
         if (sendingServer == null || !sendingServer.isConnectedToNetwork) {
             throw new IOException("sender is down, cannot send msg=" + message);
