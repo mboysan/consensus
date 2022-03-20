@@ -253,9 +253,11 @@ class BizurNodeTest extends NodeTestBase {
         assertThrows(IOException.class, () -> set(1, "k0", "v0"));
         set(0, "k0", "v0");
 
+        // at this point, if enough time passed, node-1 will try to assume leadership and since it's disconnected
+        // from the network its leader id for range-0 will be -1.
         connect(1);
-        // set with node-1, it'll still forward request to the leader.
-        set(1, "k1", "v1");
+        // Since it might have already lost the active leader, it might throw exceptions.
+        awaiting(() -> set(1, "k1", "v1"));
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
