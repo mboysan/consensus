@@ -107,8 +107,7 @@ abstract class KVStoreTestBase {
     }
 
     void assertEntriesForAll(Map<String, String> expectedEntries) throws KVOperationException {
-        // fixme: bizur has issues with iterateKeys()
-//        assertStoreSizeForAll(expectedEntries.size());
+        assertStoreSizeForAll(expectedEntries.size());
         for (String expKey : expectedEntries.keySet()) {
             for (int i = 0; i < getClients().length; i++) {
                 assertEquals(expectedEntries.get(expKey), getClient(i).get(expKey));

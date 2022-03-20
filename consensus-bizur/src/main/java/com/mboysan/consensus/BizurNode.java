@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -244,21 +243,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public CollectKeysResponse collectKeys(CollectKeysRequest request) {
-        Set<String> keysIamResponsible = new HashSet<>();
-        for (Integer rangeIndex : request.rangeIndexes()) {
-            BucketRange range = getBucketRange(rangeIndex).lock();
-            int rangeLeader = range.getLeaderId();
-            try {
-                if (range.getLeaderId() != getNodeId()) {
-                    return new CollectKeysResponse(
-                            false, new IllegalLeaderException(rangeLeader), null).responseTo(request);
-                }
-                keysIamResponsible.addAll(range.getKeysOfAllBuckets());
-            } finally {
-                range.unlock();
-            }
+        try {
+            Set<String> myKeys = new BizurRun(request.getCorrelationId(), this).collectKeys();
+            return new CollectKeysResponse(true, null, myKeys).responseTo(request);
+        } catch (BizurException e) {
+            return new CollectKeysResponse(false, e, null).responseTo(request);
         }
-        return new CollectKeysResponse(true, null, keysIamResponsible).responseTo(request);
     }
 
     /*----------------------------------------------------------------------------------

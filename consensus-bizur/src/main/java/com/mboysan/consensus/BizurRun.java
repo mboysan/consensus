@@ -1,11 +1,21 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.*;
+import com.mboysan.consensus.message.CollectKeysRequest;
+import com.mboysan.consensus.message.CollectKeysResponse;
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.PleaseVoteRequest;
+import com.mboysan.consensus.message.PleaseVoteResponse;
+import com.mboysan.consensus.message.ReplicaReadRequest;
+import com.mboysan.consensus.message.ReplicaReadResponse;
+import com.mboysan.consensus.message.ReplicaWriteRequest;
+import com.mboysan.consensus.message.ReplicaWriteResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -287,45 +297,41 @@ final class BizurRun {
         }
     }
 
-    Set<String> apiIterateKeys() throws BizurException {
-        Set<String> keySet = new HashSet<>();
-        Map<Integer, Set<Integer>> rangeLeaders = collectRangeLeaders();
-        forEachPeerParallel(peer -> {
-            Set<Integer> rangeIndexes = rangeLeaders.get(peer.peerId);
-            if (rangeIndexes != null && !rangeIndexes.isEmpty()) {
-                CollectKeysRequest req = new CollectKeysRequest(rangeLeaders.get(peer.peerId))
-                        .setCorrelationId(correlationId)
-                        .setSenderId(getNodeId())
-                        .setReceiverId(peer.peerId);
-                try {
-                    CollectKeysResponse response = getRPC().collectKeys(req);
-                    synchronized (keySet) {
-                        keySet.addAll(response.keySet());
-                    }
-                } catch (IOException e) {
-                    logPeerIOException(peer.peerId, req, e);
-                }
-            }
-        });
-        return keySet;
-    }
-
-    Map<Integer, Set<Integer>> collectRangeLeaders() throws BizurException {
-        Map<Integer, Set<Integer>> rangeLeaders = new HashMap<>();
-        for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
-            BucketRange range = getBucketRange(rangeIndex).lock();
+    Set<String> collectKeys() throws BizurException {
+        Set<String> keysIamResponsible = new HashSet<>();
+        for (int i = 0; i < getNumRanges(); i++) {
+            BucketRange range = getBucketRange(i).lock();
             try {
-                if (range.getLeaderId() == -1) {
-                    // the operation cannot be completed successfully, hence we throw exception
-                    throw new IllegalLeaderException(-1);
+                if (range.getLeaderId() == getNodeId()) {
+                    // I'm responsible from this range.
+                    for (Bucket bucket : range.getBucketMap().values()) {
+                        read(range, bucket);
+                        keysIamResponsible.addAll(bucket.getKeySetOp());
+                    }
                 }
-                Set<Integer> rangeIndexes = rangeLeaders.computeIfAbsent(range.getLeaderId(), id -> new HashSet<>());
-                rangeIndexes.add(rangeIndex);
             } finally {
                 range.unlock();
             }
         }
-        return rangeLeaders;
+        return keysIamResponsible;
     }
 
+    Set<String> apiIterateKeys() throws BizurException {
+        Set<String> keySet = new HashSet<>();
+        forEachPeerParallel(peer -> {
+            CollectKeysRequest req = new CollectKeysRequest()
+                    .setCorrelationId(correlationId)
+                    .setSenderId(getNodeId())
+                    .setReceiverId(peer.peerId);
+            try {
+                CollectKeysResponse response = getRPC().collectKeys(req);
+                synchronized (keySet) {
+                    keySet.addAll(response.keySet());
+                }
+            } catch (IOException e) {
+                logPeerIOException(peer.peerId, req, e);
+            }
+        });
+        return keySet;
+    }
 }
