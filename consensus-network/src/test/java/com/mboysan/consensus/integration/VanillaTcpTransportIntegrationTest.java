@@ -142,17 +142,16 @@ class VanillaTcpTransportIntegrationTest {
     @Test
     void testMultiThreadClientToServerSimple() throws Exception {
         Transport sender = clientTransports[0];
-
-        MultiThreadExecutor executor = new MultiThreadExecutor();
-        for (int i = 0; i < 100; i++) {
-            int finalI = i;
-            executor.execute(() -> {
-                TestMessage request = testMessage(finalI, 0, 0);
-                TestMessage response = (TestMessage) sender.sendRecv(request);
-                assertResponse(request, response);
-            });
+        try (MultiThreadExecutor executor = new MultiThreadExecutor()) {
+            for (int i = 0; i < 100; i++) {
+                int finalI = i;
+                executor.execute(() -> {
+                    TestMessage request = testMessage(finalI, 0, 0);
+                    TestMessage response = (TestMessage) sender.sendRecv(request);
+                    assertResponse(request, response);
+                });
+            }
         }
-        executor.endExecution();
     }
 
     @Test
@@ -166,24 +165,24 @@ class VanillaTcpTransportIntegrationTest {
     }
 
     void testMultithreadedComm(Transport[] transports) throws ExecutionException, InterruptedException {
-        MultiThreadExecutor executor = new MultiThreadExecutor();
         int msgCountPerPair = 10;
         int expectedMsgCount = msgCountPerPair * transports.length * transports.length;
         AtomicInteger actualMsgCount = new AtomicInteger(0);
-        for (int senderId = 0; senderId < transports.length; senderId++) {
-            Transport sender = transports[senderId];
-            for (int receiverId = 0; receiverId < transports.length; receiverId++) {
-                for (int payloadId = 0; payloadId < msgCountPerPair; payloadId++) {
-                    TestMessage request = testMessage(payloadId, senderId, receiverId);
-                    executor.execute(() -> {
-                        TestMessage response = (TestMessage) sender.sendRecv(request);
-                        assertResponse(request, response);
-                        actualMsgCount.incrementAndGet();
-                    });
+        try (MultiThreadExecutor executor = new MultiThreadExecutor()) {
+            for (int senderId = 0; senderId < transports.length; senderId++) {
+                Transport sender = transports[senderId];
+                for (int receiverId = 0; receiverId < transports.length; receiverId++) {
+                    for (int payloadId = 0; payloadId < msgCountPerPair; payloadId++) {
+                        TestMessage request = testMessage(payloadId, senderId, receiverId);
+                        executor.execute(() -> {
+                            TestMessage response = (TestMessage) sender.sendRecv(request);
+                            assertResponse(request, response);
+                            actualMsgCount.incrementAndGet();
+                        });
+                    }
                 }
             }
         }
-        executor.endExecution();
         assertEquals(expectedMsgCount, actualMsgCount.get());
     }
 

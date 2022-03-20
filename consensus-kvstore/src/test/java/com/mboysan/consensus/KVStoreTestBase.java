@@ -44,21 +44,21 @@ abstract class KVStoreTestBase {
 
     void multiThreadTest() throws Exception {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
-        MultiThreadExecutor exec = new MultiThreadExecutor();
-        for (int i = 0; i < 100; i++) {
-            int finalI = i;
-            exec.execute(() -> {
-                String key = "testKey" + finalI;
-                String val = "testVal" + finalI;
-                getRandomClient().set(key ,val);
-                if (RNG.nextBoolean()) {   // in some cases, remove the entry
-                    getRandomClient().delete(key);
-                } else {    // in other cases, just leave it inserted.
-                    expectedEntries.put(key, val);
-                }
-            });
+        try (MultiThreadExecutor exec = new MultiThreadExecutor()) {
+            for (int i = 0; i < 100; i++) {
+                int finalI = i;
+                exec.execute(() -> {
+                    String key = "testKey" + finalI;
+                    String val = "testVal" + finalI;
+                    getRandomClient().set(key ,val);
+                    if (RNG.nextBoolean()) {   // in some cases, remove the entry
+                        getRandomClient().delete(key);
+                    } else {    // in other cases, just leave it inserted.
+                        expectedEntries.put(key, val);
+                    }
+                });
+            }
         }
-        exec.endExecution();
         assertEntriesForAll(expectedEntries);
     }
 

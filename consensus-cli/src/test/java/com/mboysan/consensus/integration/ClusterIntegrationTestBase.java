@@ -57,21 +57,21 @@ abstract class ClusterIntegrationTestBase {
     {
         long startTime = System.currentTimeMillis();
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
-        MultiThreadExecutor exec = new MultiThreadExecutor(4);
-        for (int i = 0; i < 100; i++) {
-            int finalI = i;
-            exec.execute(() -> {
-                String key = "k" + finalI;
-                String val = "v" + finalI;
-                cluster.getRandomClient().set(key, val);
-                if (new SecureRandom().nextBoolean()) {   // in some cases, remove the entry
-                    cluster.getRandomClient().delete(key);
-                } else {    // in other cases, just leave it inserted.
-                    expectedEntries.put(key, val);
-                }
-            });
+        try (MultiThreadExecutor exec = new MultiThreadExecutor(4)) {
+            for (int i = 0; i < 100; i++) {
+                int finalI = i;
+                exec.execute(() -> {
+                    String key = "k" + finalI;
+                    String val = "v" + finalI;
+                    cluster.getRandomClient().set(key, val);
+                    if (new SecureRandom().nextBoolean()) {   // in some cases, remove the entry
+                        cluster.getRandomClient().delete(key);
+                    } else {    // in other cases, just leave it inserted.
+                        expectedEntries.put(key, val);
+                    }
+                });
+            }
         }
-        exec.endExecution();
         assertEntriesForAllConnectedClients(cluster, expectedEntries);
         LOGGER.info("testKVOperationsMultiThreaded exec time : {}", (System.currentTimeMillis() - startTime));
     }
