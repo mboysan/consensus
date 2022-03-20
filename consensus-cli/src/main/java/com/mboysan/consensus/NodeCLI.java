@@ -7,6 +7,7 @@ import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +15,7 @@ import java.util.concurrent.ExecutionException;
 
 public class NodeCLI {
 
-    public static final Map<Integer, AbstractNode<?>> NODE_REFERENCES = new ConcurrentHashMap<>();
+    private static final Map<Integer, AbstractNode<?>> NODE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties mainProps = new Properties();
@@ -46,5 +47,13 @@ public class NodeCLI {
         Runtime.getRuntime().addShutdownHook(new Thread(node::shutdown));
 
         node.start().get();
+    }
+
+    public static AbstractNode<?> getNode(int nodeId) {
+        return NODE_REFERENCES.get(nodeId);
+    }
+
+    public static Collection<AbstractNode<?>> getNodes() {
+        return NODE_REFERENCES.values();
     }
 }

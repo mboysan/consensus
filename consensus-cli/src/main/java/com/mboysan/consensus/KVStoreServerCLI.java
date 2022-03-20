@@ -2,11 +2,12 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.Configuration;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +15,7 @@ import java.util.concurrent.ExecutionException;
 
 public class KVStoreServerCLI {
 
-    public static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
+    private static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties mainProps = new Properties();
@@ -70,5 +71,13 @@ public class KVStoreServerCLI {
         }
         TcpTransportConfig serverTransportConfig = Configuration.newInstance(TcpTransportConfig.class, transportProperties);
         return new VanillaTcpServerTransport(serverTransportConfig);
+    }
+
+    public static AbstractKVStore<?> getStore(int nodeId) {
+        return STORE_REFERENCES.get(nodeId);
+    }
+
+    public static Collection<AbstractKVStore<?>> getStores() {
+        return STORE_REFERENCES.values();
     }
 }

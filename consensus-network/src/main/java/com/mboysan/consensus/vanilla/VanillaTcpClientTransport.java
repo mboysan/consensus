@@ -4,7 +4,7 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.CheckedRunnable;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpClientTransport implements Transport {
@@ -41,11 +42,17 @@ public class VanillaTcpClientTransport implements Transport {
     private final long messageCallbackTimeoutMs;
     private final Map<Integer, ObjectPool<TcpClient>> clientPools = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
+    private final Integer associatedServerId;
 
     public VanillaTcpClientTransport(TcpTransportConfig config) {
+        this(config, null);
+    }
+
+    VanillaTcpClientTransport(TcpTransportConfig config, Integer associatedServerId) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
+        this.associatedServerId = associatedServerId;
     }
 
     @Override
@@ -84,7 +91,7 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             return sendRecvUsingClientPool(message);
         } catch (Exception e) {
-            throw new IOException("err on message=" + message, e);
+            throw new IOException(e);
         }
     }
 
@@ -96,15 +103,17 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             client = pool.borrowObject();
             client.send(message);
-            return msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS);
-        } finally {
+            Message response = messageCallbackTimeoutMs > 0
+                    ? msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS)
+                    : msgFuture.get();  // wait indefinitely
+            pool.returnObject(client);
+            return response;
+        } catch (Exception e) {
             if (client != null) {
-                try {
-                    pool.returnObject(client);
-                } catch (Exception e) {
-                    LOGGER.error(e.getMessage());
-                }
+                pool.invalidateObject(client);
             }
+            throw e;
+        } finally {
             callbackMap.remove(message.getId());
         }
     }
@@ -112,7 +121,7 @@ public class VanillaTcpClientTransport implements Transport {
     private ObjectPool<TcpClient> getOrCreateClientPool(int receiverId) {
         return clientPools.computeIfAbsent(receiverId, id -> {
             Destination dest = destinations.get(id);
-            TcpClientFactory clientFactory = new TcpClientFactory(dest, callbackMap);
+            TcpClientFactory clientFactory = new TcpClientFactory(dest);
             GenericObjectPoolConfig<TcpClient> poolConfig = new GenericObjectPoolConfig<>();
             poolConfig.setMaxTotal(clientPoolSize);
             return new GenericObjectPool<>(clientFactory, poolConfig);
@@ -129,10 +138,10 @@ public class VanillaTcpClientTransport implements Transport {
         clientPools.clear();
     }
 
-    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(ThrowingRunnable toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
@@ -142,31 +151,28 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static int resolveClientPoolSize(int providedClientPoolSize) {
-        if (providedClientPoolSize <= 0) {
+        if (providedClientPoolSize == 0) {
             return Runtime.getRuntime().availableProcessors() * 2;
         }
         return providedClientPoolSize;
     }
 
-    private static class TcpClient {
+    private final class TcpClient {
         private volatile boolean isConnected;
         private final Socket socket;
         private final ObjectOutputStream os;
         private final ObjectInputStream is;
-        private final Map<String, CompletableFuture<Message>> callbackMap;
         private final Semaphore semaphore = new Semaphore(0);
 
-        TcpClient(
-                Destination destination,
-                Map<String, CompletableFuture<Message>> callbackMap) throws IOException
-        {
-            this.callbackMap = callbackMap;
+        TcpClient(int clientId, Integer associatedServerId, Destination destination) throws IOException {
             this.socket = new Socket(destination.ip(), destination.port());
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
             this.isConnected = true;
 
-            String receiverThreadName = "client-receiver-for-" + destination.nodeId();
+            String receiverThreadName = associatedServerId == null
+                    ? "client-%d-recv-server-%d".formatted(clientId, destination.nodeId())
+                    : "server-%d-client-%d-recv-server-%d".formatted(associatedServerId, clientId, destination.nodeId());
             Thread receiverThread = new Thread(this::receive, receiverThreadName);
             receiverThread.start();
         }
@@ -182,11 +188,12 @@ public class VanillaTcpClientTransport implements Transport {
                         future.complete(response);
                     }
                 } catch (EOFException ignore) {
+                    // ignoring EOFException-s
                 } catch (IOException | ClassNotFoundException e) {
-                    LOGGER.error(e.getMessage(), e);
+                    LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
                 } catch (InterruptedException e) {
-                    LOGGER.error(e.getMessage(), e);
+                    LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
                     Thread.currentThread().interrupt();
                 }
@@ -200,50 +207,34 @@ public class VanillaTcpClientTransport implements Transport {
             os.flush();
         }
 
-        synchronized boolean isValid() {
-            return socket != null && os != null && is != null && isConnected;
-        }
-
-        synchronized void shutdown() throws IOException {
+        synchronized void shutdown() {
+            if (!isConnected) {
+                return;
+            }
             isConnected = false;
-            if (os != null) {
-                os.close();
-            }
-            if (is != null) {
-                is.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
+            VanillaTcpClientTransport.shutdown(() -> {if (os != null) os.close();});
+            VanillaTcpClientTransport.shutdown(() -> {if (is != null) is.close();});
+            VanillaTcpClientTransport.shutdown(() -> {if (socket != null) socket.close();});
             semaphore.release();
         }
     }
 
-    private static class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {
+    private class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {
+        private final AtomicInteger clientId = new AtomicInteger(0);
         private final Destination destination;
-        private final Map<String, CompletableFuture<Message>> callbackMap;
 
-        private TcpClientFactory(
-                Destination destination,
-                Map<String, CompletableFuture<Message>> callbackMap)
-        {
+        private TcpClientFactory(Destination destination) {
             this.destination = destination;
-            this.callbackMap = callbackMap;
         }
 
         @Override
         public TcpClient create() throws IOException {
-            return new TcpClient(destination, callbackMap);
+            return new TcpClient(clientId.getAndIncrement(), associatedServerId, this.destination);
         }
 
         @Override
-        public void destroyObject(PooledObject<TcpClient> p) throws IOException {
+        public void destroyObject(PooledObject<TcpClient> p) {
             p.getObject().shutdown();
-        }
-
-        @Override
-        public boolean validateObject(PooledObject<TcpClient> p) {
-            return p.getObject().isValid();
         }
 
         @Override

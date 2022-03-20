@@ -30,6 +30,11 @@ class BizurClient extends AbstractClient implements BizurRPC {
     }
 
     @Override
+    public CollectKeysResponse collectKeys(CollectKeysRequest request) throws IOException {
+        return (CollectKeysResponse) getTransport().sendRecv(request);
+    }
+
+    @Override
     public KVGetResponse get(KVGetRequest request) throws IOException {
         return (KVGetResponse) getTransport().sendRecv(request);
     }

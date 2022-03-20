@@ -6,14 +6,15 @@ import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
-    public static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
     public static volatile boolean testingInProgress = false;
+    private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
         Properties mainProps = new Properties();
@@ -64,5 +65,13 @@ public class KVStoreClientCLI {
             return new SecureRandom().nextInt();
         }
         return Integer.parseInt(clientId);
+    }
+
+    public static KVStoreClient getClient(int id) {
+        return CLIENT_REFERENCES.get(id);
+    }
+
+    public static Collection<KVStoreClient> getClients() {
+        return CLIENT_REFERENCES.values();
     }
 }

@@ -4,17 +4,23 @@ import com.mboysan.consensus.configuration.Configuration;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
-import com.mboysan.consensus.util.TimerQueue;
-import com.mboysan.consensus.util.Timers;
+import com.mboysan.consensus.util.Scheduler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
@@ -22,11 +28,10 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractNode.class);
 
     private volatile boolean isRunning;
-    private final Lock updateLock = new ReentrantLock();
 
     private final int nodeId;
     private final Transport transport;
-    private final Timers timers;
+    private final Scheduler scheduler;
 
     private ExecutorService peerExecutor;
 
@@ -37,17 +42,11 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     AbstractNode(Configuration config, Transport transport) {
         this.nodeId = config.nodeId();
         this.transport = transport;
-        this.timers = createTimers();
+        this.scheduler = new Scheduler();
         this.nodeConfig = config;
         LOGGER.info("node-{} config={}", nodeId, nodeConfig);
 
         EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
-        // register known peer destinations
-        onNodeListChanged(new NodeListChangedEvent(nodeId, transport.getDestinationNodeIds()));
-    }
-
-    Timers createTimers() {
-        return new TimerQueue();
     }
 
     public synchronized Future<Void> start() throws IOException {
@@ -59,10 +58,13 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
         isRunning = true;
 
+        // register known peer destinations
+        onNodeListChanged(new NodeListChangedEvent(nodeId, transport.getDestinationNodeIds()));
+
         transport.registerMessageProcessor(this);
 
         peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("PeerExec-" + nodeId + "-%d").daemon(true).build()
+                new BasicThreadFactory.Builder().namingPattern("node-" + nodeId + "-peer-exec-%d").daemon(true).build()
         );
 
         EventManager.getInstance().fireEvent(new NodeStartedEvent(nodeId));
@@ -77,7 +79,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
             return;
         }
         isRunning = false;
-        timers.shutdown();
+        scheduler.shutdown();
         peerExecutor.shutdown();
         peers.clear();
         EventManager.getInstance().fireEvent(new NodeStoppedEvent(nodeId));
@@ -91,17 +93,8 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         // override if a special logic is needed.
     }
 
-    void tryUpdate() {
-        if (updateLock.tryLock()) {
-            try {
-                LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getTimers().currentTime());
-                update();
-            } finally {
-                updateLock.unlock();
-            }
-        } else {
-            LOGGER.debug("update in progress, skipped.");
-        }
+    public synchronized boolean isRunning() {
+        return isRunning;
     }
 
     abstract void update();
@@ -151,8 +144,8 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     abstract RPCProtocol getRPC();
 
-    Timers getTimers() {
-        return timers;
+    Scheduler getScheduler() {
+        return scheduler;
     }
 
     public int getNodeId() {

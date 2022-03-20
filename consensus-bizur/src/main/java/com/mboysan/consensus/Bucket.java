@@ -7,13 +7,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class Bucket implements Serializable, Comparable<Bucket> {
 
     private transient static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
-
-    private transient final ReentrantLock bucketLock = new ReentrantLock();
 
     private final int index;
 
@@ -30,11 +27,11 @@ public class Bucket implements Serializable, Comparable<Bucket> {
      * Map Operations
      *----------------------------------------------------------------------------------*/
 
-    String putOp(String key, String val) {
+    void putOp(String key, String val) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("put key={},val={} in bucket={}", key, val, this);
         }
-        return bucketMap.put(key, val);
+        bucketMap.put(key, val);
     }
 
     String getOp(String key) {
@@ -44,11 +41,11 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         return bucketMap.get(key);
     }
 
-    String removeOp(String key) {
+    void removeOp(String key) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("remove key={} from bucket={}", key, this);
         }
-        return bucketMap.remove(key);
+        bucketMap.remove(key);
     }
 
     Set<String> getKeySetOp() {
@@ -59,12 +56,11 @@ public class Bucket implements Serializable, Comparable<Bucket> {
      * Getters/Setters
      *----------------------------------------------------------------------------------*/
 
-    Bucket setBucketMap(Map<String, String> bucketMap) {
+    void setBucketMap(Map<String, String> bucketMap) {
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("replacing bucketMap={} with map={} in bucket={}", this.bucketMap, bucketMap, this);
         }
         this.bucketMap = bucketMap;
-        return this;
     }
 
     public Map<String, String> getBucketMap() {
@@ -75,18 +71,16 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         return verElectId;
     }
 
-    Bucket setVerElectId(int verElectId) {
+    void setVerElectId(int verElectId) {
         this.verElectId = verElectId;
-        return this;
     }
 
     int getVerCounter() {
         return verCounter;
     }
 
-    Bucket setVerCounter(int verCounter) {
+    void setVerCounter(int verCounter) {
         this.verCounter = verCounter;
-        return this;
     }
 
     void incrementVerCounter() {
@@ -100,15 +94,6 @@ public class Bucket implements Serializable, Comparable<Bucket> {
     /*----------------------------------------------------------------------------------
      * Utils
      *----------------------------------------------------------------------------------*/
-
-    Bucket lock() {
-        bucketLock.lock();
-        return this;
-    }
-
-    void unlock() {
-        bucketLock.unlock();
-    }
 
     @Override
     public int compareTo(Bucket o) {

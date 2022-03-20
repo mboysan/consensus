@@ -7,13 +7,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A utility class that is used as an executor but used to report any exceptions caught when
- * {@link #execute(CheckedRunnable)} method is run.
+ * {@link #execute(ThrowingRunnable)} method is run.
  */
 public class MultiThreadExecutor {
 
@@ -26,7 +30,7 @@ public class MultiThreadExecutor {
     /**
      * Total executions required.
      */
-    private final List<Future<Optional<Exception>>> futures = new ArrayList<>();
+    private final List<Future<Optional<Throwable>>> futures = new ArrayList<>();
 
     private final String execId = UUID.randomUUID().toString();
 
@@ -46,13 +50,13 @@ public class MultiThreadExecutor {
      * of the <tt>runnable</tt>.
      * @param runnable the runnable to handle and report any ee.ut.jbizur.exceptions caught when running it.
      */
-    public void execute(CheckedRunnable<Exception> runnable) {
+    public void execute(ThrowingRunnable runnable) {
         futures.add(executor.submit(() -> {
             try {
                 latch.await();
                 runnable.run();
                 return Optional.empty();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 return Optional.of(e);
             }
         }));
@@ -65,8 +69,8 @@ public class MultiThreadExecutor {
     public void endExecution() throws InterruptedException, ExecutionException {
         LOGGER.info("ending execution id=" + execId);
         latch.countDown();
-        for (Future<Optional<Exception>> future : futures) {
-            Optional<Exception> optEx = future.get();
+        for (Future<Optional<Throwable>> future : futures) {
+            Optional<Throwable> optEx = future.get();
             optEx.ifPresent(e ->
                     fail(String.format("execution[id=%s] failed with exception=%s", execId, e.getMessage()), e));
         }

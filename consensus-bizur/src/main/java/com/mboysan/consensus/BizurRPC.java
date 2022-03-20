@@ -13,6 +13,8 @@ interface BizurRPC extends RPCProtocol {
 
     ReplicaWriteResponse replicaWrite(ReplicaWriteRequest request) throws IOException;
 
+    CollectKeysResponse collectKeys(CollectKeysRequest request) throws IOException;
+
     KVGetResponse get(KVGetRequest request) throws IOException;
 
     KVSetResponse set(KVSetRequest request) throws IOException;
@@ -31,6 +33,8 @@ interface BizurRPC extends RPCProtocol {
             return replicaRead(request);
         } else if (message instanceof ReplicaWriteRequest request) {
             return replicaWrite(request);
+        } else if(message instanceof  CollectKeysRequest request) {
+            return collectKeys(request);
         } else if (message instanceof KVGetRequest request) {
             return get(request);
         } else if (message instanceof KVSetRequest request) {

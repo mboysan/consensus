@@ -4,7 +4,7 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.CheckedRunnable;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class VanillaTcpServerTransport implements Transport {
 
     private final int port;
     private final Map<Integer, Destination> destinations;
-    private final int nodeId;
+    private final int nodeIdOrPort;
     private final Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
 
     private ServerSocket serverSocket;
@@ -49,11 +49,11 @@ public class VanillaTcpServerTransport implements Transport {
     public VanillaTcpServerTransport(TcpTransportConfig config) {
         this.port = config.port();
         this.destinations = config.destinations();
-        this.clientTransport = new VanillaTcpClientTransport(config);
-        this.nodeId = destinations.values().stream()
+        this.nodeIdOrPort = destinations.values().stream()
                 .filter(dest -> dest.port() == port)
                 .mapToInt(Destination::nodeId)
                 .findFirst().orElse(port);
+        this.clientTransport = new VanillaTcpClientTransport(config, nodeIdOrPort);
     }
 
     @Override
@@ -79,11 +79,11 @@ public class VanillaTcpServerTransport implements Transport {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + nodeId);
+        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + nodeIdOrPort);
         serverThread.setDaemon(false);
         this.clientHandlerExecutor = Executors.newCachedThreadPool(
                 new BasicThreadFactory.Builder()
-                        .namingPattern("server-" + nodeId +"-handler-" + "%d")
+                        .namingPattern("server-" + nodeIdOrPort +"-handler-" + "%d")
                         .daemon(false)
                         .build());
 
@@ -98,12 +98,12 @@ public class VanillaTcpServerTransport implements Transport {
             try {
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setKeepAlive(true);
-                ClientHandler clientHandler = new ClientHandler(clientSocket, messageProcessor, clientCount, nodeId);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);
                 clientHandlers.put(clientCount + "", clientHandler);
                 clientHandlerExecutor.submit(clientHandler);
                 ++clientCount;
             } catch (IOException e) {
-                LOGGER.error(e.getMessage(), e);
+                LOGGER.error(e.getMessage());
             }
         }
     }
@@ -120,6 +120,10 @@ public class VanillaTcpServerTransport implements Transport {
 
     @Override
     public Message sendRecv(Message message) throws IOException {
+        if (message.getSenderId() == message.getReceiverId()) {
+            LOGGER.debug("IN (self): {}", message);
+            return messageProcessor.apply(message);
+        }
         return clientTransport.sendRecv(message);
     }
 
@@ -137,10 +141,10 @@ public class VanillaTcpServerTransport implements Transport {
         shutdown(() -> clientHandlerExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
     }
 
-    private static void shutdown(CheckedRunnable<Exception> toShutdown) {
+    private static void shutdown(ThrowingRunnable toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
@@ -149,30 +153,20 @@ public class VanillaTcpServerTransport implements Transport {
         return !isRunning && clientTransport.verifyShutdown();
     }
 
-    private static final class ClientHandler implements Runnable {
-
+    private final class ClientHandler implements Runnable {
         private volatile boolean isRunning = true;
         private final Socket socket;
         private final ObjectOutputStream os;
         private final ObjectInputStream is;
-        private final UnaryOperator<Message> messageProcessor;
         private final int handlerId;
-        private final int nodeId;
 
         private ExecutorService requestExecutor;
 
-        private ClientHandler(
-                Socket socket,
-                UnaryOperator<Message> messageProcessor,
-                int handlerId,
-                int nodeId) throws IOException
-        {
+        private ClientHandler(Socket socket, int handlerId) throws IOException {
             this.socket = socket;
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
-            this.messageProcessor = messageProcessor;
             this.handlerId = handlerId;
-            this.nodeId = nodeId;
         }
 
         @Override
@@ -193,13 +187,14 @@ public class VanillaTcpServerTransport implements Transport {
                                 os.flush();
                             }
                         } catch (IOException e) {
-                            LOGGER.error(e.getMessage(), e);
+                            LOGGER.error(e.getMessage());
                             VanillaTcpServerTransport.shutdown(this::shutdown);
                         }
                     });
                 } catch (EOFException ignore) {
-                } catch (Exception e) {
-                    LOGGER.error("request could not be processed, err={}", e.getMessage());
+                    // ignoring EOFException-s
+                } catch (IOException | ClassNotFoundException e) {
+                    LOGGER.error(e.getMessage());
                     VanillaTcpServerTransport.shutdown(this::shutdown);
                 }
             }
@@ -209,30 +204,33 @@ public class VanillaTcpServerTransport implements Transport {
             if (this.requestExecutor == null) {
                 this.requestExecutor = Executors.newCachedThreadPool(
                         new BasicThreadFactory.Builder()
-                                .namingPattern("server-" + nodeId +"-handler-" + handlerId + "-exec-" + "%d")
+                                .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
                                 .daemon(false)
                                 .build());
             }
             requestExecutor.submit(runnable);
         }
 
-        synchronized void shutdown() throws IOException, InterruptedException {
+        synchronized void shutdown() {
+            if (!isRunning) {
+                return;
+            }
             isRunning = false;
-            if (os != null) {
-                synchronized (os) {
-                    os.close();
+            VanillaTcpServerTransport.shutdown(() -> {
+                if (os != null) {
+                    synchronized (os) {
+                        os.close();
+                    }
                 }
-            }
-            if (is != null) {
-                is.close();
-            }
-            if (socket != null) {
-                socket.close();
-            }
-            if (requestExecutor != null) {
-                requestExecutor.shutdown();
-                requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
-            }
+            });
+            VanillaTcpServerTransport.shutdown(() -> {if (is != null) is.close();});
+            VanillaTcpServerTransport.shutdown(() -> {if (socket != null) socket.close();});
+            VanillaTcpServerTransport.shutdown(() -> {
+                if (requestExecutor != null) {
+                    requestExecutor.shutdown();
+                    requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
+                }
+            });
         }
     }
 }

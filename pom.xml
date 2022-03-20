@@ -27,7 +27,6 @@
         <slf4j.version>1.7.30</slf4j.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-pool2.version>2.10.0</commons-pool2.version>
-        <netty.version>4.1.65.Final</netty.version>
 
         <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
         <jacoco.maven.plugin.version>0.8.7</jacoco.maven.plugin.version>
@@ -38,6 +37,7 @@
         <maven.failsafe.version>3.0.0-M4</maven.failsafe.version>
         <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
         <mockito.version>4.3.1</mockito.version>
+        <awaitility.version>4.2.0</awaitility.version>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
 
         <sonar.projectKey>mboysan_consensus</sonar.projectKey>
@@ -73,11 +73,6 @@
                 <artifactId>commons-pool2</artifactId>
                 <version>${commons-pool2.version}</version>
             </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -89,6 +84,12 @@
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>${awaitility.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

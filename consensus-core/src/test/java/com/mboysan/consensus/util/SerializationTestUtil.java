@@ -20,9 +20,4 @@ public final class SerializationTestUtil {
             }
         }
     }
-
-    public static void assertSerialized(Serializable expected, Serializable actual) {
-        // this is a workaround to instead of overriding hashcode and equals for all the classes.
-        assertEquals(expected.toString(), actual.toString());
-    }
 }
