@@ -42,13 +42,13 @@ public class VanillaTcpClientTransport implements Transport {
     private final long messageCallbackTimeoutMs;
     private final Map<Integer, ObjectPool<TcpClient>> clientPools = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
-    private final Integer associatedServerId;
+    private final int associatedServerId;
 
     public VanillaTcpClientTransport(TcpTransportConfig config) {
-        this(config, null);
+        this(config, -1);
     }
 
-    VanillaTcpClientTransport(TcpTransportConfig config, Integer associatedServerId) {
+    VanillaTcpClientTransport(TcpTransportConfig config, int associatedServerId) {
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
@@ -164,13 +164,13 @@ public class VanillaTcpClientTransport implements Transport {
         private final ObjectInputStream is;
         private final Semaphore semaphore = new Semaphore(0);
 
-        TcpClient(int clientId, Integer associatedServerId, Destination destination) throws IOException {
+        TcpClient(int clientId, int associatedServerId, Destination destination) throws IOException {
             this.socket = new Socket(destination.ip(), destination.port());
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
             this.isConnected = true;
 
-            String receiverThreadName = associatedServerId == null
+            String receiverThreadName = associatedServerId == -1
                     ? "client-%d-recv-server-%d".formatted(clientId, destination.nodeId())
                     : "server-%d-client-%d-recv-server-%d".formatted(associatedServerId, clientId, destination.nodeId());
             Thread receiverThread = new Thread(this::receive, receiverThreadName);
