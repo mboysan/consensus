@@ -57,7 +57,7 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
-                            <finalName>consensus-all</finalName>
+<!--                            <finalName>consensus-all</finalName>-->
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>

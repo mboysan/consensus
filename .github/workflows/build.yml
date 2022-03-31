@@ -72,27 +72,44 @@ jobs:
           MVN_REPO_KEY: ${{ secrets.MVN_REPO_KEY }}
           BUILD_NUMBER: ${{github.run_number}}
         run: |
+          REPO_DIR=$(pwd)
+          
+          # ------------------------------------- build and deploy as maven repository package
           mvn install -DskipTests
           
           PROJ_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
           
-          # configure git
-          git config --global user.email "dev@mboysan.com"
-          git config --global user.name "mboysan"
-          
           # get repo branch
           cd $HOME
-          git clone --depth=1 https://github.com/mboysan/mvn-repo.git
+          git clone https://github.com/mboysan/mvn-repo.git
           cd mvn-repo
+          
+          MVN_REPO_DIR=$(pwd)
           
           # clean dir & copy new files
           [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus
           mkdir -p ./com/mboysan/consensus
           cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
           
-          # commit & push files
-          git add --all
-          git commit --message "build com.mboysan.consensus v${PROJ_VERSION}_${BUILD_NUMBER}"
+          # configure git
+          git config --global user.email "dev@mboysan.com"
+          git config --global user.name "mboysan"
           git remote rm origin
           git remote add origin https://${MVN_REPO_KEY}@github.com/mboysan/mvn-repo.git
+          
+          # commit & push files
+          git add --all
+          git commit --message "build consensus-v${PROJ_VERSION}_${BUILD_NUMBER}"
           git push --quiet origin master
+
+          # ------------------------------------- release the jar file
+          cd $MVN_REPO_DIR
+          git checkout releases
+          
+          mkdir -p consensus
+          cp -avr $REPO_DIR/consensus-distribution/target/*jar-with-dependencies.jar consensus/
+          
+          # commit & push files
+          git add --all
+          git commit --message "release consensus-v${PROJ_VERSION}_${BUILD_NUMBER}"
+          git push --quiet origin releases
