@@ -75,6 +75,8 @@ jobs:
           REPO_DIR=$(pwd)
           
           # ------------------------------------- build and deploy as maven repository package
+          echo "build and deploy..."
+          
           mvn install -DskipTests
           
           PROJ_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
@@ -103,7 +105,9 @@ jobs:
           git push --quiet origin master
 
           # ------------------------------------- release the jar file
-          cd $MVN_REPO_DIR
+          echo "release jar..."
+          
+          git fetch
           git checkout releases
           
           mkdir -p consensus
