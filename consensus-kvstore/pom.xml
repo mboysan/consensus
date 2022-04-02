@@ -20,48 +20,22 @@
         </dependency>
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-bizur</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-raft</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mboysan.consensus</groupId>
             <artifactId>consensus-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-network</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-network</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-bizur</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-bizur</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-raft</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-raft</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>

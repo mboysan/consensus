@@ -18,6 +18,7 @@
             <artifactId>consensus-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
             <artifactId>consensus-core</artifactId>
@@ -25,7 +26,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
