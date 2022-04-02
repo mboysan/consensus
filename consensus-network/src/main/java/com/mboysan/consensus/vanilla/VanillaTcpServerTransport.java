@@ -47,6 +47,7 @@ public class VanillaTcpServerTransport implements Transport {
     private final VanillaTcpClientTransport clientTransport;
 
     public VanillaTcpServerTransport(TcpTransportConfig config) {
+        LOGGER.info("server transport config={}", config);
         this.port = config.port();
         this.destinations = config.destinations();
         this.nodeIdOrPort = destinations.values().stream()

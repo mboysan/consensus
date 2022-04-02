@@ -1,6 +1,6 @@
 package com.mboysan.consensus.configuration;
 
-public interface BizurConfig extends Configuration {
+public interface BizurConfig extends NodeConfig {
     @Key("bizur.numPeers")
     int numPeers();
 

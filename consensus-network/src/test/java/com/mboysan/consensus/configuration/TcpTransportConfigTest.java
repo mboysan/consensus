@@ -15,7 +15,7 @@ class TcpTransportConfigTest {
     void testDestinationConverterSuccess() {
         Properties props = new Properties();
         props.put("transport.tcp.destinations", "0-localhost:8080,1-localhost:8081, 2-localhost:8082");
-        TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, props);
+        TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, props);
 
         Map<Integer, Destination> expected = new HashMap<>() {{
             put(0, new Destination(0, "localhost", 8080));
@@ -31,7 +31,7 @@ class TcpTransportConfigTest {
     void testDestinationConverterFails() {
         Properties props = new Properties();
         props.put("transport.tcp.destinations", "invalid");
-        var config = Configuration.newInstance(TcpTransportConfig.class, props);
+        var config = CoreConfig.newInstance(TcpTransportConfig.class, props);
         assertThrows(RuntimeException.class, config::destinations);
     }
 }

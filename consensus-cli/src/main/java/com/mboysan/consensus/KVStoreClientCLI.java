@@ -1,7 +1,8 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 
 import java.io.IOException;
@@ -17,15 +18,10 @@ public class KVStoreClientCLI {
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
-        Properties mainProps = new Properties();
+        Properties properties = CliArgsHelper.getProperties(args);
+        int clientId = resolveClientId(properties);
 
-        for (String arg : args) {
-            String[] kv = arg.split("=");
-            mainProps.put(kv[0], kv[1]);
-        }
-        int clientId = resolveClientId(mainProps);
-
-        TcpTransportConfig clientTransportConfig = Configuration.newInstance(TcpTransportConfig.class, mainProps);
+        TcpTransportConfig clientTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
         Transport clientTransport = new VanillaTcpClientTransport(clientTransportConfig);
         KVStoreClient client = new KVStoreClient(clientTransport);
         CLIENT_REFERENCES.put(clientId, client);

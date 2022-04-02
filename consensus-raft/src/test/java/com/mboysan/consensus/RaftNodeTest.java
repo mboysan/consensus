@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.message.StateMachineRequest;
 import org.junit.jupiter.api.AfterEach;
@@ -52,7 +52,7 @@ class RaftNodeTest extends NodeTestBase {
         properties.put("node.id", nodeId + "");
         properties.put("raft.updateIntervalMs", 50 + "");
         properties.put("raft.electionTimeoutMs", 1000 + "");
-        return Configuration.newInstance(RaftConfig.class, properties);
+        return CoreConfig.newInstance(RaftConfig.class, properties);
     }
 
     @Override

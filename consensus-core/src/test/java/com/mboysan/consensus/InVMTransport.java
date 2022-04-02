@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.TransportConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
@@ -14,13 +15,21 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public class InVMTransport implements Transport {
 
-    private static final long DEFAULT_CALLBACK_TIMEOUT_MS = Configuration.getCached(Configuration.class).messageCallbackTimeoutMs();
+    private static final long DEFAULT_CALLBACK_TIMEOUT_MS =
+            CoreConfig.getCached(TransportConfig.class).messageCallbackTimeoutMs();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 
