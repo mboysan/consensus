@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 
 import java.security.SecureRandom;
@@ -19,7 +19,7 @@ abstract class KVStoreTestBase {
     static {
         Properties properties = new Properties();
         properties.put("transport.message.callbackTimeoutMs", 1000 + "");
-        Configuration.getCached(Configuration.class, properties); // InVMTransport's callbackTimeout will be overridden
+        CoreConfig.getCached(CoreConfig.class, properties); // InVMTransport's callbackTimeout will be overridden
     }
 
     void putGetSequentialTest() throws Exception {

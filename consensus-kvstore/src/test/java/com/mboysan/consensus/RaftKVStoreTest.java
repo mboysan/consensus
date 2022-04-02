@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ class RaftKVStoreTest extends KVStoreTestBase {
         properties.put("node.id", nodeId + "");
         properties.put("raft.updateIntervalMs", 50 + "");
         properties.put("raft.electionTimeoutMs", 1000 + "");
-        return Configuration.newInstance(RaftConfig.class, properties);
+        return CoreConfig.newInstance(RaftConfig.class, properties);
     }
 
     @AfterEach

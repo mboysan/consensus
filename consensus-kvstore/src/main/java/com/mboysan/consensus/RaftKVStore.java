@@ -1,6 +1,16 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.message.*;
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVDeleteResponse;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVGetResponse;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVIterateKeysResponse;
+import com.mboysan.consensus.message.KVSetRequest;
+import com.mboysan.consensus.message.KVSetResponse;
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.StateMachineRequest;
+import com.mboysan.consensus.message.StateMachineResponse;
 
 import java.io.IOException;
 import java.util.HashSet;

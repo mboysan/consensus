@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
@@ -37,14 +37,15 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     final Map<Integer, P> peers = new ConcurrentHashMap<>();
 
-    private final Configuration nodeConfig;
+    private final NodeConfig nodeConfig;
 
-    AbstractNode(Configuration config, Transport transport) {
+    AbstractNode(NodeConfig config, Transport transport) {
+        LOGGER.info("node-{} config={}", config.nodeId(), config);
+
         this.nodeId = config.nodeId();
         this.transport = transport;
         this.scheduler = new Scheduler();
         this.nodeConfig = config;
-        LOGGER.info("node-{} config={}", nodeId, nodeConfig);
 
         EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
     }
@@ -152,7 +153,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         return nodeId;
     }
 
-    Configuration getConfiguration() {
+    NodeConfig getConfiguration() {
         return nodeConfig;
     }
 }

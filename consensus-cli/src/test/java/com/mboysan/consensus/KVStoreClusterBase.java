@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.util.ThrowingRunnable;
 import com.mboysan.consensus.util.NetUtil;
+import com.mboysan.consensus.util.ThrowingRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +38,9 @@ public abstract class KVStoreClusterBase {
         return sj.toString();    // it will look like -> 0-localhost:8080,1-localhost:8081 ...
     }
 
+    public AbstractNode<?> getNode(int nodeId) {
+        return NodeCLI.getNode(nodeId);
+    }
 
     public AbstractKVStore<?> getStore(int nodeId) {
         return KVStoreServerCLI.getStore(nodeId);

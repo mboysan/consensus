@@ -49,6 +49,8 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     VanillaTcpClientTransport(TcpTransportConfig config, int associatedServerId) {
+        LOGGER.info("client transport for server={} config={}", associatedServerId, config);
+
         this.destinations = Objects.requireNonNull(config.destinations());
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());

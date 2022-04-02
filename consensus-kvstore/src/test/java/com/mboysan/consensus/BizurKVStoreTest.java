@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,7 @@ class BizurKVStoreTest extends KVStoreTestBase {
         properties.put("bizur.numPeers", numPeers + "");
         properties.put("bizur.numBuckets", numBuckets + "");
         properties.put("bizur.updateIntervalMs", 50 + "");
-        return Configuration.newInstance(BizurConfig.class, properties);
+        return CoreConfig.newInstance(BizurConfig.class, properties);
     }
 
     @AfterEach

@@ -6,7 +6,7 @@ import org.aeonbits.owner.Converter;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-public interface TcpTransportConfig extends Configuration {
+public interface TcpTransportConfig extends TransportConfig {
 
     @Key("transport.tcp.clientPoolSize")
     @DefaultValue("-1")

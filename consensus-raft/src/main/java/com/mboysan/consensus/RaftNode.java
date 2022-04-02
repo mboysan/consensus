@@ -1,7 +1,13 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.message.*;
+import com.mboysan.consensus.message.AppendEntriesRequest;
+import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.LogEntry;
+import com.mboysan.consensus.message.RequestVoteRequest;
+import com.mboysan.consensus.message.RequestVoteResponse;
+import com.mboysan.consensus.message.StateMachineRequest;
+import com.mboysan.consensus.message.StateMachineResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +19,9 @@ import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static com.mboysan.consensus.RaftState.Role.*;
+import static com.mboysan.consensus.RaftState.Role.CANDIDATE;
+import static com.mboysan.consensus.RaftState.Role.FOLLOWER;
+import static com.mboysan.consensus.RaftState.Role.LEADER;
 
 public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 

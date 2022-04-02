@@ -1,6 +1,6 @@
 package com.mboysan.consensus.configuration;
 
-public interface RaftConfig extends Configuration {
+public interface RaftConfig extends NodeConfig {
     @Key("raft.updateIntervalMs")
     @DefaultValue("500")
     long updateIntervalMs();

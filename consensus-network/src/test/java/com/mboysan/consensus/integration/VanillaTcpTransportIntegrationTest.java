@@ -2,7 +2,7 @@ package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.EchoRPCProtocol;
 import com.mboysan.consensus.Transport;
-import com.mboysan.consensus.configuration.Configuration;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
@@ -217,7 +217,7 @@ class VanillaTcpTransportIntegrationTest {
         properties.put("transport.tcp.server.port", port + "");
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
-        TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
+        TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, properties);
         return new VanillaTcpServerTransport(config);
     }
 
@@ -225,7 +225,7 @@ class VanillaTcpTransportIntegrationTest {
         Properties properties = new Properties();
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         // create new config per transport
-        TcpTransportConfig config = Configuration.newInstance(TcpTransportConfig.class, properties);
+        TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, properties);
         return new VanillaTcpClientTransport(config);
     }
 
