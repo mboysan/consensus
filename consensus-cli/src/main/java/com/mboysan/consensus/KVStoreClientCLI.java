@@ -3,6 +3,7 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
+import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 
 import java.io.IOException;
@@ -29,6 +30,7 @@ public class KVStoreClientCLI {
         Runtime.getRuntime().addShutdownHook(new Thread(client::shutdown));
 
         client.start();
+        StateUtil.writeStateStarted();
 
         if (!testingInProgress) {
             System.out.println("client ready to receive commands:");

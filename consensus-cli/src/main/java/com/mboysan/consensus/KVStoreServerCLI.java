@@ -6,6 +6,7 @@ import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
+import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.io.IOException;
@@ -51,6 +52,7 @@ public class KVStoreServerCLI {
         Runtime.getRuntime().addShutdownHook(new Thread(kvStore::shutdown));
 
         kvStore.start().get();
+        StateUtil.writeStateStarted();
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {
