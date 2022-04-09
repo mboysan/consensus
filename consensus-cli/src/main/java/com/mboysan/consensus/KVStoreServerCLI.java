@@ -8,6 +8,8 @@ import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -17,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 public class KVStoreServerCLI {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreServerCLI.class);
 
     private static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
 
@@ -49,10 +52,21 @@ public class KVStoreServerCLI {
         }
         STORE_REFERENCES.put(kvStore.getNode().getNodeId(), kvStore);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(kvStore::shutdown));
+        Runtime.getRuntime().addShutdownHook(createShutdownHookThread(kvStore));
 
         kvStore.start().get();
+        LOGGER.info("store started");
         StateUtil.writeStateStarted();
+    }
+
+    private static Thread createShutdownHookThread(AbstractKVStore<?> kvStore) {
+        return new Thread(() -> {
+            try {
+                kvStore.shutdown();
+            } finally {
+                LOGGER.info("store stopped");
+            }
+        });
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {

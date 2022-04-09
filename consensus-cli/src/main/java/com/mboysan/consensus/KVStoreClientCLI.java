@@ -5,6 +5,8 @@ import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -16,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
     public static volatile boolean testingInProgress = false;
+    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
@@ -27,9 +30,10 @@ public class KVStoreClientCLI {
         KVStoreClient client = new KVStoreClient(clientTransport);
         CLIENT_REFERENCES.put(clientId, client);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(client::shutdown));
+        Runtime.getRuntime().addShutdownHook(createShutdownHookThread(client));
 
         client.start();
+        LOGGER.info("client started");
         StateUtil.writeStateStarted();
 
         if (!testingInProgress) {
@@ -63,6 +67,16 @@ public class KVStoreClientCLI {
             return new SecureRandom().nextInt();
         }
         return Integer.parseInt(clientId);
+    }
+
+    private static Thread createShutdownHookThread(KVStoreClient client) {
+        return new Thread(() -> {
+            try {
+                client.shutdown();
+            } finally {
+                LOGGER.info("client stopped");
+            }
+        });
     }
 
     public static KVStoreClient getClient(int id) {
