@@ -6,7 +6,6 @@ import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +55,6 @@ public class KVStoreServerCLI {
 
         kvStore.start().get();
         LOGGER.info("store started");
-        StateUtil.writeStateStarted();
     }
 
     private static Thread createShutdownHookThread(AbstractKVStore<?> kvStore) {

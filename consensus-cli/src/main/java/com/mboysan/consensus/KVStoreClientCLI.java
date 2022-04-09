@@ -3,7 +3,6 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.util.StateUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +33,6 @@ public class KVStoreClientCLI {
 
         client.start();
         LOGGER.info("client started");
-        StateUtil.writeStateStarted();
 
         if (!testingInProgress) {
             System.out.println("client ready to receive commands:");
