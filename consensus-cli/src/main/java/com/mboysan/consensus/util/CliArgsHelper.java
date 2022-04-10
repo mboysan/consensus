@@ -68,6 +68,9 @@ public final class CliArgsHelper {
 
     private static void addProperty(String arg, Properties properties) {
         String[] kv = arg.split("=");
+        if (kv.length != 2) {
+            return;
+        }
         String key = kv[0];
         String value = kv[1];
 
