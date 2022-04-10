@@ -24,6 +24,7 @@ public class MetricsCollector implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MetricsCollector.class);
 
     private GraphiteFileSender graphiteSender;
+    private JvmGcMetrics jvmGcMetrics;  // AutoClosable
 
     public MetricsCollector(MetricsConfig metricsConfig) {
         if (!metricsConfig.enabled()) {
@@ -64,7 +65,8 @@ public class MetricsCollector implements AutoCloseable {
             new JvmMemoryMetrics().bindTo(registry);
         }
         if (metricsConfig.gcMetricsEnabled()) {
-            new JvmGcMetrics().bindTo(registry);
+            jvmGcMetrics = new JvmGcMetrics();
+            jvmGcMetrics.bindTo(registry);
         }
         if (metricsConfig.processorMetricsEnabled()) {
             new ProcessorMetrics().bindTo(registry);
@@ -78,6 +80,9 @@ public class MetricsCollector implements AutoCloseable {
     public void close() {
         if (graphiteSender != null) {
             graphiteSender.shutdown();
+        }
+        if (jvmGcMetrics != null) {
+            jvmGcMetrics.close();
         }
     }
 }
