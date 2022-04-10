@@ -26,10 +26,6 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-graphite</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
