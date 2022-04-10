@@ -2,6 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
@@ -16,14 +17,19 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class NodeCLI {
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeCLI.class);
+
+    private static final AtomicReference<MetricsCollector> METRICS_COLLECTOR_REF = new AtomicReference<>();
 
     private static final Map<Integer, AbstractNode<?>> NODE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties properties = CliArgsHelper.getProperties(args);
+
+        startMetricsCollector(properties);
 
         TcpTransportConfig serverTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
         Transport nodeServingTransport = new VanillaTcpServerTransport(serverTransportConfig);
@@ -56,8 +62,18 @@ public class NodeCLI {
                 node.shutdown();
             } finally {
                 LOGGER.info("node stopped");
+                closeMetricsCollector();
             }
         });
+    }
+
+    private static void startMetricsCollector(Properties properties) {
+        MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
+        METRICS_COLLECTOR_REF.compareAndSet(null, new MetricsCollector(config));
+    }
+
+    private static void closeMetricsCollector() {
+        METRICS_COLLECTOR_REF.get().close();
     }
 
     public static AbstractNode<?> getNode(int nodeId) {

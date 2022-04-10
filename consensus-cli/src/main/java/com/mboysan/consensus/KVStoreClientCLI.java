@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
@@ -14,14 +15,23 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class KVStoreClientCLI {
+
     public static volatile boolean testingInProgress = false;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
+
+    private static final AtomicReference<MetricsCollector> METRICS_COLLECTOR_REF = new AtomicReference<>();
+
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
         Properties properties = CliArgsHelper.getProperties(args);
+
+        startMetricsCollector(properties);
+
         int clientId = resolveClientId(properties);
 
         TcpTransportConfig clientTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
@@ -73,8 +83,18 @@ public class KVStoreClientCLI {
                 client.shutdown();
             } finally {
                 LOGGER.info("client stopped");
+                closeMetricsCollector();
             }
         });
+    }
+
+    private static void startMetricsCollector(Properties properties) {
+        MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
+        METRICS_COLLECTOR_REF.compareAndSet(null, new MetricsCollector(config));
+    }
+
+    private static void closeMetricsCollector() {
+        METRICS_COLLECTOR_REF.get().close();
     }
 
     public static KVStoreClient getClient(int id) {

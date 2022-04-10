@@ -43,6 +43,11 @@
             <artifactId>consensus-cli</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.mboysan.consensus</groupId>
+            <artifactId>consensus-metrics</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
