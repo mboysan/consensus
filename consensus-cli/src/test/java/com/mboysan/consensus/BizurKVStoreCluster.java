@@ -16,7 +16,7 @@ public class BizurKVStoreCluster extends KVStoreClusterBase {
             String[] storeArgs = new String[] {
                     "--node",
                     "node.id=%d".formatted(i),
-                    "protocol=raft",
+                    "protocol=bizur",
                     "port=" + ports[i][0],  // nodes will connect to this node
                     "destinations=" + destinations,
                     "bizur.numPeers=" + builder.numNodes,
