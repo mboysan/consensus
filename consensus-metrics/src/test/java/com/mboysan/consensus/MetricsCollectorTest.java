@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,6 +40,31 @@ class MetricsCollectorTest {
             MetricsCollector collector = new MetricsCollector(config);
             assertTrue(Files.exists(metricsPath));
             collector.close();
+        } finally {
+            Files.deleteIfExists(metricsPath);
+        }
+    }
+
+    @Test
+    void testMetricsCollectionWithPrefix() throws IOException, InterruptedException {
+        String expectedPrefix = "part1.part2";
+        Properties properties = new Properties();
+        properties.put("metrics.enabled", "true");
+        properties.put("metrics.step", "1000");
+        properties.put("metrics.prefix", expectedPrefix);
+        MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
+        Path metricsPath = FileUtil.path(config.outputPath());
+        try {
+            MetricsCollector collector = new MetricsCollector(config);
+            Thread.sleep(3000);
+            assertTrue(Files.exists(metricsPath));
+            List<String> metricsLines = Files.readAllLines(metricsPath);
+            collector.close();
+
+            assertTrue(metricsLines.size() > 0);
+            for (String metric : metricsLines) {
+                assertTrue(metric.startsWith(expectedPrefix));
+            }
         } finally {
             Files.deleteIfExists(metricsPath);
         }

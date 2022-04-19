@@ -10,6 +10,10 @@ public interface MetricsConfig extends CoreConfig {
     @DefaultValue("/tmp/metrics.txt")
     String outputPath();
 
+    @Key("metrics.prefix")
+    @DefaultValue("")
+    String prefix();
+
     @Key("metrics.step")
     @DefaultValue("2000")
     long step();
