@@ -47,9 +47,11 @@ public class MetricsCollector implements AutoCloseable {
         MetricRegistry metricRegistry = new MetricRegistry();
         Clock clock = Clock.SYSTEM;
 
+        String prefix = "".equals(metricsConfig.prefix()) ? null : metricsConfig.prefix();
         graphiteSender = new GraphiteFileSender(metricsConfig.outputPath());
         GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(metricRegistry)
                 .withClock(new DropwizardClock(clock))
+                .prefixedWith(prefix)
                 .convertRatesTo(config.rateUnits())
                 .convertDurationsTo(config.durationUnits())
                 .addMetricAttributesAsTags(config.graphiteTagsEnabled())
