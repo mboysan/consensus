@@ -19,10 +19,12 @@ public class GraphiteFileSender implements GraphiteSender {
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphiteFileSender.class);
 
     private volatile boolean isRunning;
+    private final String separator;
     private final PrintWriter writer;
 
-    public GraphiteFileSender(String outputPath) {
+    public GraphiteFileSender(String outputPath, String seperator) {
         try {
+            this.separator = seperator;
             Path path = Files.createFile(FileUtil.path(outputPath));
             File file = path.toFile();
             boolean writable = file.setWritable(true);
@@ -44,7 +46,7 @@ public class GraphiteFileSender implements GraphiteSender {
 
     @Override
     public void send(String name, String value, long timestamp) {
-        writer.println(name + " " + value + " " + timestamp);
+        writer.println(name + separator + value + separator + timestamp);
     }
 
     @Override

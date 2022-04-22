@@ -26,7 +26,7 @@ public class MetricsCollector implements AutoCloseable {
     private GraphiteFileSender graphiteSender;
     private JvmGcMetrics jvmGcMetrics;  // AutoClosable
 
-    public MetricsCollector(MetricsConfig metricsConfig) {
+    private MetricsCollector(MetricsConfig metricsConfig) {
         if (!metricsConfig.enabled()) {
             LOGGER.info("metrics collection disabled.");
             return;
@@ -48,7 +48,8 @@ public class MetricsCollector implements AutoCloseable {
         Clock clock = Clock.SYSTEM;
 
         String prefix = "".equals(metricsConfig.prefix()) ? null : metricsConfig.prefix();
-        graphiteSender = new GraphiteFileSender(metricsConfig.outputPath());
+        String separator = "".equals(metricsConfig.seperator()) ? " " : metricsConfig.seperator();
+        graphiteSender = new GraphiteFileSender(metricsConfig.exportfile(), separator);
         GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(metricRegistry)
                 .withClock(new DropwizardClock(clock))
                 .prefixedWith(prefix)
@@ -86,5 +87,9 @@ public class MetricsCollector implements AutoCloseable {
         if (jvmGcMetrics != null) {
             jvmGcMetrics.close();
         }
+    }
+
+    public static MetricsCollector initAndStart(MetricsConfig metricsConfig) {
+        return new MetricsCollector(metricsConfig);
     }
 }
