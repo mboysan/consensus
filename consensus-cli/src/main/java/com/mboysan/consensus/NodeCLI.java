@@ -69,7 +69,7 @@ public class NodeCLI {
 
     private static void startMetricsCollector(Properties properties) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        METRICS_COLLECTOR_REF.compareAndSet(null, new MetricsCollector(config));
+        METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
     }
 
     private static void closeMetricsCollector() {

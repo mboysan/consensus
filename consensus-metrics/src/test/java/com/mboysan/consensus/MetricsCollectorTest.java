@@ -20,9 +20,9 @@ class MetricsCollectorTest {
         Properties properties = new Properties();
         properties.put("metrics.enabled", "false");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        Path metricsPath = FileUtil.path(config.outputPath());
+        Path metricsPath = FileUtil.path(config.exportfile());
         try {
-            MetricsCollector collector = new MetricsCollector(config);
+            MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertFalse(Files.exists(metricsPath));
             collector.close();
         } finally {
@@ -35,9 +35,9 @@ class MetricsCollectorTest {
         Properties properties = new Properties();
         properties.put("metrics.enabled", "true");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        Path metricsPath = FileUtil.path(config.outputPath());
+        Path metricsPath = FileUtil.path(config.exportfile());
         try {
-            MetricsCollector collector = new MetricsCollector(config);
+            MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
             collector.close();
         } finally {
@@ -53,9 +53,9 @@ class MetricsCollectorTest {
         properties.put("metrics.step", "1000");
         properties.put("metrics.prefix", expectedPrefix);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        Path metricsPath = FileUtil.path(config.outputPath());
+        Path metricsPath = FileUtil.path(config.exportfile());
         try {
-            MetricsCollector collector = new MetricsCollector(config);
+            MetricsCollector collector = MetricsCollector.initAndStart(config);
             Thread.sleep(3000);
             assertTrue(Files.exists(metricsPath));
             List<String> metricsLines = Files.readAllLines(metricsPath);
@@ -64,6 +64,33 @@ class MetricsCollectorTest {
             assertTrue(metricsLines.size() > 0);
             for (String metric : metricsLines) {
                 assertTrue(metric.startsWith(expectedPrefix));
+            }
+        } finally {
+            Files.deleteIfExists(metricsPath);
+        }
+    }
+
+    @Test
+    void testMetricsCollectionWithSeparator() throws IOException, InterruptedException {
+        String separator = "###";
+        Properties properties = new Properties();
+        properties.put("metrics.enabled", "true");
+        properties.put("metrics.step", "1000");
+        properties.put("metrics.seperator", separator);
+        MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
+        Path metricsPath = FileUtil.path(config.exportfile());
+        try {
+            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            Thread.sleep(3000);
+            assertTrue(Files.exists(metricsPath));
+            List<String> metricsLines = Files.readAllLines(metricsPath);
+            collector.close();
+
+            assertTrue(metricsLines.size() > 0);
+            for (String metric : metricsLines) {
+                assertTrue(metric.contains(separator));
+                // 3 column per line -> name, value and timestamp
+                assertEquals(3, metric.split(separator).length);
             }
         } finally {
             Files.deleteIfExists(metricsPath);

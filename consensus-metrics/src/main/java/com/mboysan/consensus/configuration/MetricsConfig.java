@@ -6,9 +6,13 @@ public interface MetricsConfig extends CoreConfig {
     @DefaultValue("false")
     boolean enabled();
 
-    @Key("metrics.output.path")
+    @Key("metrics.exportfile")
     @DefaultValue("/tmp/metrics.txt")
-    String outputPath();
+    String exportfile();
+
+    @Key("metrics.seperator")
+    @DefaultValue(" ")
+    String seperator();
 
     @Key("metrics.prefix")
     @DefaultValue("")
