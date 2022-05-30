@@ -28,7 +28,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-pool2.version>2.11.1</commons-pool2.version>
-        <micrometer.version>1.8.4</micrometer.version>
+        <micrometer.version>1.9.0</micrometer.version>
 
         <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
         <jacoco.maven.plugin.version>0.8.8</jacoco.maven.plugin.version>
@@ -38,7 +38,7 @@
         <maven.surefire.version>3.0.0-M6</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
         <maven.failsafe.version>3.0.0-M6</maven.failsafe.version>
         <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
-        <mockito.version>4.4.0</mockito.version>
+        <mockito.version>4.6.0</mockito.version>
         <awaitility.version>4.2.0</awaitility.version>
         <junit.jupiter.version>5.8.2</junit.jupiter.version>
 
