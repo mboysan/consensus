@@ -31,7 +31,6 @@ public class KVStoreServerCLI {
             main0(args);
         } catch (RuntimeException e) {
             LOGGER.error(e.getMessage(), e);
-            throw e;
         }
     }
 
