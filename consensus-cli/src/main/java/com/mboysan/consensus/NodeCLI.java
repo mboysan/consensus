@@ -27,6 +27,15 @@ public class NodeCLI {
     private static final Map<Integer, AbstractNode<?>> NODE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+        try {
+            main0(args);
+        } catch (RuntimeException e) {
+            LOGGER.error(e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties properties = CliArgsHelper.getProperties(args);
 
         startMetricsCollector(properties);

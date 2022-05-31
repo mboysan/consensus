@@ -27,6 +27,15 @@ public class KVStoreServerCLI {
     private static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+        try {
+            main0(args);
+        } catch (RuntimeException e) {
+            LOGGER.error(e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
         startMetricsCollector(CliArgsHelper.getProperties(args));
 
         Properties nodeSectionProperties = CliArgsHelper.getNodeSectionProperties(args);

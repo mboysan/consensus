@@ -25,24 +25,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.java.version>17</maven.compiler.java.version>
 
-        <slf4j.version>1.7.36</slf4j.version>
-        <owner.version>1.0.12</owner.version>
-        <commons-lang3.version>3.12.0</commons-lang3.version>
-        <commons-pool2.version>2.11.1</commons-pool2.version>
-        <micrometer.version>1.9.0</micrometer.version>
-
-        <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
-        <jacoco.maven.plugin.version>0.8.8</jacoco.maven.plugin.version>
-        <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
-        <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
-        <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
-        <maven.surefire.version>3.0.0-M6</maven.surefire.version>   <!--3.0.0-M5 has issues don't use-->
-        <maven.failsafe.version>3.0.0-M6</maven.failsafe.version>
-        <flatten.maven.plugin.version>1.2.7</flatten.maven.plugin.version>
-        <mockito.version>4.6.0</mockito.version>
-        <awaitility.version>4.2.0</awaitility.version>
-        <junit.jupiter.version>5.8.2</junit.jupiter.version>
-
         <sonar.projectKey>mboysan_consensus</sonar.projectKey>
         <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
         <sonar.organization>mboysan-github</sonar.organization>
@@ -50,60 +32,64 @@
     </properties>
 
     <dependencyManagement>
+        <!--
+            Dependency versions are manged by "versions-maven-plugin". To update the dependency versions, we run
+            mvn versions:use-latest-versions
+        -->
         <dependencies>
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
+                <version>1.7.36</version>
             </dependency>
             <dependency>
                 <groupId>org.aeonbits.owner</groupId>
                 <artifactId>owner</artifactId>
-                <version>${owner.version}</version>
+                <version>1.0.12</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>${commons-lang3.version}</version>
+                <version>3.12.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
-                <version>${commons-pool2.version}</version>
+                <version>2.11.1</version>
             </dependency>
             <dependency>
                 <groupId>io.micrometer</groupId>
                 <artifactId>micrometer-registry-jmx</artifactId>
-                <version>${micrometer.version}</version>
+                <version>1.9.0</version>
             </dependency>
             <dependency>
                 <groupId>io.micrometer</groupId>
                 <artifactId>micrometer-registry-graphite</artifactId>
-                <version>${micrometer.version}</version>
+                <version>1.9.0</version>
             </dependency>
 
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
+                <version>1.7.36</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
-                <version>${junit.jupiter.version}</version>
+                <version>5.8.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
-                <version>${mockito.version}</version>
+                <version>4.6.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
-                <version>${awaitility.version}</version>
+                <version>4.2.0</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -114,12 +100,12 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>${maven.assembly.plugin.version}</version>
+                    <version>3.3.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>${jacoco.maven.plugin.version}</version>
+                    <version>0.8.8</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -127,7 +113,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
+                <version>3.10.1</version>
                 <configuration>
                     <release>${maven.compiler.java.version}</release>
                     <source>${maven.compiler.java.version}</source>
@@ -137,7 +123,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.version}</version>
+                <version>3.0.0-M6</version>     <!--3.0.0-M5 has issues don't use-->
                 <configuration>
                     <excludes>
                         <exclude>**/*IT.java</exclude>
@@ -157,7 +143,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${maven.failsafe.version}</version>
+                <version>3.0.0-M6</version>
                 <configuration>
                     <includes>
                         <include>**/*IT.java</include>
@@ -182,7 +168,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>${flatten.maven.plugin.version}</version>
+                <version>1.2.7</version>
                 <configuration>
                     <updatePomFile>true</updatePomFile>
                     <flattenMode>resolveCiFriendliesOnly</flattenMode>
@@ -207,7 +193,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven.jar.plugin.version}</version>
+                <version>3.2.2</version>
                 <executions>
                     <execution>
                         <id>Jar Tests Package</id>
