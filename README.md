@@ -51,41 +51,27 @@ mvn clean package -DskipTests
 # switch to the directory of the jar executable.
 cd consensus-distribution/target
 
-# rename the jar for easier referening.
+# rename the jar for easier referencing.
 mv *-jar-with-dependencies.jar consensus.jar
 ```
 At this point, we have switched to our working directory where we have an executable jar file called `consensus.jar` 
-which will use to run the nodes and client. 
-
-We'll need to copy the logging dependencies in our working directory:
-```
-# copy logging implementation dependencies into working dir.
-cp -vr ../../lib/* .
-```
-
-Now, open 3 more terminal windows in the current working directory and execute the following on each window:
-```
-# set environment variable for our logging implementation dependency (log4j) configuration
-export LOG_CONFIG="-Dlog4j.configuration=file:log4j.properties"
-# set the classpath params
-export CP_CONFIG="slf4j-reload4j-1.7.36.jar:reload4j-1.2.19.jar:consensus.jar"
-```
+which will use to run the nodes and client.
 
 Let's start the nodes. Execute each command in different terminal windows.
 
 ```
 # node-0
-java $LOG_CONFIG -cp $CP_CONFIG com.mboysan.consensus.KVStoreServerCLI \
+java -cp consensus.jar com.mboysan.consensus.KVStoreServerCLI \
     --node node.id=0 port=33330 protocol=raft destinations=0-localhost:33330,1-localhost:33331,2-localhost:33332 \
     --store port=33340
 
 # node-1
-java $LOG_CONFIG -cp $CP_CONFIG com.mboysan.consensus.KVStoreServerCLI \
+java -cp consensus.jar com.mboysan.consensus.KVStoreServerCLI \
     --node node.id=1 port=33331 protocol=raft destinations=0-localhost:33330,1-localhost:33331,2-localhost:33332 \
     --store port=33341
 
 # node-2
-java $LOG_CONFIG -cp $CP_CONFIG com.mboysan.consensus.KVStoreServerCLI \
+java -cp consensus.jar com.mboysan.consensus.KVStoreServerCLI \
     --node node.id=2 port=33332 protocol=raft destinations=0-localhost:33330,1-localhost:33331,2-localhost:33332 \
     --store port=33342
 ```
@@ -99,7 +85,7 @@ Finally, we'll start our client for sending commands to the nodes.
 
 ```
 # client
-java $LOG_CONFIG -cp $CP_CONFIG com.mboysan.consensus.KVStoreClientCLI destinations=0-localhost:33340,1-localhost:33341,2-localhost:33342
+java -cp consensus.jar com.mboysan.consensus.KVStoreClientCLI destinations=0-localhost:33340,1-localhost:33341,2-localhost:33342
 ```
 As you can see, we have given the node destinations for our client where each node accepts client requests (notice the
 port numbers used).
@@ -131,7 +117,7 @@ unit.
 
 The project is deployed to a [separate repository](https://github.com/mboysan/mvn-repo) as a library which can be 
 used as a maven dependency in your own projects. Just add the necessary `<repository>` portion in your pom.xml
-as described in that page and in dependencies add:
+as described in that page, and in dependencies add:
 ```
 <dependency>
     <groupId>com.mboysan.consensus</groupId>
@@ -144,11 +130,16 @@ each class.
 
 TODO: example usage.
 
+## About Logging
 
-----------------------------------------
-TODO: this part will be removed
+Using the project through the Command Line Interface ([consensus-cli module](consensus-cli)) automatically provides all
+the necessary logging implementation and configuration (log4j), which by default logs all the output (INFO level) 
+to console. To change the configuration, first create your own `log4j.properties` file and run the java executable 
+with the following command:
 
-Some commands:
 ```
-java -Dlog4j.configuration=file:log4j.properties -cp "slf4j-reload4j-1.7.36.jar;reload4j-1.2.19.jar;consensus-distribution-1.0-SNAPSHOT-jar-with-dependencies.jar;log4j.properties" com.mboysan.consensus.KVStoreClientCLI
+java -Dlog4j.configuration=file:log4j.properties -cp consensus.jar <main class and additional properties>
 ```
+
+However, if you choose to use the project as a library, the choice of logging implementation (and its configuration) is 
+fully customizable and your own responsibility given that your own project uses slf4j bindings.

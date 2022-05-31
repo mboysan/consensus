@@ -28,6 +28,14 @@ public class KVStoreClientCLI {
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
+        try {
+            main0(args);
+        } catch (RuntimeException e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+    }
+
+    private static void main0(String[] args) throws IOException {
         Properties properties = CliArgsHelper.getProperties(args);
 
         startMetricsCollector(properties);
