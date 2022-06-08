@@ -31,6 +31,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private boolean notified = false;
 
+    private final boolean isStronglyConsistent;
     private final long updateIntervalMs;
     private long electionTimeoutMs;
     private long nextElectionTime;
@@ -42,6 +43,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         super(config, transport);
         this.rpcClient = new RaftClient(transport);
 
+        this.isStronglyConsistent = "strong".equals(config.consistency());
         this.updateIntervalMs = config.updateIntervalMs();
         this.electionTimeoutMs = config.electionTimeoutMs();
     }
@@ -215,6 +217,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         }
                     } catch (IOException e) {
                         LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
+                        peer.reset();   // reset state for the peer as we think it is dead.
                     }
                 }
             });
@@ -286,6 +289,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         if (state.currentTerm > request.getTerm()) {
             return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
         } else {
+            if (state.leaderId != request.getLeaderId()) {
+                LOGGER.info("node-{} claims to be the LEADER of term {}", request.getLeaderId(), state.currentTerm);
+            }
             state.leaderId = request.getLeaderId();
             state.role = FOLLOWER;
             state.seenLeader = true;
@@ -301,7 +307,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
                 state.votedFor = request.getLeaderId();
 
-                update();   // sync for strong consistency
+                if (isStronglyConsistent) {
+                    update();   // sync for strong consistency
+                }
                 return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex()).responseTo(request);
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
@@ -320,7 +328,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             if (state.role == LEADER) {
                 state.raftLog.push(new LogEntry(request.getCommand(), state.currentTerm));
                 int entryIndex = state.raftLog.lastLogIndex();
-                update();   // sync for strong consistency
+                if (isStronglyConsistent) {
+                    update();   // sync for strong consistency
+                }
                 int term = state.currentTerm;
                 if (!isEntryApplied(entryIndex, term)) { // if not applied
                     try {

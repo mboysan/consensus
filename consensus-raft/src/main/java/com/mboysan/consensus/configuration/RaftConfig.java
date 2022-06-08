@@ -8,4 +8,8 @@ public interface RaftConfig extends NodeConfig {
     @Key("raft.electionTimeoutMs")
     @DefaultValue("5000")
     long electionTimeoutMs();
+
+    @Key("raft.consistency")
+    @DefaultValue("strong") // or weak
+    String consistency();
 }
