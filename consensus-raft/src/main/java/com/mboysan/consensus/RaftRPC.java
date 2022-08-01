@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.AppendEntriesRequest;
 import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.RequestVoteRequest;
 import com.mboysan.consensus.message.RequestVoteResponse;
@@ -17,6 +19,8 @@ interface RaftRPC extends RPCProtocol {
 
     StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException;
 
+    CustomResponse customRequest(CustomRequest request) throws IOException;
+
     @Override
     default Message processRequest(Message message) throws IOException {
         if (message instanceof AppendEntriesRequest request) {
@@ -27,6 +31,9 @@ interface RaftRPC extends RPCProtocol {
         }
         if (message instanceof StateMachineRequest request) {
             return stateMachineRequest(request);
+        }
+        if (message instanceof CustomRequest request) {
+            return customRequest(request);
         }
         throw new IllegalArgumentException("unrecognized message=" + message);
     }

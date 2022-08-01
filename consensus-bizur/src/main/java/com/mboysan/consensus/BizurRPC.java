@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -41,6 +43,8 @@ interface BizurRPC extends RPCProtocol {
 
     KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
 
+    CustomResponse customRequest(CustomRequest request) throws IOException;
+
     @Override
     default Message processRequest(Message message) throws IOException {
         if (message instanceof HeartbeatRequest request) {
@@ -61,6 +65,8 @@ interface BizurRPC extends RPCProtocol {
             return delete(request);
         } else if (message instanceof KVIterateKeysRequest request) {
             return iterateKeys(request);
+        } else if (message instanceof CustomRequest request) {
+            return customRequest(request);
         }
         throw new IllegalArgumentException("unrecognized message=" + message);
     }

@@ -3,6 +3,7 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import org.slf4j.Logger;
@@ -19,9 +20,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class KVStoreClientCLI {
 
-    public static volatile boolean testingInProgress = false;
+    public static volatile boolean isInteractiveSession = true;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
+
+    private static final String ROUTE_TO_SEPARATOR = "#";
 
     private static final AtomicReference<MetricsCollector> METRICS_COLLECTOR_REF = new AtomicReference<>();
 
@@ -30,12 +33,12 @@ public class KVStoreClientCLI {
     public static void main(String[] args) throws IOException {
         try {
             main0(args);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | CommandException e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
 
-    private static void main0(String[] args) throws IOException {
+    private static void main0(String[] args) throws IOException, CommandException {
         Properties properties = CliArgsHelper.getProperties(args);
 
         startMetricsCollector(properties);
@@ -52,7 +55,9 @@ public class KVStoreClientCLI {
         client.start();
         LOGGER.info("client started");
 
-        if (!testingInProgress) {
+        isInteractiveSession = isInteractiveSession(properties);
+
+        if (isInteractiveSession) {
             System.out.println("client ready to receive commands:");
 
             Scanner scanner = new Scanner(System.in);
@@ -67,13 +72,20 @@ public class KVStoreClientCLI {
                         case "delete" -> client.delete(cmd[1]);
                         case "iterateKeys" -> System.out.println("result -> " + client.iterateKeys());
                         case "exit" -> exited = true;
-                        default -> throw new IllegalArgumentException("command invalid");
+                        default -> sendCustomCommand(client, input);
                     }
                 } catch (Exception e) {
-                    System.err.println(e.getMessage());
+                    System.err.println(e);
                 }
             }
             client.shutdown();
+        } else {
+            String commandFromCli = properties.getProperty("command");
+            if (commandFromCli != null) {
+                sendCustomCommand(client, commandFromCli);
+                client.shutdown();
+            }
+            // otherwise, keep the client running for Integration Tests.
         }
     }
 
@@ -103,6 +115,33 @@ public class KVStoreClientCLI {
 
     private static void closeMetricsCollector() {
         METRICS_COLLECTOR_REF.get().close();
+    }
+
+    private static boolean isInteractiveSession(Properties properties) {
+        String interactiveFlag = properties.getProperty("interactive");
+        if ("false".equals(interactiveFlag)) {
+            return false;
+        }
+        String commandFromCli = properties.getProperty("command");
+        return commandFromCli == null;
+    }
+
+    private static void sendCustomCommand(KVStoreClient client, String input) throws CommandException {
+        String[] request = prepareRequest(input);
+        int routeToId = Integer.parseInt(request[0]);
+        String command = request[1];
+        String result = client.customRequest(command, routeToId);
+        if (isInteractiveSession) {
+            System.out.println("result -> " + result);
+        }
+    }
+
+    private static String[] prepareRequest(String command) {
+        if (!command.contains(ROUTE_TO_SEPARATOR)) {
+            //returns: -1#<command>
+            command = "%d%s%s".formatted(-1, ROUTE_TO_SEPARATOR, command);
+        }
+        return command.split(ROUTE_TO_SEPARATOR);
     }
 
     public static KVStoreClient getClient(int id) {

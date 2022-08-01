@@ -207,6 +207,7 @@ public class VanillaTcpClientTransport implements Transport {
             semaphore.release();
             os.writeObject(message);
             os.flush();
+            os.reset();
         }
 
         synchronized void shutdown() {

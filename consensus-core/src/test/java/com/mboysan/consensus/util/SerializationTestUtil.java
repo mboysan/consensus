@@ -17,6 +17,7 @@ public final class SerializationTestUtil {
              ObjectOutputStream oos = new ObjectOutputStream(baos)) {
             oos.writeObject(obj);
             oos.flush();
+            oos.reset();
             try (ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
                  ObjectInputStream ois = new ObjectInputStream(bais)) {
                 return (T) ois.readObject();

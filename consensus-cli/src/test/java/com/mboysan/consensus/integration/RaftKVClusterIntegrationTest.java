@@ -44,4 +44,12 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
                 .build();
         testKVStoreShutdownAndStart(raftCluster);
     }
+
+    @Test
+    void testCustomCommands() throws Exception {
+        this.raftCluster = new RaftKVStoreCluster.Builder()
+                .setNumNodes(5)
+                .build();
+        testCustomCommands(raftCluster);
+    }
 }

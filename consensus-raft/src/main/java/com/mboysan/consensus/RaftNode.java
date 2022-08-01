@@ -3,6 +3,8 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.message.AppendEntriesRequest;
 import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.LogEntry;
 import com.mboysan.consensus.message.RequestVoteRequest;
 import com.mboysan.consensus.message.RequestVoteResponse;
@@ -351,6 +353,29 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private boolean isEntryApplied(int entryIndex, int term) {
         return state.raftLog.logTerm(entryIndex) == term && state.lastApplied >= entryIndex;
+    }
+
+    @Override
+    public synchronized CustomResponse customRequest(CustomRequest request) throws IOException {
+        validateAction();
+        if (request.getRouteTo() != -1) {
+            int routeToId = request.getRouteTo();
+            request.setRouteTo(-1);
+            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        switch (request.getRequest()) {
+            case "askState" -> {
+                String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
+                return new CustomResponse(true, null, stateStr).responseTo(request);
+            }
+            case "askStateFull" -> {
+                String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
+                return new CustomResponse(true, null, stateStr).responseTo(request);
+            }
+        }
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
+                .responseTo(request);
     }
 
     /*----------------------------------------------------------------------------------

@@ -184,6 +184,26 @@ class BizurNodeTest extends NodeTestBase {
     }
 
     /**
+     * A second k/v operations test to assert key/value integrity when leader is killed. This is a known scenario that
+     * was failing during integration tests, so we ensure this test succeeds in unit tests as well.
+     */
+    @Test
+    void testKVOpsOnLeaderFailure2() throws Exception {
+        initCluster(5, 5);
+
+        // key 'a' belongs to bucket-2 which belongs to node-2.
+        final String expectedKey = "a";
+        final String expectedValue = "v0";
+
+        set(0, expectedKey, expectedValue);
+
+        kill(2);
+
+        String actualValue = awaiting(() -> get(0, expectedKey));
+        assertEquals(expectedValue, actualValue);
+    }
+
+    /**
      * Tests k/v operations when follower is killed.
      */
     @Test

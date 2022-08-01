@@ -1,10 +1,9 @@
 package com.mboysan.consensus;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 class BucketRange {
 
@@ -65,14 +64,6 @@ class BucketRange {
         return bucketMap.computeIfAbsent(index, Bucket::new);
     }
 
-    Set<String> getKeysOfAllBuckets() {
-        Set<String> keys = new HashSet<>();
-        for (Bucket bucket : bucketMap.values()) {
-            keys.addAll(bucket.getKeySetOp());
-        }
-        return keys;
-    }
-
     //------------------------------- utils -------------------------------//
 
     BucketRange lock() {
@@ -82,6 +73,30 @@ class BucketRange {
 
     void unlock() {
         lock.unlock();
+    }
+
+    public String toThinString() {
+        String bucketMapThinStr = bucketMap.values().stream()
+                .map(Bucket::toThinString)
+                .collect(Collectors.joining(", "));
+        return "BucketRange{" +
+                "rangeIndex=" + rangeIndex +
+                ", leaderId=" + leaderId +
+                ", electId=" + electId +
+                ", votedElectId=" + votedElectId +
+                ", bucketMap=" + bucketMapThinStr +
+                '}';
+    }
+
+    @Override
+    public String toString() {
+        return "BucketRange{" +
+                "rangeIndex=" + rangeIndex +
+                ", leaderId=" + leaderId +
+                ", electId=" + electId +
+                ", votedElectId=" + votedElectId +
+                ", bucketMap=" + bucketMap +
+                '}';
     }
 
     //------------------------------- for testing -------------------------------//

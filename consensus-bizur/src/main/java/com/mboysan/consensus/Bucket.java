@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class Bucket implements Serializable, Comparable<Bucket> {
 
-    private transient static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Bucket.class);
 
     private final int index;
 
@@ -104,6 +104,15 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         } else {
             return -1;
         }
+    }
+
+    public String toThinString() {
+        return "Bucket{" +
+                "index=" + index +
+                ", verElectId=" + verElectId +
+                ", verCounter=" + verCounter +
+                ", bucketMap=<...>" +
+                '}';
     }
 
     @Override

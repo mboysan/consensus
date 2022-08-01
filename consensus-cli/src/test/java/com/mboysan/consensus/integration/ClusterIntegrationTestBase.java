@@ -3,6 +3,7 @@ package com.mboysan.consensus.integration;
 import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
+import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import java.util.concurrent.ExecutionException;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 abstract class ClusterIntegrationTestBase {
@@ -89,6 +91,16 @@ abstract class ClusterIntegrationTestBase {
 
         assertEquals("v1", cluster.getClient(0).get("k1"));
         assertEquals("v0", cluster.getClient(1).get("k0"));
+    }
+
+    void testCustomCommands(KVStoreClusterBase cluster) throws CommandException, KVOperationException {
+        // populate the stores
+        cluster.getClient(0).set("a", "v0");
+
+        assertNotNull(cluster.getClient(0).customRequest("askState"));
+        assertNotNull(cluster.getClient(0).customRequest("askState", 1));
+        assertNotNull(cluster.getClient(0).customRequest("askStateFull"));
+        assertNotNull(cluster.getClient(0).customRequest("askStateFull", 1));
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {

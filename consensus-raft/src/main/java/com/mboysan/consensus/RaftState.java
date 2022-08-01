@@ -47,6 +47,19 @@ class RaftState {
         this.role = Role.FOLLOWER;
     }
 
+    public String toThinString() {
+        return "State{" +
+                "currentTerm=" + currentTerm +
+                ", votedFor=" + votedFor +
+                ", raftLog=" + raftLog.toThinString() + // raftLog entries are omitted.
+                ", commitIndex=" + commitIndex +
+                ", lastApplied=" + lastApplied +
+                ", leaderId=" + leaderId +
+                ", seenLeader=" + seenLeader +
+                ", role=" + role +
+                '}';
+    }
+
     @Override
     public String toString() {
         return "State{" +

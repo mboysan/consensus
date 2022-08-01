@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -69,5 +71,10 @@ class BizurClient extends AbstractClient implements BizurRPC {
     @Override
     public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
         return (KVIterateKeysResponse) getTransport().sendRecv(request);
+    }
+
+    @Override
+    public CustomResponse customRequest(CustomRequest request) throws IOException {
+        return (CustomResponse) getTransport().sendRecv(request);
     }
 }

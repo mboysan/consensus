@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
 import com.mboysan.consensus.message.KVDeleteResponse;
 import com.mboysan.consensus.message.KVGetRequest;
@@ -52,6 +54,16 @@ public class BizurKVStore extends AbstractKVStore<BizurNode> {
         } catch (Exception e) {
             logError(request, e);
             return new KVIterateKeysResponse(false, e, null);
+        }
+    }
+
+    @Override
+    public CustomResponse customRequest(CustomRequest request) {
+        try {
+            return getNode().customRequest(request);
+        } catch (Exception e) {
+            logError(request, e);
+            return new CustomResponse(false, e, null).responseTo(request);
         }
     }
 }

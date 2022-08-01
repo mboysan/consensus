@@ -30,7 +30,8 @@ public class BizurKVStoreCluster extends KVStoreClusterBase {
             String storeDestination = "%d-localhost:%d".formatted(i, ports[i][1]);
             String[] clientArgs = new String[]{
                     "client.id=" + i,
-                    "destinations=" + storeDestination
+                    "destinations=" + storeDestination,
+                    "interactive=false"
             };
             KVStoreClientCLI.main(clientArgs);
         }
