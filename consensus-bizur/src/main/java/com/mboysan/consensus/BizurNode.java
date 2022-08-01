@@ -3,6 +3,8 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -124,7 +126,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
             int supposedRangeLeader = nodeIdForRangeIndex(rangeIndex);
 
-            boolean iAmSupposedLeader = false;
+            boolean iAmSupposedLeader;
             boolean noRangeLeader = false;
             boolean currentLeaderDead = false;
             boolean supposedLeaderDead = false;
@@ -309,6 +311,31 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             logErrorForRequest(e, request);
             return response(request, false, e, null);
         }
+    }
+
+    @Override
+    public CustomResponse customRequest(CustomRequest request) throws IOException {
+        validateAction();
+        if (request.getRouteTo() != -1) {
+            int routeToId = request.getRouteTo();
+            request.setRouteTo(-1);
+            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
+                    .responseTo(request);
+        }
+        switch (request.getRequest()) {
+            case "askState" -> {
+                String state = new BizurRun(request.getCorrelationId(), this).apiGetState(true);
+                state = "State of node-" + getNodeId() + ": " + state;
+                return new CustomResponse(true, null, state).responseTo(request);
+            }
+            case "askStateFull" -> {
+                String state = new BizurRun(request.getCorrelationId(), this).apiGetState(false);
+                state = "Verbose State of node-" + getNodeId() + ": " + state;
+                return new CustomResponse(true, null, state).responseTo(request);
+            }
+        }
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
+                .responseTo(request);
     }
 
     private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {

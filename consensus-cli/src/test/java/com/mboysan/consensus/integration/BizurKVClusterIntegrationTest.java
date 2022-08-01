@@ -4,6 +4,9 @@ import com.mboysan.consensus.BizurKVStoreCluster;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static com.mboysan.consensus.util.AwaitUtil.awaiting;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private BizurKVStoreCluster bizurCluster;
@@ -83,5 +86,32 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
                 .setNumNodes(5)
                 .build();
         testKVStoreShutdownAndStart(bizurCluster);
+    }
+
+    @Test
+    void testKVStoreLeaderFailure() throws Exception {
+        this.bizurCluster = new BizurKVStoreCluster.Builder()
+                .setNumBuckets(5)
+                .setNumNodes(5)
+                .build();
+
+        // key 'a' belongs to bucket-2 which belongs to node-2 (leader).
+        final String expectedKey = "a";
+        final String expectedValue = "v0";
+
+        bizurCluster.getClient(0).set(expectedKey, expectedValue);
+        bizurCluster.getStore(2).shutdown();
+
+        String actualValue = awaiting(() -> bizurCluster.getClient(0).get(expectedKey));
+        assertEquals(expectedValue, actualValue);
+    }
+
+    @Test
+    void testCustomCommands() throws Exception {
+        this.bizurCluster = new BizurKVStoreCluster.Builder()
+                .setNumBuckets(5)
+                .setNumNodes(5)
+                .build();
+        testCustomCommands(bizurCluster);
     }
 }

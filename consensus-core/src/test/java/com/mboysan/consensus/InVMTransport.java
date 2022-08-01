@@ -69,7 +69,7 @@ public class InVMTransport implements Transport {
 
     @Override
     public synchronized void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
-        if (messageProcessor instanceof AbstractNode msgProcessor) {
+        if (messageProcessor instanceof AbstractNode<?> msgProcessor) {
             int nodeId = msgProcessor.getNodeId();
             Server server = serverMap.get(nodeId);
             if (server == null) {
@@ -115,7 +115,9 @@ public class InVMTransport implements Transport {
     public Message sendRecv(Message message) throws IOException {
         Future<Message> msgFuture = sendRecvAsync(message);
         try {
-            Message response = msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            Message response = DEFAULT_CALLBACK_TIMEOUT_MS > 0
+                    ? msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    : msgFuture.get();  // wait indefinitely.
             LOGGER.debug("IN (response): {}", response);
             return response;
         } catch (Exception e) {

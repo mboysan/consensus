@@ -71,7 +71,7 @@ public class VanillaTcpServerTransport implements Transport {
     }
 
     @Override
-    public synchronized void start() throws IOException {
+    public synchronized void start() {
         if (isRunning) {
             return;
         }
@@ -186,6 +186,7 @@ public class VanillaTcpServerTransport implements Transport {
                                 LOGGER.debug("OUT (response): {}", response);
                                 os.writeObject(response);
                                 os.flush();
+                                os.reset();
                             }
                         } catch (IOException e) {
                             LOGGER.error(e.getMessage());

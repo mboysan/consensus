@@ -13,10 +13,6 @@ public abstract class KVStoreClusterBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClusterBase.class);
 
-    static {
-        KVStoreClientCLI.testingInProgress = true;
-    }
-
     private static final SecureRandom RNG = new SecureRandom();
 
     int[][] ports(int numNodes) {

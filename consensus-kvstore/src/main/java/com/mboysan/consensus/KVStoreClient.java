@@ -1,5 +1,8 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CommandException;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
 import com.mboysan.consensus.message.KVDeleteResponse;
 import com.mboysan.consensus.message.KVGetRequest;
@@ -12,20 +15,12 @@ import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.util.ThrowingSupplier;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStoreClient extends AbstractClient {
 
-    private final List<Integer> nodeIds;
-    private final AtomicInteger currIndex = new AtomicInteger(-1);
-
     public KVStoreClient(Transport transport) {
         super(transport);
-        this.nodeIds = new ArrayList<>(Objects.requireNonNull(transport.getDestinationNodeIds()));
     }
 
     public void start() throws IOException {
@@ -71,10 +66,6 @@ public class KVStoreClient extends AbstractClient {
         });
     }
 
-    private int nextNodeId() {
-        return nodeIds.get(currIndex.incrementAndGet() % nodeIds.size());
-    }
-
     private void validateResponse(KVOperationResponse response) throws Exception {
         if (!response.isSuccess()) {
             Exception e = response.getException();
@@ -89,6 +80,28 @@ public class KVStoreClient extends AbstractClient {
             return supplier.get();
         } catch (Throwable e) {
             throw new KVOperationException(e);
+        }
+    }
+
+    public String customRequest(String command) throws CommandException {
+        return customRequest(command, -1);
+    }
+
+    public String customRequest(String command, int routeTo) throws CommandException {
+        try {
+            CustomRequest request = new CustomRequest(command)
+                    .setRouteTo(routeTo)
+                    .setReceiverId(nextNodeId());
+            CustomResponse response = (CustomResponse) getTransport().sendRecv(request);
+            if (!response.isSuccess()) {
+                Exception e = response.getException();
+                if (e != null) {
+                    throw new CommandException(e);
+                }
+            }
+            return response.getPayload();
+        } catch (Exception e) {
+            throw new CommandException(e);
         }
     }
 }

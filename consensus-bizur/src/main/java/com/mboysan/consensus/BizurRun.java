@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -333,5 +334,22 @@ final class BizurRun {
             }
         });
         return keySet;
+    }
+
+    String apiGetState(boolean thinState) {
+        StringJoiner sj = new StringJoiner(", ");
+        for (int i = 0; i < getNumRanges(); i++) {
+            BucketRange range = getBucketRange(i).lock();
+            try {
+                if (thinState) {
+                    sj.add(range.toThinString());
+                } else {
+                    sj.add(range.toString());
+                }
+            } finally {
+                range.unlock();
+            }
+        }
+        return sj.toString();
     }
 }
