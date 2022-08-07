@@ -373,6 +373,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
                 return new CustomResponse(true, null, stateStr).responseTo(request);
             }
+            case "askProtocol" -> {
+                return new CustomResponse(true, null, "raft").responseTo(request);
+            }
         }
         return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
                 .responseTo(request);

@@ -333,6 +333,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 state = "Verbose State of node-" + getNodeId() + ": " + state;
                 return new CustomResponse(true, null, state).responseTo(request);
             }
+            case "askProtocol" -> {
+                return new CustomResponse(true, null, "bizur").responseTo(request);
+            }
         }
         return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
                 .responseTo(request);
