@@ -190,7 +190,7 @@ public class VanillaTcpClientTransport implements Transport {
                         future.complete(response);
                     }
                 } catch (EOFException ignore) {
-                    // ignoring EOFException-s
+                    VanillaTcpClientTransport.shutdown(this::shutdown);
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
                     VanillaTcpClientTransport.shutdown(this::shutdown);
