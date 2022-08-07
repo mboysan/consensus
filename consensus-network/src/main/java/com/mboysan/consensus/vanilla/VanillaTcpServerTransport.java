@@ -194,7 +194,7 @@ public class VanillaTcpServerTransport implements Transport {
                         }
                     });
                 } catch (EOFException ignore) {
-                    // ignoring EOFException-s
+                    VanillaTcpServerTransport.shutdown(this::shutdown);
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
                     VanillaTcpServerTransport.shutdown(this::shutdown);
