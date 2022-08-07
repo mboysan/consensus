@@ -55,7 +55,7 @@ cd consensus-distribution/target
 mv *-jar-with-dependencies.jar consensus.jar
 ```
 At this point, we have switched to our working directory where we have an executable jar file called `consensus.jar` 
-which will use to run the nodes and client.
+which will be used to run the nodes and client.
 
 Let's start the nodes. Execute each command in different terminal windows.
 

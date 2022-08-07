@@ -133,6 +133,8 @@ public class KVStoreClientCLI {
         String result = client.customRequest(command, routeToId);
         if (isInteractiveSession) {
             System.out.println("result -> " + result);
+        } else {
+            LOGGER.info("{}", result);
         }
     }
 
