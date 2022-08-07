@@ -1,8 +1,10 @@
 package com.mboysan.consensus.integration;
 
+import com.mboysan.consensus.BizurKVStoreCluster;
 import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
+import com.mboysan.consensus.RaftKVStoreCluster;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.slf4j.Logger;
@@ -16,8 +18,8 @@ import java.util.concurrent.ExecutionException;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class ClusterIntegrationTestBase {
 
@@ -97,10 +99,27 @@ abstract class ClusterIntegrationTestBase {
         // populate the stores
         cluster.getClient(0).set("a", "v0");
 
-        assertNotNull(cluster.getClient(0).customRequest("askState"));
-        assertNotNull(cluster.getClient(0).customRequest("askState", 1));
-        assertNotNull(cluster.getClient(0).customRequest("askStateFull"));
-        assertNotNull(cluster.getClient(0).customRequest("askStateFull", 1));
+        String response;
+
+        response = cluster.getClient(0).customRequest("askState");
+        assertTrue(response.startsWith("State of node"));
+
+        response = cluster.getClient(0).customRequest("askState", 1);
+        assertTrue(response.startsWith("State of node-1"));
+
+        response = cluster.getClient(0).customRequest("askStateFull");
+        assertTrue(response.startsWith("Verbose State of node"));
+
+        response = cluster.getClient(0).customRequest("askStateFull", 1);
+        assertTrue(response.startsWith("Verbose State of node-1"));
+
+        response = cluster.getClient(0).customRequest("askProtocol");
+        if (cluster instanceof RaftKVStoreCluster) {
+            assertEquals("raft", response);
+        }
+        if (cluster instanceof BizurKVStoreCluster) {
+            assertEquals("bizur", response);
+        }
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {
