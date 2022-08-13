@@ -200,6 +200,16 @@ class VanillaTcpTransportIntegrationTest {
         });
     }
 
+    @Test
+    void testSocketTimeout() {
+        Transport sender = clientTransports[0];
+        // signal the server to wait before responding, this will end up socket to timeout before receiving a response.
+        TestMessage request = new TestMessage("wait")
+                .setSenderId(0)
+                .setReceiverId(1);
+        assertThrows(IOException.class, () -> sender.sendRecv(request));
+    }
+
     private TestMessage testMessage(int payloadId, int senderId, int receiverId) {
         String payload = "some-payload-" + payloadId;
         return new TestMessage(payload).setSenderId(senderId).setReceiverId(receiverId);
@@ -214,8 +224,9 @@ class VanillaTcpTransportIntegrationTest {
 
     VanillaTcpServerTransport createServerTransport(int port) {
         Properties properties = new Properties();
-        properties.put("transport.tcp.server.port", port + "");
+        properties.put("transport.tcp.server.port", String.valueOf(port));
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put("transport.tcp.server.socket.so_timeout", String.valueOf(2500)); // 2.5 seconds timeout
         // create new config per transport
         TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, properties);
         return new VanillaTcpServerTransport(config);
