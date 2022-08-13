@@ -15,6 +15,10 @@ public interface TcpTransportConfig extends TransportConfig {
     @Key("transport.tcp.server.port")
     int port();
 
+    @Key("transport.tcp.server.socket.so_timeout")
+    @DefaultValue("30000")  // 30 seconds
+    int socketSoTimeout();
+
     /**
      * Following is an example of supported TCP/IP destinations with node ids:
      * </br></br>

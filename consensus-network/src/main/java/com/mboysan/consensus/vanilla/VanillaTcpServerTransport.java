@@ -9,7 +9,6 @@ import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -45,6 +44,7 @@ public class VanillaTcpServerTransport implements Transport {
      * Id of the node that this transport is responsible from
      */
     private final VanillaTcpClientTransport clientTransport;
+    private final int socketSoTimeout;
 
     public VanillaTcpServerTransport(TcpTransportConfig config) {
         LOGGER.info("server transport config={}", config);
@@ -55,6 +55,7 @@ public class VanillaTcpServerTransport implements Transport {
                 .mapToInt(Destination::nodeId)
                 .findFirst().orElse(port);
         this.clientTransport = new VanillaTcpClientTransport(config, nodeIdOrPort);
+        this.socketSoTimeout = config.socketSoTimeout();
     }
 
     @Override
@@ -99,6 +100,9 @@ public class VanillaTcpServerTransport implements Transport {
             try {
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setKeepAlive(true);
+                if (socketSoTimeout > 0) {
+                    clientSocket.setSoTimeout(socketSoTimeout);
+                }
                 ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);
                 clientHandlers.put(clientCount + "", clientHandler);
                 clientHandlerExecutor.submit(clientHandler);
@@ -159,15 +163,17 @@ public class VanillaTcpServerTransport implements Transport {
         private final Socket socket;
         private final ObjectOutputStream os;
         private final ObjectInputStream is;
-        private final int handlerId;
-
-        private ExecutorService requestExecutor;
+        private final ExecutorService requestExecutor;
 
         private ClientHandler(Socket socket, int handlerId) throws IOException {
             this.socket = socket;
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
-            this.handlerId = handlerId;
+            this.requestExecutor = Executors.newCachedThreadPool(
+                    new BasicThreadFactory.Builder()
+                            .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
+                            .daemon(false)
+                            .build());
         }
 
         @Override
@@ -179,7 +185,7 @@ public class VanillaTcpServerTransport implements Transport {
 
                     // we allow multiple requests from the same client, hence, we don't block on processing the
                     // request and writing the response back to the client.
-                    execute(() -> {
+                    requestExecutor.submit(() -> {
                         Message response = messageProcessor.apply(request);
                         try {
                             synchronized (os) {
@@ -193,24 +199,11 @@ public class VanillaTcpServerTransport implements Transport {
                             VanillaTcpServerTransport.shutdown(this::shutdown);
                         }
                     });
-                } catch (EOFException ignore) {
-                    VanillaTcpServerTransport.shutdown(this::shutdown);
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
                     VanillaTcpServerTransport.shutdown(this::shutdown);
                 }
             }
-        }
-
-        synchronized void execute(Runnable runnable) {
-            if (this.requestExecutor == null) {
-                this.requestExecutor = Executors.newCachedThreadPool(
-                        new BasicThreadFactory.Builder()
-                                .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
-                                .daemon(false)
-                                .build());
-            }
-            requestExecutor.submit(runnable);
         }
 
         synchronized void shutdown() {
@@ -228,10 +221,8 @@ public class VanillaTcpServerTransport implements Transport {
             VanillaTcpServerTransport.shutdown(() -> {if (is != null) is.close();});
             VanillaTcpServerTransport.shutdown(() -> {if (socket != null) socket.close();});
             VanillaTcpServerTransport.shutdown(() -> {
-                if (requestExecutor != null) {
-                    requestExecutor.shutdown();
-                    requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
-                }
+                requestExecutor.shutdown();
+                requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
             });
         }
     }
