@@ -203,7 +203,8 @@ class VanillaTcpTransportIntegrationTest {
     @Test
     void testSocketTimeout() {
         Transport sender = clientTransports[0];
-        TestMessage request = new TestMessage("wait-forever")   // signal the server to wait indefinitely
+        // signal the server to wait before responding, this will end up socket to timeout before receiving a response.
+        TestMessage request = new TestMessage("wait")
                 .setSenderId(0)
                 .setReceiverId(1);
         assertThrows(IOException.class, () -> sender.sendRecv(request));
