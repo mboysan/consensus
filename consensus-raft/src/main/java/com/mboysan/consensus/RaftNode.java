@@ -356,7 +356,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     @Override
-    public synchronized CustomResponse customRequest(CustomRequest request) throws IOException {
+    public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
@@ -364,17 +364,19 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
                     .responseTo(request);
         }
-        switch (request.getRequest()) {
-            case "askState" -> {
-                String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
-                return new CustomResponse(true, null, stateStr).responseTo(request);
-            }
-            case "askStateFull" -> {
-                String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
-                return new CustomResponse(true, null, stateStr).responseTo(request);
-            }
-            case "askProtocol" -> {
-                return new CustomResponse(true, null, "raft").responseTo(request);
+        synchronized (this) {
+            switch (request.getRequest()) {
+                case "askState" -> {
+                    String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
+                    return new CustomResponse(true, null, stateStr).responseTo(request);
+                }
+                case "askStateFull" -> {
+                    String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
+                    return new CustomResponse(true, null, stateStr).responseTo(request);
+                }
+                case "askProtocol" -> {
+                    return new CustomResponse(true, null, "raft").responseTo(request);
+                }
             }
         }
         return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
