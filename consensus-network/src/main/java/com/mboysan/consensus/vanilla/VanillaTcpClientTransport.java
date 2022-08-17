@@ -14,7 +14,6 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -44,6 +43,8 @@ public class VanillaTcpClientTransport implements Transport {
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
     private final int associatedServerId;
 
+    private final FailureDetector failureDetector;
+
     public VanillaTcpClientTransport(TcpTransportConfig config) {
         this(config, -1);
     }
@@ -55,6 +56,7 @@ public class VanillaTcpClientTransport implements Transport {
         this.messageCallbackTimeoutMs = config.messageCallbackTimeoutMs();
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
         this.associatedServerId = associatedServerId;
+        this.failureDetector = new FailureDetector(this, config, associatedServerId);
     }
 
     @Override
@@ -98,6 +100,7 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private Message sendRecvUsingClientPool(Message message) throws Exception {
+        failureDetector.validateWorking(message.getReceiverId());
         ObjectPool<TcpClient> pool = getOrCreateClientPool(message.getReceiverId());
         TcpClient client = null;
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
@@ -114,6 +117,7 @@ public class VanillaTcpClientTransport implements Transport {
             if (client != null) {
                 pool.invalidateObject(client);
             }
+            failureDetector.markFailed(message.getReceiverId());
             throw e;
         } finally {
             callbackMap.remove(message.getId());
@@ -136,6 +140,7 @@ public class VanillaTcpClientTransport implements Transport {
             return;
         }
         isRunning = false;
+        failureDetector.shutdown();
         clientPools.forEach((i, pool) -> shutdown(pool::close));
         clientPools.clear();
     }

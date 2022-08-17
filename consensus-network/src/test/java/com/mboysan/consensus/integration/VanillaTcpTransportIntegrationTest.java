@@ -1,14 +1,9 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.EchoRPCProtocol;
 import com.mboysan.consensus.Transport;
-import com.mboysan.consensus.configuration.CoreConfig;
-import com.mboysan.consensus.configuration.Destination;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
-import com.mboysan.consensus.util.NetUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.AfterEach;
@@ -16,9 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,65 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class VanillaTcpTransportIntegrationTest {
+class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
 
-    private static final String HOST_NAME = "localhost";
-
-    private static final int NUM_SERVERS = 3;
-    private static final int NUM_CLIENTS = 3;
-    private static final List<Destination> DESTINATIONS = new ArrayList<>();
-    static {
-        addDestination(0, NetUtil.findFreePort());
-        addDestination(1, NetUtil.findFreePort());
-        addDestination(2, NetUtil.findFreePort());
-    }
     private VanillaTcpServerTransport[] serverTransports;
     private VanillaTcpClientTransport[] clientTransports;
 
     @BeforeEach
-    void setUp() throws IOException {
-        setupServers();
-        setupClients();
-    }
-
-    private void setupServers() throws IOException {
-        serverTransports = new VanillaTcpServerTransport[NUM_SERVERS];
-        for (int i = 0; i < serverTransports.length; i++) {
-            int port = DESTINATIONS.get(i).port();
-            VanillaTcpServerTransport serverTransport = createServerTransport(port);
-            serverTransport.registerMessageProcessor(new EchoRPCProtocol());
-            serverTransports[i] = serverTransport;
-            serverTransport.start();
-        }
-    }
-
-    private void setupClients() {
-        clientTransports = new VanillaTcpClientTransport[NUM_CLIENTS];
-        for (int i = 0; i < clientTransports.length; i++) {
-            VanillaTcpClientTransport clientTransport = createClientTransport();
-            clientTransports[i] = clientTransport;
-            clientTransport.start();
-        }
+    void setUp() {
+        this.serverTransports = setupServers();
+        this.clientTransports = setupClients();
     }
 
     @AfterEach
     void tearDown() {
-        teardownServers();
-        teardownClients();
-    }
-
-    private void teardownServers() {
-        for (VanillaTcpServerTransport serverTransport : serverTransports) {
-            serverTransport.shutdown();
-            assertTrue(serverTransport.verifyShutdown());
-        }
-    }
-
-    private void teardownClients() {
-        for (VanillaTcpClientTransport clientTransport : clientTransports) {
-            clientTransport.shutdown();
-            assertTrue(clientTransport.verifyShutdown());
-        }
+        teardownServers(serverTransports);
+        teardownClients(clientTransports);
     }
 
     @Test
@@ -187,7 +135,7 @@ class VanillaTcpTransportIntegrationTest {
     }
 
     @Test
-    void testIOErrorOnReceiverShutdown() throws IOException {
+    void testIOErrorOnReceiverShutdown() {
         TestMessage request = testMessage(0, 0, 1);
 
         serverTransports[1].shutdown();
@@ -220,27 +168,5 @@ class VanillaTcpTransportIntegrationTest {
         assertEquals(request.getId(), response.getId());
         assertEquals(request.getSenderId(), response.getReceiverId());
         assertEquals(request.getReceiverId(), response.getSenderId());
-    }
-
-    VanillaTcpServerTransport createServerTransport(int port) {
-        Properties properties = new Properties();
-        properties.put("transport.tcp.server.port", String.valueOf(port));
-        properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
-        properties.put("transport.tcp.server.socket.so_timeout", String.valueOf(2500)); // 2.5 seconds timeout
-        // create new config per transport
-        TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        return new VanillaTcpServerTransport(config);
-    }
-
-    VanillaTcpClientTransport createClientTransport() {
-        Properties properties = new Properties();
-        properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
-        // create new config per transport
-        TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        return new VanillaTcpClientTransport(config);
-    }
-
-    private static void addDestination(int nodeId, int port) {
-        DESTINATIONS.add(new Destination(nodeId, HOST_NAME, port));
     }
 }

@@ -19,6 +19,14 @@ public interface TcpTransportConfig extends TransportConfig {
     @DefaultValue("30000")  // 30 seconds
     int socketSoTimeout();
 
+    @Key("transport.tcp.client.failure.markServerAsFailedCount")
+    @DefaultValue("3")
+    int markServerAsFailedCount();
+
+    @Key("transport.tcp.client.failure.pingInterval")
+    @DefaultValue("5000")   // 5 seconds
+    long pingInterval();
+
     /**
      * Following is an example of supported TCP/IP destinations with node ids:
      * </br></br>
