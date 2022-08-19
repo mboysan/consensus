@@ -100,7 +100,7 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private Message sendRecvUsingClientPool(Message message) throws Exception {
-        failureDetector.validateWorking(message.getReceiverId());
+        failureDetector.validateStability(message.getReceiverId());
         ObjectPool<TcpClient> pool = getOrCreateClientPool(message.getReceiverId());
         TcpClient client = null;
         CompletableFuture<Message> msgFuture = new CompletableFuture<>();
