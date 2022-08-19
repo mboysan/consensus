@@ -1,6 +1,7 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.ThrowingRunnable;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
@@ -40,7 +41,7 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
                 if (message instanceof CustomRequest request) {
                     Assertions.fail("ping request must not have been received, request=" + request);
                 }
-                return message;
+                return new CustomResponse(true, null, null).responseTo(message);
             });
             serverTransport.start();
 
@@ -70,7 +71,7 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
                 if (message instanceof CustomRequest) { // ping request
                     latch.countDown();
                 }
-                return message;
+                return new CustomResponse(true, null, null).responseTo(message);
             });
             // don't start the server yet and try to send a few messages to the server.
             // The failure detector will understand that the client couldn't communicate with the server
@@ -78,10 +79,11 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
             for (int i = 0; i < 5; i++) {
                 try {
                     clientTransport.sendRecv(new TestMessage(i + "").setReceiverId(0));
-                    sleep(pingInterval * 10);   // ping messages will be sent in-between.
                     Assertions.fail("the message must not have been sent.");
                 } catch (IOException ignore) {}
             }
+
+            sleep(pingInterval * 10);   // ping messages will be sent in-between.
 
             serverTransport.start();
             latch.await();

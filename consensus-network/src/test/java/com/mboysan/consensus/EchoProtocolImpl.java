@@ -5,9 +5,11 @@ import com.mboysan.consensus.message.TestMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EchoRPCProtocol implements RPCProtocol {
+public class EchoProtocolImpl implements RPCProtocol {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EchoRPCProtocol.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EchoProtocolImpl.class);
+
+    public static final String PAYLOAD_WAIT = "wait";
 
     @Override
     public Message processRequest(Message request) {
@@ -15,7 +17,7 @@ public class EchoRPCProtocol implements RPCProtocol {
             throw new IllegalArgumentException("unsupported message type");
         }
 
-        if ("wait".equals(req.getPayload())) {
+        if (PAYLOAD_WAIT.equals(req.getPayload())) {
             try {
                 // wait for some time and respond afterwards.
                 Thread.sleep(30000);    // 30 secs.

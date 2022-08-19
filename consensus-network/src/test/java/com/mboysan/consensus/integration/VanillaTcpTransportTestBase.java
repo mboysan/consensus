@@ -1,6 +1,6 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.EchoRPCProtocol;
+import com.mboysan.consensus.EchoProtocolImpl;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
@@ -30,7 +30,7 @@ class VanillaTcpTransportTestBase {
         var serverTransports = new VanillaTcpServerTransport[NUM_SERVERS];
         for (int i = 0; i < serverTransports.length; i++) {
             VanillaTcpServerTransport serverTransport = createServerTransport(i);
-            serverTransport.registerMessageProcessor(new EchoRPCProtocol());
+            serverTransport.registerMessageProcessor(new EchoProtocolImpl());
             serverTransports[i] = serverTransport;
             serverTransport.start();
         }

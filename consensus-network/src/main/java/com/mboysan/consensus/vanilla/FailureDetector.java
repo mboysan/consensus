@@ -48,13 +48,16 @@ class FailureDetector {
             Map.Entry<Integer, FailedServer> entry = iterator.next();
             FailedServer failedServer = entry.getValue();
             if (failedServer.failCount >= markServerAsFailedCount) {
-                failedServer.markedStableTemporarily = true;   // temporarily mark server as stable
-                CustomRequest ping = new CustomRequest("ping").setReceiverId(failedServer.serverId);
+                // temporarily mark server as stable to be able to send a ping request.
+                failedServer.markedStableTemporarily = true;
                 try {
+                    CustomRequest ping = new CustomRequest("ping").setReceiverId(failedServer.serverId);
                     clientTransport.sendRecv(ping);
                     // we received some response
                     iterator.remove();
-                } catch (IOException e) {
+                    LOGGER.info("server-{} marked stable again.", failedServer.serverId);
+                } catch (IOException ignore) {
+                } finally {
                     failedServer.markedStableTemporarily = false;
                 }
             }
@@ -67,10 +70,15 @@ class FailureDetector {
         }
         FailedServer failedServer = failedServerMap.computeIfAbsent(serverId, FailedServer::new);
         failedServer.failCount++;
-        LOGGER.debug("Server marked as failed {}", failedServer);
+        if (failedServer.failCount == 1) {
+            LOGGER.warn("server-{} marked as unstable, messages sent to this server will automatically " +
+                    "fail until stability is ensured.", serverId);
+        } else {
+            LOGGER.debug("Server comm failed {}", failedServer);
+        }
     }
 
-    synchronized void validateWorking(int serverId) throws IOException {
+    synchronized void validateStability(int serverId) throws IOException {
         if (!isRunning) {
             return;
         }
@@ -82,7 +90,6 @@ class FailureDetector {
             return;
         }
         if (failedServer.failCount >= markServerAsFailedCount) {
-            LOGGER.debug("Server is unstable {}", failedServer);
             throw new IOException("server-" + serverId + " is unstable");
         }
     }

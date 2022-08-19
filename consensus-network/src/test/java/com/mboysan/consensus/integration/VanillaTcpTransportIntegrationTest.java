@@ -1,5 +1,6 @@
 package com.mboysan.consensus.integration;
 
+import com.mboysan.consensus.EchoProtocolImpl;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
@@ -152,7 +153,7 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
     void testSocketTimeout() {
         Transport sender = clientTransports[0];
         // signal the server to wait before responding, this will end up socket to timeout before receiving a response.
-        TestMessage request = new TestMessage("wait")
+        TestMessage request = new TestMessage(EchoProtocolImpl.PAYLOAD_WAIT)
                 .setSenderId(0)
                 .setReceiverId(1);
         assertThrows(IOException.class, () -> sender.sendRecv(request));
