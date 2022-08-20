@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.mboysan.consensus.SimState.Role.LEADER;
 
@@ -34,7 +35,27 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
 
     @Override
     Future<Void> startNode() {
-        return CompletableFuture.completedFuture(null);
+        return CompletableFuture.supplyAsync(() -> {
+            AtomicInteger count = new AtomicInteger(0);
+            while (true) {
+                count.set(0);
+                forEachPeerParallel(peer -> {
+                    CustomRequest request = new CustomRequest("sim_ping")
+                            .setReceiverId(peer.peerId)
+                            .setSenderId(getNodeId());
+                    try {
+                        getRPC().customRequest(request); // we aren't interested in the response
+                        count.incrementAndGet();
+                    } catch (IOException e) {
+                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
+                    }
+                });
+                if (count.get() == peers.size()) {
+                    return null;
+                }
+                getScheduler().sleep(500);
+            }
+        });
     }
 
     @Override
@@ -55,6 +76,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
 
     @Override
     public SimMessage simulate(SimMessage message) throws IOException {
+        validateAction();
         state.getMessageReceiveCount().incrementAndGet();
         if (state.getRole().equals(LEADER)) {  // leader
             if (simConfig.broadcastToFollowers()) {
