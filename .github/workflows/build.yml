@@ -60,6 +60,7 @@ jobs:
           append consensus-network
           append consensus-bizur
           append consensus-raft
+          append consensus-simulate
           append consensus-kvstore
           append consensus-cli
           append consensus-metrics

@@ -88,13 +88,11 @@ abstract class KVStoreTestBase {
     abstract AbstractKVStore<?>[] getStores();
     abstract InVMTransport getNodeServingTransport();
     abstract InVMTransport getClientServingTransport(int storeId);
-
-    private KVStoreClient getClient(int clientId) {
-        return getClients()[clientId];
-    }
-
-    private KVStoreClient getRandomClient() {
+    KVStoreClient getRandomClient() {
         return getClient(RNG.nextInt(getClients().length));
+    }
+    KVStoreClient getClient(int clientId) {
+        return getClients()[clientId];
     }
 
     private void disconnect(int storeId) {

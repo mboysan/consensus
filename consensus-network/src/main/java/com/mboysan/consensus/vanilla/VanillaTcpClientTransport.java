@@ -95,7 +95,7 @@ public class VanillaTcpClientTransport implements Transport {
         try {
             return sendRecvUsingClientPool(message);
         } catch (Exception e) {
-            throw new IOException(e);
+            throw new IOException("I/O err for messageId=" + message.getId(), e);
         }
     }
 
