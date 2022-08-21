@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ class RaftKVStoreTest extends KVStoreTestBase {
     private InVMTransport nodeServingTransport;
     private RaftKVStore[] stores;
     private KVStoreClient[] clients;
+    private boolean skipTeardown = false;
 
     void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
@@ -48,6 +50,9 @@ class RaftKVStoreTest extends KVStoreTestBase {
 
     @AfterEach
     void tearDown() {
+        if (skipTeardown) {
+            return;
+        }
         Arrays.stream(stores).forEach(KVStoreRPC::shutdown);
         Arrays.stream(clients).forEach(KVStoreClient::shutdown);
     }
@@ -94,6 +99,18 @@ class RaftKVStoreTest extends KVStoreTestBase {
     void testStoreFailureSequential() throws Exception {
         this.initCluster(5);
         super.storeFailureSequentialTest();
+    }
+
+    @Test
+    void testFailResponses() throws Exception {
+        skipTeardown = true;
+
+        RaftNode node = Mockito.mock(RaftNode.class);
+        Mockito.when(node.stateMachineRequest(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.customRequest(Mockito.any())).thenThrow(new IOException());
+        RaftKVStore store = new RaftKVStore(node, null);
+
+        testFailedResponses(store);
     }
 
 }

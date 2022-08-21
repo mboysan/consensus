@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.SimConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ class SimKVStoreTest extends KVStoreTestBase {
     private InVMTransport nodeServingTransport;
     private SimKVStore[] stores;
     private KVStoreClient[] clients;
+
+    private boolean skipTeardown = false;
 
     void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
@@ -46,6 +49,9 @@ class SimKVStoreTest extends KVStoreTestBase {
 
     @AfterEach
     void tearDown() {
+        if (skipTeardown) {
+            return;
+        }
         Arrays.stream(stores).forEach(KVStoreRPC::shutdown);
         Arrays.stream(clients).forEach(KVStoreClient::shutdown);
     }
@@ -77,5 +83,17 @@ class SimKVStoreTest extends KVStoreTestBase {
         getRandomClient().get("a");
         getRandomClient().delete("a");
         getRandomClient().iterateKeys();
+    }
+
+    @Test
+    void testFailResponses() throws Exception {
+        skipTeardown = true;
+
+        SimNode node = Mockito.mock(SimNode.class);
+        Mockito.when(node.simulate(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.customRequest(Mockito.any())).thenThrow(new IOException());
+        SimKVStore store = new SimKVStore(node, null);
+
+        testFailedResponses(store);
     }
 }
