@@ -6,7 +6,7 @@ public interface RaftConfig extends NodeConfig {
     long updateIntervalMs();
 
     @Key("raft.electionTimeoutMs")
-    @DefaultValue("5000")
+    @DefaultValue("1000")
     long electionTimeoutMs();
 
     @Key("raft.consistency")

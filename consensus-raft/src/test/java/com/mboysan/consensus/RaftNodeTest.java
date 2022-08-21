@@ -51,7 +51,7 @@ class RaftNodeTest extends NodeTestBase {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
         properties.put("raft.updateIntervalMs", 50 + "");
-        properties.put("raft.electionTimeoutMs", 1000 + "");
+        properties.put("raft.electionTimeoutMs", 100 + "");
         return CoreConfig.newInstance(RaftConfig.class, properties);
     }
 

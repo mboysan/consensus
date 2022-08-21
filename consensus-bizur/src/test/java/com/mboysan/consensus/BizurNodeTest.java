@@ -64,7 +64,7 @@ class BizurNodeTest extends NodeTestBase {
         properties.put("node.id", nodeId + "");
         properties.put("bizur.numPeers", numPeers + "");
         properties.put("bizur.numBuckets", numBuckets + "");
-        properties.put("bizur.updateIntervalMs", 50 * (nodeId + 1) + "");
+        properties.put("bizur.updateIntervalMs", 50 + "");
         return CoreConfig.newInstance(BizurConfig.class, properties);
     }
 
