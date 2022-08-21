@@ -5,6 +5,7 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
@@ -60,6 +61,11 @@ public class KVStoreServerCLI {
                 BizurConfig bizurConfig = CoreConfig.newInstance(BizurConfig.class, nodeSectionProperties);
                 BizurNode bizurNode = new BizurNode(bizurConfig, nodeServingTransport);
                 kvStore = new BizurKVStore(bizurNode, clientServingTransport);
+            }
+            case "simulate" -> {
+                SimConfig simConfig = CoreConfig.newInstance(SimConfig.class, nodeSectionProperties);
+                SimNode simNode = new SimNode(simConfig, nodeServingTransport);
+                kvStore = new SimKVStore(simNode, clientServingTransport);
             }
             default -> throw new IllegalStateException("Unexpected value: " + conf.nodeConsensusProtocol());
         }

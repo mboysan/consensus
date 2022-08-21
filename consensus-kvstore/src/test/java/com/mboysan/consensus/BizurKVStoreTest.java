@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ class BizurKVStoreTest extends KVStoreTestBase {
     private InVMTransport nodeServingTransport;
     private BizurKVStore[] stores;
     private KVStoreClient[] clients;
+    private boolean skipTeardown = false;
 
     void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
@@ -49,6 +51,9 @@ class BizurKVStoreTest extends KVStoreTestBase {
 
     @AfterEach
     void tearDown() {
+        if (skipTeardown) {
+            return;
+        }
         Arrays.stream(stores).forEach(KVStoreRPC::shutdown);
         Arrays.stream(clients).forEach(KVStoreClient::shutdown);
     }
@@ -119,5 +124,20 @@ class BizurKVStoreTest extends KVStoreTestBase {
     void testStoreFailureSequentialWithMultiBucket() throws Exception {
         this.initCluster(5, 100);
         super.storeFailureSequentialTest();
+    }
+
+    @Test
+    void testFailResponses() throws Exception {
+        skipTeardown = true;
+
+        BizurNode node = Mockito.mock(BizurNode.class);
+        Mockito.when(node.get(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.set(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.delete(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.iterateKeys(Mockito.any())).thenThrow(new IOException());
+        Mockito.when(node.customRequest(Mockito.any())).thenThrow(new IOException());
+        BizurKVStore store = new BizurKVStore(node, null);
+
+        testFailedResponses(store);
     }
 }

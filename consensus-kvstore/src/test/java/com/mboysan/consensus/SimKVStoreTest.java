@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
-import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.configuration.SimConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -14,22 +14,23 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-class RaftKVStoreTest extends KVStoreTestBase {
+class SimKVStoreTest extends KVStoreTestBase {
 
     private InVMTransport nodeServingTransport;
-    private RaftKVStore[] stores;
+    private SimKVStore[] stores;
     private KVStoreClient[] clients;
+
     private boolean skipTeardown = false;
 
     void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
         this.nodeServingTransport = new InVMTransport();
-        this.stores = new RaftKVStore[numNodes];
+        this.stores = new SimKVStore[numNodes];
         this.clients = new KVStoreClient[numNodes];
         for (int i = 0; i < stores.length; i++) {
-            RaftNode node = new RaftNode(raftConfig(i), nodeServingTransport);
+            SimNode node = new SimNode(simConfig(i), nodeServingTransport);
             InVMTransport clientServingTransport = new InVMTransport(i);
-            stores[i] = new RaftKVStore(node, clientServingTransport);
+            stores[i] = new SimKVStore(node, clientServingTransport);
             futures.add(stores[i].start());
 
             clients[i] = new KVStoreClient(clientServingTransport);
@@ -40,12 +41,10 @@ class RaftKVStoreTest extends KVStoreTestBase {
         }
     }
 
-    private RaftConfig raftConfig(int nodeId) {
+    private SimConfig simConfig(int nodeId) {
         Properties properties = new Properties();
         properties.put("node.id", nodeId + "");
-        properties.put("raft.updateIntervalMs", 50 + "");
-        properties.put("raft.electionTimeoutMs", 100 + "");
-        return CoreConfig.newInstance(RaftConfig.class, properties);
+        return CoreConfig.newInstance(SimConfig.class, properties);
     }
 
     @AfterEach
@@ -63,7 +62,7 @@ class RaftKVStoreTest extends KVStoreTestBase {
     }
 
     @Override
-    RaftKVStore[] getStores() {
+    SimKVStore[] getStores() {
         return stores;
     }
 
@@ -78,39 +77,23 @@ class RaftKVStoreTest extends KVStoreTestBase {
     }
 
     @Test
-    void testGetSetSequential() throws Exception {
-        this.initCluster(5);
-        super.putGetSequentialTest();
-    }
-
-    @Test
-    void testDeleteSequential() throws Exception {
-        this.initCluster(5);
-        super.deleteSequentialTest();
-    }
-
-    @Test
-    void testMultiThreaded() throws Exception {
-        this.initCluster(5);
-        super.multiThreadTest();
-    }
-
-    @Test
-    void testStoreFailureSequential() throws Exception {
-        this.initCluster(5);
-        super.storeFailureSequentialTest();
+    void testAllOperations() throws Exception {
+        this.initCluster(3);
+        getRandomClient().set("a", "b");
+        getRandomClient().get("a");
+        getRandomClient().delete("a");
+        getRandomClient().iterateKeys();
     }
 
     @Test
     void testFailResponses() throws Exception {
         skipTeardown = true;
 
-        RaftNode node = Mockito.mock(RaftNode.class);
-        Mockito.when(node.stateMachineRequest(Mockito.any())).thenThrow(new IOException());
+        SimNode node = Mockito.mock(SimNode.class);
+        Mockito.when(node.simulate(Mockito.any())).thenThrow(new IOException());
         Mockito.when(node.customRequest(Mockito.any())).thenThrow(new IOException());
-        RaftKVStore store = new RaftKVStore(node, null);
+        SimKVStore store = new SimKVStore(node, null);
 
         testFailedResponses(store);
     }
-
 }

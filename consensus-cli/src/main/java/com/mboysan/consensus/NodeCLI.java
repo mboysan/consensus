@@ -5,6 +5,7 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
@@ -53,6 +54,10 @@ public class NodeCLI {
             case "bizur" -> {
                 BizurConfig bizurConfig = CoreConfig.newInstance(BizurConfig.class, properties);
                 node = new BizurNode(bizurConfig, nodeServingTransport);
+            }
+            case "simulate" -> {
+                SimConfig simConfig = CoreConfig.newInstance(SimConfig.class, properties);
+                node = new SimNode(simConfig, nodeServingTransport);
             }
             default -> throw new IllegalStateException("Unexpected value: " + conf.nodeConsensusProtocol());
         }

@@ -1,8 +1,17 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
+import com.mboysan.consensus.message.KVDeleteRequest;
+import com.mboysan.consensus.message.KVGetRequest;
+import com.mboysan.consensus.message.KVIterateKeysRequest;
+import com.mboysan.consensus.message.KVOperationResponse;
+import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import org.junit.jupiter.api.Assertions;
 
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Properties;
@@ -84,17 +93,33 @@ abstract class KVStoreTestBase {
         awaiting(() -> assertEntriesForAll(expectedEntries)); // allow sync time
     }
 
+    void testFailedResponses(AbstractKVStore<?> storeWithMockedNode) throws IOException {
+        KVOperationResponse response;
+        response = storeWithMockedNode.get(new KVGetRequest("a"));
+        Assertions.assertTrue(response.getException() instanceof IOException);
+
+        response = storeWithMockedNode.set(new KVSetRequest("a", "b"));
+        Assertions.assertTrue(response.getException() instanceof IOException);
+
+        response = storeWithMockedNode.delete(new KVDeleteRequest("a"));
+        Assertions.assertTrue(response.getException() instanceof IOException);
+
+        response = storeWithMockedNode.iterateKeys(new KVIterateKeysRequest());
+        Assertions.assertTrue(response.getException() instanceof IOException);
+
+        CustomResponse resp = storeWithMockedNode.customRequest(new CustomRequest(""));
+        Assertions.assertTrue(resp.getException() instanceof IOException);
+    }
+
     abstract KVStoreClient[] getClients();
     abstract AbstractKVStore<?>[] getStores();
     abstract InVMTransport getNodeServingTransport();
     abstract InVMTransport getClientServingTransport(int storeId);
-
-    private KVStoreClient getClient(int clientId) {
-        return getClients()[clientId];
-    }
-
-    private KVStoreClient getRandomClient() {
+    KVStoreClient getRandomClient() {
         return getClient(RNG.nextInt(getClients().length));
+    }
+    KVStoreClient getClient(int clientId) {
+        return getClients()[clientId];
     }
 
     private void disconnect(int storeId) {
