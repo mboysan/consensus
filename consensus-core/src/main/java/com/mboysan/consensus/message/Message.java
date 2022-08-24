@@ -1,22 +1,10 @@
 package com.mboysan.consensus.message;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.mboysan.consensus.util.RngUtil;
 
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 
 public abstract class Message implements Serializable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Message.class);
-
-    private static final SecureRandom RNG;
-    static {
-        String seed = System.currentTimeMillis() + "";
-        LOGGER.info("message RNG seed = {}", seed);
-        RNG = new SecureRandom(seed.getBytes(StandardCharsets.UTF_8));
-    }
-
     /**
      * Unique id of a request and response message pair.
      * This value can only be modified with {@link #responseTo(Message)} method, i.e. in response to a certain request.
@@ -93,6 +81,6 @@ public abstract class Message implements Serializable {
     }
 
     public static String generateId() {
-        return RNG.nextInt(Integer.MAX_VALUE) + "";
+        return RngUtil.nextInt(Integer.MAX_VALUE) + "";
     }
 }
