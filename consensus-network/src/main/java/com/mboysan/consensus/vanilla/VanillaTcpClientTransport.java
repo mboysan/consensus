@@ -1,5 +1,6 @@
 package com.mboysan.consensus.vanilla;
 
+import com.mboysan.consensus.MetricsCollector;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
@@ -45,6 +46,8 @@ public class VanillaTcpClientTransport implements Transport {
 
     private final FailureDetector failureDetector;
 
+    private final MetricsCollector metricsCollector;
+
     public VanillaTcpClientTransport(TcpTransportConfig config) {
         this(config, -1);
     }
@@ -57,6 +60,7 @@ public class VanillaTcpClientTransport implements Transport {
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
         this.associatedServerId = associatedServerId;
         this.failureDetector = new FailureDetector(this, config, associatedServerId);
+        this.metricsCollector = MetricsCollector.getInstance();
     }
 
     @Override
@@ -211,6 +215,9 @@ public class VanillaTcpClientTransport implements Transport {
             os.writeObject(message);
             os.flush();
             os.reset();
+            if (metricsCollector.isInsightsEnabled()) {
+                metricsCollector.sample("tcp.client.send.sizeOf." + message.getClass().getSimpleName(), message);
+            }
         }
 
         synchronized void shutdown() {
