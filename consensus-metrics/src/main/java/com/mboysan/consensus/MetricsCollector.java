@@ -3,6 +3,8 @@ package com.mboysan.consensus;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.graphite.GraphiteReporter;
 import com.mboysan.consensus.configuration.MetricsConfig;
+import com.mboysan.consensus.event.MeasurementAsyncEvent;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.util.SerializationUtil;
 import com.mboysan.consensus.util.ThrowingRunnable;
 import io.micrometer.core.instrument.Clock;
@@ -16,6 +18,7 @@ import io.micrometer.core.instrument.dropwizard.DropwizardClock;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.graphite.GraphiteConfig;
 import io.micrometer.graphite.GraphiteMeterRegistry;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +42,9 @@ public class MetricsCollector implements AutoCloseable {
     private MetricsAggregator metricsAggregator = null;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors() * 2);
+            Runtime.getRuntime().availableProcessors() * 2,
+            new BasicThreadFactory.Builder().namingPattern("metrics-collector-%d").daemon(true).build()
+    );
 
     private MetricsCollector(MetricsConfig metricsConfig) {
         LOGGER.info("metrics config={}", metricsConfig);
@@ -57,6 +62,8 @@ public class MetricsCollector implements AutoCloseable {
 
         if (metricsConfig.insightsMetricsEnabled()) {
             this.metricsAggregator = new MetricsAggregator(metricsConfig, graphiteSender);
+            EventManager.registerEventListener(MeasurementEvent.class, this::measure);
+            EventManager.registerEventListener(MeasurementAsyncEvent.class, this::measureAsync);
         }
 
         if (!metricsConfig.jvmMetricsEnabled()) {
@@ -107,6 +114,50 @@ public class MetricsCollector implements AutoCloseable {
         }
     }
 
+    private void measure(MeasurementEvent measurementEvent) {
+        String value = null;
+        Object payload = measurementEvent.getPayload();
+        if (payload instanceof Long val) {
+            value = String.valueOf(val);
+        } else if (payload instanceof Integer val) {
+            value = String.valueOf(val);
+        } else if (payload instanceof String val) {
+            value = val;
+        } else if (payload instanceof Serializable val) {
+            // WARN! other primitives will also use this path
+            try {
+                value = String.valueOf(SerializationUtil.sizeOf(val));
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage());
+            }
+        } else {
+            throw new UnsupportedOperationException("unsupported measurement payload=" + payload);
+        }
+
+        switch (measurementEvent.getMeasurementType()) {
+            case SAMPLE -> {
+                metricsAggregator.add(new Measurement(
+                        measurementEvent.getName(),
+                        value,
+                        measurementEvent.getTimestamp()
+                ));
+            }
+            case AGGREGATE -> {
+                metricsAggregator.add(new LongAggregateMeasurement(
+                        measurementEvent.getName(),
+                        String.valueOf(value),
+                        measurementEvent.getTimestamp()
+                ));
+            }
+        }
+    }
+
+    private void measureAsync(MeasurementAsyncEvent measurementEvent) {
+        executor.submit(() -> {
+            measure(measurementEvent);
+        });
+    }
+
     @Override
     public void close() {
         shutdown(executor::shutdown);
@@ -123,80 +174,12 @@ public class MetricsCollector implements AutoCloseable {
         return instance = new MetricsCollector(metricsConfig);
     }
 
-    public synchronized static MetricsCollector getInstance() {
-        if (instance == null) {
-            return initAndStart(null);
-        }
-        return instance;
-    }
-
     /**
      * For testing purposes.
      */
     synchronized static void shutdown() {
-        getInstance().close();
+        instance.close();
         instance = null;    // dereference
-    }
-
-    MetricsAggregator getAggregator() {
-        return metricsAggregator;
-    }
-
-    // ---------------------------------------------------------------------------------- public api
-
-    public boolean isInsightsEnabled() {
-        return metricsAggregator != null;
-    }
-
-    public void aggregateAsync(String name, long value) {
-        executor.submit(() -> {
-            aggregate(name, value);
-        });
-    }
-
-    public void aggregate(String name, long value) {
-        if (isInsightsEnabled()) {
-            metricsAggregator.add(new LongAggregateMeasurement(name, value));
-        }
-    }
-
-    public void sampleAsync(String measurementName, Serializable object) {
-        executor.submit(() -> {
-            sample(measurementName, object);
-        });
-    }
-
-    public void sample(String measurementName, Serializable object) {
-        if (isInsightsEnabled()) {
-            try {
-                final long objSize = SerializationUtil.sizeOf(object);
-                sample(measurementName, objSize);
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage());
-            }
-        }
-    }
-
-    public void sampleAsync(String name, long value) {
-        executor.submit(() -> {
-            sample(name, value);
-        });
-    }
-
-    public void sample(String name, long value) {
-        sample(name, String.valueOf(value));
-    }
-
-    public void sampleAsync(String name, String value) {
-        executor.submit(() -> {
-            sample(name, value);
-        });
-    }
-
-    public void sample(String name, String value) {
-        if (isInsightsEnabled()) {
-            metricsAggregator.add(new Measurement(name, value));
-        }
     }
 
     private static void shutdown(ThrowingRunnable toShutdown) {

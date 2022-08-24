@@ -1,8 +1,8 @@
 package com.mboysan.consensus;
 
 public class LongAggregateMeasurement extends AggregateMeasurement {
-    public LongAggregateMeasurement(String name, long value) {
-        super(name, String.valueOf(value));
+    public LongAggregateMeasurement(String name, String value, long timestamp) {
+        super(name, value, timestamp);
     }
 
     @Override

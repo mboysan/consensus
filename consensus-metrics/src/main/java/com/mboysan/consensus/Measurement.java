@@ -1,13 +1,16 @@
 package com.mboysan.consensus;
 
+import java.util.Objects;
+
 public class Measurement implements Comparable<Measurement> {
     private String name;
     private String value;
-    private long timestamp = System.currentTimeMillis();
+    private long timestamp;
 
-    public Measurement(String name, String value) {
-        this.name = name;
-        this.value = value;
+    public Measurement(String name, String value, long timestamp) {
+        this.name = Objects.requireNonNull(name);
+        this.value = Objects.requireNonNull(value);
+        this.timestamp = Objects.requireNonNull(timestamp);
     }
 
     public String getName() {

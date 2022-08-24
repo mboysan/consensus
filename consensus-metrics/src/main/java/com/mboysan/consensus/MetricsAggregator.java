@@ -43,6 +43,7 @@ class MetricsAggregator {
     }
 
     private synchronized void dumpMeasurements() {
+        LOGGER.debug("dumping measurements.");
         Iterator<AggregateMeasurement> aggrIter = aggregatedMeasurements.values().iterator();
         while (aggrIter.hasNext()) {
             Measurement measurement = aggrIter.next();

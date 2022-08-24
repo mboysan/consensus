@@ -1,9 +1,11 @@
 package com.mboysan.consensus.vanilla;
 
-import com.mboysan.consensus.MetricsCollector;
+import com.mboysan.consensus.EventManager;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.event.MeasurementAsyncEvent;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.pool2.BasePooledObjectFactory;
@@ -46,8 +48,6 @@ public class VanillaTcpClientTransport implements Transport {
 
     private final FailureDetector failureDetector;
 
-    private final MetricsCollector metricsCollector;
-
     public VanillaTcpClientTransport(TcpTransportConfig config) {
         this(config, -1);
     }
@@ -60,7 +60,6 @@ public class VanillaTcpClientTransport implements Transport {
         this.clientPoolSize = resolveClientPoolSize(config.clientPoolSize());
         this.associatedServerId = associatedServerId;
         this.failureDetector = new FailureDetector(this, config, associatedServerId);
-        this.metricsCollector = MetricsCollector.getInstance();
     }
 
     @Override
@@ -215,9 +214,7 @@ public class VanillaTcpClientTransport implements Transport {
             os.writeObject(message);
             os.flush();
             os.reset();
-            if (metricsCollector.isInsightsEnabled()) {
-                metricsCollector.sample("tcp.client.send.sizeOf." + message.getClass().getSimpleName(), message);
-            }
+            sampleSend(message);
         }
 
         synchronized void shutdown() {
@@ -253,6 +250,17 @@ public class VanillaTcpClientTransport implements Transport {
         @Override
         public PooledObject<TcpClient> wrap(TcpClient tcpClient) {
             return new DefaultPooledObject<>(tcpClient);
+        }
+    }
+
+    private static void sampleSend(Message message) {
+        if (EventManager.listenerExists(MeasurementEvent.class)) {
+            // fire async measurement event
+            EventManager.fireEvent(new MeasurementAsyncEvent(
+                    MeasurementEvent.MeasurementType.SAMPLE,
+                    "tcp.client.send.sizeOf." + message.getClass().getSimpleName(),
+                    message
+            ));
         }
     }
 }

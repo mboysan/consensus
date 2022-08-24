@@ -1,8 +1,8 @@
 package com.mboysan.consensus;
 
 public abstract class AggregateMeasurement extends Measurement {
-    public AggregateMeasurement(String name, String value) {
-        super(name, value);
+    public AggregateMeasurement(String name, String value, long timestamp) {
+        super(name, value, timestamp);
     }
 
     synchronized void doAggregate(String newValue) {

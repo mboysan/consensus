@@ -47,7 +47,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         this.scheduler = new Scheduler();
         this.nodeConfig = config;
 
-        EventManager.getInstance().registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
+        EventManager.registerEventListener(NodeListChangedEvent.class, this::onNodeListChanged);
     }
 
     public synchronized Future<Void> start() throws IOException {
@@ -68,7 +68,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
                 new BasicThreadFactory.Builder().namingPattern("node-" + nodeId + "-peer-exec-%d").daemon(true).build()
         );
 
-        EventManager.getInstance().fireEvent(new NodeStartedEvent(nodeId));
+        EventManager.fireEvent(new NodeStartedEvent(nodeId));
 
         return startNode();
     }
@@ -83,7 +83,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         scheduler.shutdown();
         peerExecutor.shutdown();
         peers.clear();
-        EventManager.getInstance().fireEvent(new NodeStoppedEvent(nodeId));
+        EventManager.fireEvent(new NodeStoppedEvent(nodeId));
         if (!transport.isShared()) {
             transport.shutdown();
         }

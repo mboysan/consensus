@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
+import com.mboysan.consensus.event.MeasurementAsyncEvent;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +17,8 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.mboysan.consensus.event.MeasurementEvent.MeasurementType.AGGREGATE;
+import static com.mboysan.consensus.event.MeasurementEvent.MeasurementType.SAMPLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -89,7 +93,7 @@ class MetricsCollectorTest {
     // --------------------------------------------------------------------------------- insights metrics
 
     @Test
-    void assertSamplingAndAggregation() throws IOException {
+    void assertSampleAndAggregate() throws IOException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
@@ -101,30 +105,36 @@ class MetricsCollectorTest {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            collector.sample("sampledStr", "value0");
-            collector.sampleAsync("sampledStr", "value1");
-            collector.sample("sampledStr", "value2");
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
+            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledStr", "value1"));
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
 
-            collector.sample("sampledLong", 0);
-            collector.sampleAsync("sampledLong", 1);
-            collector.sample("sampledLong", 2);
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 10));
+            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledInt", 20));
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 30));
 
-            collector.sample("sampledMessageSize", new CustomRequest(""));
-            collector.sampleAsync("sampledMessageSize", new CustomRequest(""));
-            collector.sample("sampledMessageSize", new CustomRequest(""));
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
+            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledLong", 20L));
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
 
-            collector.aggregate("aggregatedLong", 0);
-            collector.aggregateAsync("aggregatedLong", 10);
-            collector.aggregate("aggregatedLong", 20);
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+
+            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
+            EventManager.fireEvent(new MeasurementAsyncEvent(AGGREGATE, "aggregatedLong", 20L));
+            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
             collector.close();   // measurements will be dumped upon close.
 
             AtomicInteger sampledStrCount = new AtomicInteger(0);
-            AtomicInteger sampledLongCount = new AtomicInteger(0);
+            AtomicInteger sampledIntTotal = new AtomicInteger(0);
+            AtomicLong sampledLongTotal = new AtomicLong(0);
             AtomicLong sampledMessageSizes = new AtomicLong(0);
             AtomicLong aggregatedLong = new AtomicLong(0);
 
             List<String> metricsLines = Files.readAllLines(metricsPath);
+            assertEquals(13, metricsLines.size());  // 12 sample + 1 aggregate
             for (String metric : metricsLines) {
                 String[] split = metric.split(separator);
                 final String name = split[0];
@@ -136,8 +146,11 @@ class MetricsCollectorTest {
                 if (name.equals("sampledStr")) {
                     sampledStrCount.incrementAndGet();
                 }
+                if (name.equals("sampledInt")) {
+                    sampledIntTotal.addAndGet(Integer.parseInt(value));
+                }
                 if (name.equals("sampledLong")) {
-                    sampledLongCount.incrementAndGet();
+                    sampledLongTotal.addAndGet(Long.parseLong(value));
                 }
                 if (name.equals("sampledMessageSize")) {
                     sampledMessageSizes.set(sampledMessageSizes.get() + Long.parseLong(value));
@@ -148,9 +161,10 @@ class MetricsCollectorTest {
             }
 
             assertEquals(3, sampledStrCount.get());
-            assertEquals(3, sampledLongCount.get());
+            assertEquals(60, sampledIntTotal.get());
+            assertEquals(60, sampledLongTotal.get());
             assertTrue(sampledMessageSizes.get() > 600);
-            assertEquals(30, aggregatedLong.get());
+            assertEquals(60, aggregatedLong.get());
 
         } finally {
             Files.deleteIfExists(metricsPath);
