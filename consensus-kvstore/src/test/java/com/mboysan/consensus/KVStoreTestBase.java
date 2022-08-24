@@ -9,10 +9,10 @@ import com.mboysan.consensus.message.KVIterateKeysRequest;
 import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import com.mboysan.consensus.util.RngUtil;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,8 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 abstract class KVStoreTestBase {
-
-    private static final SecureRandom RNG = new SecureRandom();
 
     static {
         Properties properties = new Properties();
@@ -60,7 +58,7 @@ abstract class KVStoreTestBase {
                     String key = "testKey" + finalI;
                     String val = "testVal" + finalI;
                     getRandomClient().set(key ,val);
-                    if (RNG.nextBoolean()) {   // in some cases, remove the entry
+                    if (RngUtil.nextBoolean()) {   // in some cases, remove the entry
                         getRandomClient().delete(key);
                     } else {    // in other cases, just leave it inserted.
                         expectedEntries.put(key, val);
@@ -116,7 +114,7 @@ abstract class KVStoreTestBase {
     abstract InVMTransport getNodeServingTransport();
     abstract InVMTransport getClientServingTransport(int storeId);
     KVStoreClient getRandomClient() {
-        return getClient(RNG.nextInt(getClients().length));
+        return getClient(RngUtil.nextInt(getClients().length));
     }
     KVStoreClient getClient(int clientId) {
         return getClients()[clientId];

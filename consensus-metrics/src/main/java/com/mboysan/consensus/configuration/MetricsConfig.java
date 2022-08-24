@@ -2,44 +2,44 @@ package com.mboysan.consensus.configuration;
 
 public interface MetricsConfig extends CoreConfig {
 
-    @Key("metrics.enabled")
-    @DefaultValue("false")
-    boolean enabled();
-
     @Key("metrics.exportfile")
     @DefaultValue("/tmp/metrics.txt")
     String exportfile();
 
-    @Key("metrics.seperator")
+    @Key("metrics.separator")
     @DefaultValue(" ")
     String seperator();
-
-    @Key("metrics.prefix")
-    @DefaultValue("")
-    String prefix();
 
     @Key("metrics.step")
     @DefaultValue("2000")
     long step();
 
-    @Key("metrics.classloader.enabled")
-    @DefaultValue("true")
-    boolean classLoaderMetricsEnabled();
+    @Key("metrics.insights.enabled")
+    @DefaultValue("false")
+    boolean insightsMetricsEnabled();
 
-    @Key("metrics.memory.enabled")
-    @DefaultValue("true")
-    boolean memoryMetricsEnabled();
+    @Key("metrics.jvm.enabled")
+    @DefaultValue("false")
+    boolean jvmMetricsEnabled();
 
-    @Key("metrics.gc.enabled")
+    @Key("metrics.jvm.classloader.enabled")
     @DefaultValue("true")
-    boolean gcMetricsEnabled();
+    boolean jvmClassLoaderMetricsEnabled();
 
-    @Key("metrics.processor.enabled")
+    @Key("metrics.jvm.memory.enabled")
     @DefaultValue("true")
-    boolean processorMetricsEnabled();
+    boolean jvmMemoryMetricsEnabled();
 
-    @Key("metrics.thread.enabled")
+    @Key("metrics.jvm.gc.enabled")
     @DefaultValue("true")
-    boolean threadMetricsEnabled();
+    boolean jvmGcMetricsEnabled();
+
+    @Key("metrics.jvm.processor.enabled")
+    @DefaultValue("true")
+    boolean jvmProcessorMetricsEnabled();
+
+    @Key("metrics.jvm.thread.enabled")
+    @DefaultValue("true")
+    boolean jvmThreadMetricsEnabled();
 
 }

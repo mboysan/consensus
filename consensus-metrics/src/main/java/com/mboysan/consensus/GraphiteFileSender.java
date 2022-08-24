@@ -22,10 +22,12 @@ public class GraphiteFileSender implements GraphiteSender {
     private final String separator;
     private final PrintWriter writer;
 
-    public GraphiteFileSender(String outputPath, String seperator) {
+    public GraphiteFileSender(String outputPath, String separator) {
         try {
-            this.separator = seperator;
-            Path path = Files.createFile(FileUtil.path(outputPath));
+            this.separator = separator;
+            Path path = FileUtil.path(outputPath);
+            Files.deleteIfExists(path);
+            Files.createFile(path);
             File file = path.toFile();
             boolean writable = file.setWritable(true);
             boolean readable = file.setReadable(true);

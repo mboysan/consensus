@@ -1,19 +1,16 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.util.NetUtil;
+import com.mboysan.consensus.util.RngUtil;
 import com.mboysan.consensus.util.ThrowingRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.StringJoiner;
 
 public abstract class KVStoreClusterBase {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClusterBase.class);
-
-    private static final SecureRandom RNG = new SecureRandom();
 
     int[][] ports(int numNodes) {
         int[][] ports = new int [numNodes][2];
@@ -55,7 +52,7 @@ public abstract class KVStoreClusterBase {
     }
 
     public int randomClientId() {
-        return RNG.nextInt(getClients().size());
+        return RngUtil.nextInt(getClients().size());
     }
 
     public void cleanup() {

@@ -5,7 +5,7 @@ import com.mboysan.consensus.configuration.TransportConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.SerializationTestUtil;
+import com.mboysan.consensus.util.SerializationUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +39,6 @@ public class InVMTransport implements Transport {
 
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
-
-    private final EventManager eventManager;
     private final int associatedNodeId;
 
     public InVMTransport() {
@@ -48,8 +46,7 @@ public class InVMTransport implements Transport {
     }
 
     public InVMTransport(int associatedNodeId) {
-        this.eventManager = EventManager.getInstance();
-        this.eventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+        EventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
         this.associatedNodeId = associatedNodeId;
     }
 
@@ -76,7 +73,7 @@ public class InVMTransport implements Transport {
                 server = new Server(messageProcessor);
                 // add this server to map and start processing
                 serverMap.put(nodeId, server);
-                serverMap.forEach((i, s) -> eventManager.fireEvent(new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
+                serverMap.forEach((i, s) -> EventManager.fireEvent(new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
                 serverExecutor.execute(server);
             }
             LOGGER.info("server-{} added", nodeId);
@@ -96,7 +93,7 @@ public class InVMTransport implements Transport {
             idsTmp.remove(nodeId);
             server.shutdown();
             serverMap.remove(nodeId);
-            eventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
+            EventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
         }
         LOGGER.info("server-{} removed", nodeId);
     }
@@ -231,7 +228,8 @@ public class InVMTransport implements Transport {
                     }
 
                     // we also test if a received message can be serialized and deserialized successfully.
-                    Message request = SerializationTestUtil.serializeDeserialize(message);
+                    byte[] objBytes = SerializationUtil.serialize(message);
+                    Message request = SerializationUtil.deserialize(objBytes);
 
                     // don't block request processing
                     requestExecutor.submit(() -> {
