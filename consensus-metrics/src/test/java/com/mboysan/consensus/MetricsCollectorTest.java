@@ -39,6 +39,7 @@ class MetricsCollectorTest {
         properties.put("metrics.jvm.enabled", "false");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
+        Files.deleteIfExists(metricsPath);
         try {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertFalse(Files.exists(metricsPath));
@@ -54,6 +55,7 @@ class MetricsCollectorTest {
         properties.put("metrics.jvm.enabled", "true");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
+        Files.deleteIfExists(metricsPath);
         try {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
@@ -72,6 +74,7 @@ class MetricsCollectorTest {
         properties.put("metrics.separator", separator);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
+        Files.deleteIfExists(metricsPath);
         try {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             Thread.sleep(3000);
@@ -101,6 +104,7 @@ class MetricsCollectorTest {
         properties.put("metrics.separator", separator);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
+        Files.deleteIfExists(metricsPath);
         try {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
