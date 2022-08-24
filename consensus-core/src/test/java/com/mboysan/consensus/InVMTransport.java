@@ -5,7 +5,7 @@ import com.mboysan.consensus.configuration.TransportConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.SerializationTestUtil;
+import com.mboysan.consensus.util.SerializationUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -231,7 +231,8 @@ public class InVMTransport implements Transport {
                     }
 
                     // we also test if a received message can be serialized and deserialized successfully.
-                    Message request = SerializationTestUtil.serializeDeserialize(message);
+                    byte[] objBytes = SerializationUtil.serialize(message);
+                    Message request = SerializationUtil.deserialize(objBytes);
 
                     // don't block request processing
                     requestExecutor.submit(() -> {
