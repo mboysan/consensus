@@ -193,6 +193,7 @@ public class VanillaTcpClientTransport implements Transport {
                     semaphore.acquire();
                     Message response = (Message) is.readObject();
                     LOGGER.debug("IN (response): {}", response);
+                    sampleReceive(response);
                     CompletableFuture<Message> future = callbackMap.remove(response.getId());
                     if (future != null) {
                         future.complete(response);
@@ -229,6 +230,21 @@ public class VanillaTcpClientTransport implements Transport {
         }
     }
 
+    private static void sampleSend(Message message) {
+        sample("insights.tcp.client.send.sizeOf." + message.getClass().getSimpleName(), message);
+    }
+
+    private static void sampleReceive(Message message) {
+        sample("insights.tcp.client.receive.sizeOf." + message.getClass().getSimpleName(), message);
+    }
+
+    private static void sample(String name, Message message) {
+        if (EventManager.listenerExists(MeasurementAsyncEvent.class)) {
+            // fire async measurement event
+            EventManager.fireEvent(new MeasurementAsyncEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
+        }
+    }
+
     private class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {
         private final AtomicInteger clientId = new AtomicInteger(0);
         private final Destination destination;
@@ -250,17 +266,6 @@ public class VanillaTcpClientTransport implements Transport {
         @Override
         public PooledObject<TcpClient> wrap(TcpClient tcpClient) {
             return new DefaultPooledObject<>(tcpClient);
-        }
-    }
-
-    private static void sampleSend(Message message) {
-        if (EventManager.listenerExists(MeasurementEvent.class)) {
-            // fire async measurement event
-            EventManager.fireEvent(new MeasurementAsyncEvent(
-                    MeasurementEvent.MeasurementType.SAMPLE,
-                    "tcp.client.send.sizeOf." + message.getClass().getSimpleName(),
-                    message
-            ));
         }
     }
 }
