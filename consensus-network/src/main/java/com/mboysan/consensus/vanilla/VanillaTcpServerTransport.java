@@ -1,8 +1,11 @@
 package com.mboysan.consensus.vanilla;
 
+import com.mboysan.consensus.EventManager;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.event.MeasurementAsyncEvent;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.ThrowingRunnable;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -182,6 +185,7 @@ public class VanillaTcpServerTransport implements Transport {
                 try {
                     Message request = (Message) is.readObject();
                     LOGGER.debug("IN (request): {}", request);
+                    sampleReceive(request);
 
                     // we allow multiple requests from the same client, hence, we don't block on processing the
                     // request and writing the response back to the client.
@@ -193,6 +197,7 @@ public class VanillaTcpServerTransport implements Transport {
                                 os.writeObject(response);
                                 os.flush();
                                 os.reset();
+                                sampleSend(response);
                             }
                         } catch (IOException e) {
                             LOGGER.error(e.getMessage());
@@ -224,6 +229,21 @@ public class VanillaTcpServerTransport implements Transport {
                 requestExecutor.shutdown();
                 requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
             });
+        }
+    }
+
+    private static void sampleSend(Message message) {
+        sample("insights.tcp.server.send.sizeOf." + message.getClass().getSimpleName(), message);
+    }
+
+    private static void sampleReceive(Message message) {
+        sample("insights.tcp.server.receive.sizeOf." + message.getClass().getSimpleName(), message);
+    }
+
+    private static void sample(String name, Message message) {
+        if (EventManager.listenerExists(MeasurementAsyncEvent.class)) {
+            // fire async measurement event
+            EventManager.fireEvent(new MeasurementAsyncEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
         }
     }
 }
