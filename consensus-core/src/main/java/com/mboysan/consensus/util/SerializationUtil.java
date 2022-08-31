@@ -7,7 +7,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-public class SerializationUtil {
+public final class SerializationUtil {
+
+    private SerializationUtil() {}
 
     public static long sizeOf(Serializable obj) throws IOException {
         return serialize(obj).length;

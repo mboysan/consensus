@@ -2,7 +2,7 @@ package com.mboysan.consensus.vanilla;
 
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CustomRequest;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -99,16 +98,7 @@ class FailureDetector {
             return;
         }
         isRunning = false;
-        shutdown(scheduledExecutor::shutdown);
-        shutdown(() -> scheduledExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
+        ShutdownUtil.shutdown(LOGGER, scheduledExecutor);
     }
 
     private static final class FailedServer {

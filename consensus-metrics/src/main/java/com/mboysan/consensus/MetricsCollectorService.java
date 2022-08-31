@@ -5,7 +5,7 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.util.SerializationUtil;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
-import java.util.Objects;
 
 public final class MetricsCollectorService implements BackgroundService {
 
@@ -144,9 +143,9 @@ public final class MetricsCollectorService implements BackgroundService {
     }
 
     public synchronized void shutdown() {
-        shutdown(() -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
-        shutdown(() -> {if (graphiteSender != null) graphiteSender.shutdown();});
-        shutdown(() -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});
+        ShutdownUtil.shutdown(LOGGER, () -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
+        ShutdownUtil.shutdown(LOGGER, () -> {if (graphiteSender != null) graphiteSender.shutdown();});
+        ShutdownUtil.shutdown(LOGGER, () -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});
     }
 
     @Override
@@ -167,14 +166,6 @@ public final class MetricsCollectorService implements BackgroundService {
     static void shutdownAndDereference() {
         instance.shutdown();
         instance = null;    // dereference
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
     }
 
 }

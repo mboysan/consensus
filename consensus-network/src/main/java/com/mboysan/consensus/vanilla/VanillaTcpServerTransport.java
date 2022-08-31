@@ -6,7 +6,7 @@ import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,13 +19,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpServerTransport implements Transport {
@@ -140,20 +138,11 @@ public class VanillaTcpServerTransport implements Transport {
             return;
         }
         isRunning = false;
-        shutdown(serverSocket::close);
-        shutdown(clientHandlerExecutor::shutdown);
-        clientHandlers.forEach((s, ch) -> shutdown(ch::shutdown));
+        ShutdownUtil.close(LOGGER, serverSocket);
+        ShutdownUtil.shutdown(LOGGER, clientHandlerExecutor);
+        clientHandlers.forEach((s, ch) -> ShutdownUtil.shutdown(LOGGER, ch::shutdown));
         clientHandlers.clear();
-        shutdown(clientTransport::shutdown);
-        shutdown(() -> clientHandlerExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS));
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
+        ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
     }
 
     public synchronized boolean verifyShutdown() {
@@ -200,12 +189,12 @@ public class VanillaTcpServerTransport implements Transport {
                             }
                         } catch (IOException e) {
                             LOGGER.error(e.getMessage());
-                            VanillaTcpServerTransport.shutdown(this::shutdown);
+                            shutdown();
                         }
                     });
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
-                    VanillaTcpServerTransport.shutdown(this::shutdown);
+                    shutdown();
                 }
             }
         }
@@ -215,19 +204,8 @@ public class VanillaTcpServerTransport implements Transport {
                 return;
             }
             isRunning = false;
-            VanillaTcpServerTransport.shutdown(() -> {
-                if (os != null) {
-                    synchronized (os) {
-                        os.close();
-                    }
-                }
-            });
-            VanillaTcpServerTransport.shutdown(() -> {if (is != null) is.close();});
-            VanillaTcpServerTransport.shutdown(() -> {if (socket != null) socket.close();});
-            VanillaTcpServerTransport.shutdown(() -> {
-                requestExecutor.shutdown();
-                requestExecutor.awaitTermination(5000, TimeUnit.MILLISECONDS);
-            });
+            ShutdownUtil.close(LOGGER, socket);
+            ShutdownUtil.shutdown(LOGGER, requestExecutor);
         }
     }
 

@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.event.IEvent;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class EventManagerService implements BackgroundService {
@@ -87,8 +86,7 @@ public final class EventManagerService implements BackgroundService {
             return;
         }
         isRunning = false;
-        shutdown(executor::shutdown);
-        shutdown(() -> executor.awaitTermination(5000L, TimeUnit.MILLISECONDS));
+        ShutdownUtil.shutdown(LOGGER, executor);
     }
 
     @Override
@@ -102,13 +100,5 @@ public final class EventManagerService implements BackgroundService {
 
     public static EventManagerService getInstance() {
         return INSTANCE;
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
     }
 }

@@ -6,7 +6,7 @@ import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
@@ -143,16 +143,8 @@ public class VanillaTcpClientTransport implements Transport {
         }
         isRunning = false;
         failureDetector.shutdown();
-        clientPools.forEach((i, pool) -> shutdown(pool::close));
+        clientPools.forEach((i, pool) -> ShutdownUtil.close(LOGGER, pool));
         clientPools.clear();
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
     }
 
     public synchronized boolean verifyShutdown() {
@@ -199,10 +191,10 @@ public class VanillaTcpClientTransport implements Transport {
                     }
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
-                    VanillaTcpClientTransport.shutdown(this::shutdown);
+                    shutdown();
                 } catch (InterruptedException e) {
                     LOGGER.error(e.getMessage());
-                    VanillaTcpClientTransport.shutdown(this::shutdown);
+                    shutdown();
                     Thread.currentThread().interrupt();
                 }
             }
@@ -222,9 +214,7 @@ public class VanillaTcpClientTransport implements Transport {
                 return;
             }
             isConnected = false;
-            VanillaTcpClientTransport.shutdown(() -> {if (os != null) os.close();});
-            VanillaTcpClientTransport.shutdown(() -> {if (is != null) is.close();});
-            VanillaTcpClientTransport.shutdown(() -> {if (socket != null) socket.close();});
+            ShutdownUtil.close(LOGGER, socket);
             semaphore.release();
         }
     }
