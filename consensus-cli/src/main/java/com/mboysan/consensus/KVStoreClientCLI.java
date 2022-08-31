@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class KVStoreClientCLI {
 
@@ -25,8 +24,6 @@ public class KVStoreClientCLI {
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
 
     private static final String ROUTE_TO_SEPARATOR = "#";
-
-    private static final AtomicReference<MetricsCollector> METRICS_COLLECTOR_REF = new AtomicReference<>();
 
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
@@ -102,20 +99,14 @@ public class KVStoreClientCLI {
             try {
                 client.shutdown();
             } finally {
-                LOGGER.info("client stopped");
-                shutdownBackgroundServices();
+                BackgroundServiceRegistry.getInstance().shutdownAll();
             }
         });
     }
 
     private static void startMetricsCollector(Properties properties) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
-    }
-
-    private static void shutdownBackgroundServices() {
-        METRICS_COLLECTOR_REF.get().close();
-        EventManager.getInstance().shutdown();
+        MetricsCollectorService.initAndStart(config);
     }
 
     private static boolean isInteractiveSession(Properties properties) {

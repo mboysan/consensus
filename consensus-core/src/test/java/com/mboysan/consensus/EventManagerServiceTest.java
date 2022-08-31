@@ -10,20 +10,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 
-class EventManagerTest {
+class EventManagerServiceTest {
 
     @Test
     void testEventRegistrationAndFire() {
         AtomicInteger i = new AtomicInteger(0);
         IEvent mockEvent = mock(IEvent.class);
         // register 2 listeners which listens to any event types.
-        EventManager.getInstance().registerEventListener(mockEvent.getClass(), e -> {
+        EventManagerService.getInstance().register(mockEvent.getClass(), e -> {
             i.incrementAndGet();    // perform some operation
         });
-        EventManager.getInstance().registerEventListener(mockEvent.getClass(), e -> {
+        EventManagerService.getInstance().register(mockEvent.getClass(), e -> {
             i.incrementAndGet();    // perform some operation
         });
-        EventManager.getInstance().fireEvent(mockEvent); // fire an event with specific context.
+        EventManagerService.getInstance().fire(mockEvent); // fire an event with specific context.
         assertEquals(2, i.get());
     }
 
@@ -33,11 +33,11 @@ class EventManagerTest {
         IEvent mockEvent = mock(IEvent.class);
         CountDownLatch latch = new CountDownLatch(1);
         // register 1 listeners which listens to any event types.
-        EventManager.getInstance().registerEventListener(mockEvent.getClass(), e -> {
+        EventManagerService.getInstance().register(mockEvent.getClass(), e -> {
             i.incrementAndGet();    // perform some operation
             latch.countDown();
         });
-        EventManager.getInstance().fireEventAsync(mockEvent); // fire an async event with specific context.
+        EventManagerService.getInstance().fireAsync(mockEvent); // fire an async event with specific context.
         latch.await();
         assertEquals(1, i.get());
     }
@@ -48,19 +48,19 @@ class EventManagerTest {
         IEvent mockEvent = mock(IEvent.class);
         // register 2 listeners which listens to any event types.
         // first listener throws runtime exception, but other should not be affected.
-        EventManager.getInstance().registerEventListener(mockEvent.getClass(), e -> {
+        EventManagerService.getInstance().register(mockEvent.getClass(), e -> {
             throw new RuntimeException();
         });
-        EventManager.getInstance().registerEventListener(mockEvent.getClass(), e -> {
+        EventManagerService.getInstance().register(mockEvent.getClass(), e -> {
             i.incrementAndGet();    // perform some operation
         });
-        EventManager.getInstance().fireEvent(mockEvent); // fire an event with specific context.
+        EventManagerService.getInstance().fire(mockEvent); // fire an event with specific context.
         assertEquals(1, i.get());
     }
 
     @Test
     void testListenerExists() {
         class SomeEvent implements IEvent {}
-        assertFalse(EventManager.getInstance().listenerExists(SomeEvent.class));
+        assertFalse(EventManagerService.getInstance().listenerExists(SomeEvent.class));
     }
 }

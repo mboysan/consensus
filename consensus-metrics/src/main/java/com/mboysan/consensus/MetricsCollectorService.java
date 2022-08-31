@@ -25,18 +25,20 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.util.Objects;
 
-public class MetricsCollector implements AutoCloseable {
+public final class MetricsCollectorService implements BackgroundService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MetricsCollector.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetricsCollectorService.class);
 
-    private static MetricsCollector instance = null;
+    private static MetricsCollectorService instance = null;
 
     private GraphiteFileSender graphiteSender;
     private JvmGcMetrics jvmGcMetrics;  // AutoClosable
 
     private MetricsAggregator metricsAggregator = null;
 
-    private MetricsCollector(MetricsConfig metricsConfig) {
+    private MetricsCollectorService(MetricsConfig metricsConfig) {
+        BackgroundServiceRegistry.getInstance().register(this);
+
         LOGGER.info("metrics config={}", metricsConfig);
         if (metricsConfig == null) {
             return;
@@ -52,7 +54,7 @@ public class MetricsCollector implements AutoCloseable {
 
         if (metricsConfig.insightsMetricsEnabled()) {
             this.metricsAggregator = new MetricsAggregator(metricsConfig, graphiteSender);
-            EventManager.getInstance().registerEventListener(MeasurementEvent.class, this::measure);
+            EventManagerService.getInstance().register(MeasurementEvent.class, this::measure);
         }
 
         if (!metricsConfig.jvmMetricsEnabled()) {
@@ -141,25 +143,29 @@ public class MetricsCollector implements AutoCloseable {
         }
     }
 
-    @Override
-    public void close() {
+    public synchronized void shutdown() {
         shutdown(() -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
         shutdown(() -> {if (graphiteSender != null) graphiteSender.shutdown();});
         shutdown(() -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});
     }
 
-    public synchronized static MetricsCollector initAndStart(MetricsConfig metricsConfig) {
+    @Override
+    public String toString() {
+        return "MetricsCollectorService";
+    }
+
+    public synchronized static MetricsCollectorService initAndStart(MetricsConfig metricsConfig) {
         if (instance != null) {
             return instance;
         }
-        return instance = new MetricsCollector(metricsConfig);
+        return instance = new MetricsCollectorService(metricsConfig);
     }
 
     /**
      * For testing purposes.
      */
-    synchronized static void shutdown() {
-        instance.close();
+    static void shutdownAndDereference() {
+        instance.shutdown();
         instance = null;    // dereference
     }
 

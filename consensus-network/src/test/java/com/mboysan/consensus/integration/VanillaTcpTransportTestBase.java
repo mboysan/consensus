@@ -1,9 +1,11 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.EchoProtocolImpl;
+import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.util.NetUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
@@ -24,6 +26,11 @@ class VanillaTcpTransportTestBase {
         addDestination(0, NetUtil.findFreePort());
         addDestination(1, NetUtil.findFreePort());
         addDestination(2, NetUtil.findFreePort());
+    }
+
+    static {
+        // no-op event listener to increase code coverage.
+        EventManagerService.getInstance().register(MeasurementEvent.class, measurementEvent -> {});
     }
 
     VanillaTcpServerTransport[] setupServers() {

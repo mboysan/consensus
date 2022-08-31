@@ -27,7 +27,7 @@ class MetricsCollectorTest {
 
     @AfterEach
     void tearDown() {
-        MetricsCollector.shutdown();
+        MetricsCollectorService.shutdownAndDereference();
     }
 
     // --------------------------------------------------------------------------------- jvm metrics
@@ -40,9 +40,9 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertFalse(Files.exists(metricsPath));
-            collector.close();
+            collector.shutdown();
         } finally {
             Files.deleteIfExists(metricsPath);
         }
@@ -56,9 +56,9 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
-            collector.close();
+            collector.shutdown();
         } finally {
             Files.deleteIfExists(metricsPath);
         }
@@ -75,11 +75,11 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             Thread.sleep(2500L);
             assertTrue(Files.exists(metricsPath));
             List<String> metricsLines = Files.readAllLines(metricsPath);
-            collector.close();
+            collector.shutdown();
 
             assertTrue(metricsLines.size() > 0);
             for (String metric : metricsLines) {
@@ -105,32 +105,32 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
-            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledStr", "value1"));
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledStr", "value1"));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
 
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 10));
-            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledInt", 20));
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 30));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledInt", 10));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledInt", 20));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledInt", 30));
 
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
-            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledLong", 20L));
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledLong", 20L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
 
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
 
-            EventManager.getInstance().fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
-            EventManager.getInstance().fireEventAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
-            EventManager.getInstance().fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
-            Thread.sleep(2500);
+            EventManagerService.getInstance().shutdown();
 
-            collector.close();   // measurements will be dumped upon close.
+            collector.shutdown();   // measurements will be dumped upon close.
 
             AtomicInteger sampledStrCount = new AtomicInteger(0);
             AtomicInteger sampledIntTotal = new AtomicInteger(0);

@@ -16,11 +16,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-public final class EventManager {
+public final class EventManagerService implements BackgroundService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventManager.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventManagerService.class);
 
-    private static final EventManager INSTANCE = new EventManager();
+    private static final EventManagerService INSTANCE = new EventManagerService();
 
     private final Map<Class<? extends IEvent>, EventConsumers<? extends IEvent>> eventConsumerMap = new ConcurrentHashMap<>();
 
@@ -31,18 +31,20 @@ public final class EventManager {
 
     private volatile boolean isRunning = true;
 
-    private EventManager() {}
+    private EventManagerService() {
+        BackgroundServiceRegistry.getInstance().register(this);
+    }
 
     @SuppressWarnings("unchecked")
-    public synchronized <T extends IEvent> void registerEventListener(Class<T> type, Consumer<T> eventConsumer) {
+    public synchronized <T extends IEvent> void register(Class<T> eventType, Consumer<T> eventConsumer) {
         if (!isRunning) {
             return;
         }
-        EventConsumers<T> eventConsumers = (EventConsumers<T>) eventConsumerMap.get(type);
+        EventConsumers<T> eventConsumers = (EventConsumers<T>) eventConsumerMap.get(eventType);
         if (eventConsumers == null) {
             eventConsumers = new EventConsumers<>();
             eventConsumers.consumers.add(eventConsumer);
-            eventConsumerMap.put(type, eventConsumers);
+            eventConsumerMap.put(eventType, eventConsumers);
         } else {
             eventConsumers.consumers.add(eventConsumer);
         }
@@ -50,7 +52,7 @@ public final class EventManager {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends IEvent> void fireEvent(T event) {
+    public <T extends IEvent> void fire(T event) {
         if (!isRunning) {
             return;
         }
@@ -68,13 +70,18 @@ public final class EventManager {
         }
     }
 
-    public <T extends IEvent> void fireEventAsync(T event) {
+    public <T extends IEvent> void fireAsync(T event) {
         if (!isRunning) {
             return;
         }
-        executor.submit(() -> fireEvent(event));
+        executor.submit(() -> fire(event));
     }
 
+    public <T extends IEvent> boolean listenerExists(Class<T> eventType) {
+        return eventConsumerMap.get(eventType) != null;
+    }
+
+    @Override
     public void shutdown() {
         if (!isRunning) {
             return;
@@ -84,15 +91,16 @@ public final class EventManager {
         shutdown(() -> executor.awaitTermination(5000L, TimeUnit.MILLISECONDS));
     }
 
-    public <T extends IEvent> boolean listenerExists(Class<T> type) {
-        return eventConsumerMap.get(type) != null;
+    @Override
+    public String toString() {
+        return "EventManagerService";
     }
 
     private static class EventConsumers<T extends IEvent> {
         private final List<Consumer<T>> consumers = new ArrayList<>();
     }
 
-    public static EventManager getInstance() {
+    public static EventManagerService getInstance() {
         return INSTANCE;
     }
 

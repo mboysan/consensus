@@ -57,7 +57,7 @@ public class InVMTransport implements Transport {
     }
 
     public InVMTransport(TransportConfig transportConfig, int associatedNodeId) {
-        EventManager.getInstance().registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+        EventManagerService.getInstance().register(NodeStoppedEvent.class, this::onNodeStopped);
         this.transportConfig = transportConfig;
         this.associatedNodeId = associatedNodeId;
     }
@@ -85,7 +85,7 @@ public class InVMTransport implements Transport {
                 server = new Server(messageProcessor);
                 // add this server to map and start processing
                 serverMap.put(nodeId, server);
-                serverMap.forEach((i, s) -> EventManager.getInstance().fireEvent(
+                serverMap.forEach((i, s) -> EventManagerService.getInstance().fire(
                         new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
                 serverExecutor.execute(server);
             }
@@ -106,7 +106,7 @@ public class InVMTransport implements Transport {
             idsTmp.remove(nodeId);
             server.shutdown();
             serverMap.remove(nodeId);
-            EventManager.getInstance().fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
+            EventManagerService.getInstance().fire(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
         }
         LOGGER.info("server-{} removed", nodeId);
     }

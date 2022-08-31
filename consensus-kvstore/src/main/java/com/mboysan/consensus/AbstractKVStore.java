@@ -29,6 +29,7 @@ public abstract class AbstractKVStore<N extends AbstractNode<?>> implements KVSt
     public void shutdown() {
         clientServingTransport.shutdown();
         node.shutdown();
+        LOGGER.info("store-{} shutdown", getNode().getNodeId());
     }
 
     N getNode() {

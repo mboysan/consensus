@@ -1,6 +1,6 @@
 package com.mboysan.consensus.vanilla;
 
-import com.mboysan.consensus.EventManager;
+import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
@@ -240,9 +240,9 @@ public class VanillaTcpServerTransport implements Transport {
     }
 
     private static void sample(String name, Message message) {
-        if (EventManager.getInstance().listenerExists(MeasurementEvent.class)) {
+        if (EventManagerService.getInstance().listenerExists(MeasurementEvent.class)) {
             // fire async measurement event
-            EventManager.getInstance().fireEventAsync(
+            EventManagerService.getInstance().fireAsync(
                     new MeasurementEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
         }
     }
