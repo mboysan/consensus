@@ -3,7 +3,6 @@ package com.mboysan.consensus;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.graphite.GraphiteReporter;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.event.MeasurementAsyncEvent;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.util.SerializationUtil;
 import com.mboysan.consensus.util.ThrowingRunnable;
@@ -18,7 +17,6 @@ import io.micrometer.core.instrument.dropwizard.DropwizardClock;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.graphite.GraphiteConfig;
 import io.micrometer.graphite.GraphiteMeterRegistry;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +24,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class MetricsCollector implements AutoCloseable {
 
@@ -41,11 +36,6 @@ public class MetricsCollector implements AutoCloseable {
 
     private MetricsAggregator metricsAggregator = null;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors() * 2,
-            new BasicThreadFactory.Builder().namingPattern("metrics-collector-%d").daemon(true).build()
-    );
-
     private MetricsCollector(MetricsConfig metricsConfig) {
         LOGGER.info("metrics config={}", metricsConfig);
         if (metricsConfig == null) {
@@ -55,15 +45,14 @@ public class MetricsCollector implements AutoCloseable {
         boolean createGraphiteSender = metricsConfig.insightsMetricsEnabled() || metricsConfig.jvmMetricsEnabled();
 
         if (createGraphiteSender) {
-            String separator = "".equals(metricsConfig.seperator()) ? " " : metricsConfig.seperator();
+            String separator = "".equals(metricsConfig.separator()) ? " " : metricsConfig.separator();
             graphiteSender = new GraphiteFileSender(metricsConfig.exportfile(), separator);
             LOGGER.debug("created graphite sender for metrics collection.");
         }
 
         if (metricsConfig.insightsMetricsEnabled()) {
             this.metricsAggregator = new MetricsAggregator(metricsConfig, graphiteSender);
-            EventManager.registerEventListener(MeasurementEvent.class, this::measure);
-            EventManager.registerEventListener(MeasurementAsyncEvent.class, this::measureAsync);
+            EventManager.getInstance().registerEventListener(MeasurementEvent.class, this::measure);
         }
 
         if (!metricsConfig.jvmMetricsEnabled()) {
@@ -152,16 +141,8 @@ public class MetricsCollector implements AutoCloseable {
         }
     }
 
-    private void measureAsync(MeasurementAsyncEvent measurementEvent) {
-        executor.submit(() -> {
-            measure(measurementEvent);
-        });
-    }
-
     @Override
     public void close() {
-        shutdown(executor::shutdown);
-        shutdown(() -> executor.awaitTermination(5000, TimeUnit.MILLISECONDS));
         shutdown(() -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
         shutdown(() -> {if (graphiteSender != null) graphiteSender.shutdown();});
         shutdown(() -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});

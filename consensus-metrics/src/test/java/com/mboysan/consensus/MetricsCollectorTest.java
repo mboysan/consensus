@@ -2,7 +2,6 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.event.MeasurementAsyncEvent;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
@@ -77,7 +76,7 @@ class MetricsCollectorTest {
         Files.deleteIfExists(metricsPath);
         try {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
-            Thread.sleep(3000);
+            Thread.sleep(2500L);
             assertTrue(Files.exists(metricsPath));
             List<String> metricsLines = Files.readAllLines(metricsPath);
             collector.close();
@@ -96,7 +95,7 @@ class MetricsCollectorTest {
     // --------------------------------------------------------------------------------- insights metrics
 
     @Test
-    void assertSampleAndAggregate() throws IOException {
+    void assertSampleAndAggregate() throws IOException, InterruptedException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
@@ -109,25 +108,27 @@ class MetricsCollectorTest {
             MetricsCollector collector = MetricsCollector.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledStr", "value1"));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
+            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledStr", "value1"));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 10));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledInt", 20));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 30));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 10));
+            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledInt", 20));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 30));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledLong", 20L));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
+            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledLong", 20L));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManager.getInstance().fireEventAsync(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
 
-            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
-            EventManager.fireEvent(new MeasurementAsyncEvent(AGGREGATE, "aggregatedLong", 20L));
-            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
+            EventManager.getInstance().fireEventAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
+            EventManager.getInstance().fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
+
+            Thread.sleep(2500);
 
             collector.close();   // measurements will be dumped upon close.
 

@@ -4,7 +4,6 @@ import com.mboysan.consensus.EventManager;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
-import com.mboysan.consensus.event.MeasurementAsyncEvent;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.ThrowingRunnable;
@@ -239,9 +238,10 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static void sample(String name, Message message) {
-        if (EventManager.listenerExists(MeasurementAsyncEvent.class)) {
+        if (EventManager.getInstance().listenerExists(MeasurementEvent.class)) {
             // fire async measurement event
-            EventManager.fireEvent(new MeasurementAsyncEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
+            EventManager.getInstance().fireEventAsync(
+                    new MeasurementEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
         }
     }
 

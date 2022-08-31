@@ -103,7 +103,7 @@ public class KVStoreClientCLI {
                 client.shutdown();
             } finally {
                 LOGGER.info("client stopped");
-                closeMetricsCollector();
+                shutdownBackgroundServices();
             }
         });
     }
@@ -113,8 +113,9 @@ public class KVStoreClientCLI {
         METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
     }
 
-    private static void closeMetricsCollector() {
+    private static void shutdownBackgroundServices() {
         METRICS_COLLECTOR_REF.get().close();
+        EventManager.getInstance().shutdown();
     }
 
     private static boolean isInteractiveSession(Properties properties) {

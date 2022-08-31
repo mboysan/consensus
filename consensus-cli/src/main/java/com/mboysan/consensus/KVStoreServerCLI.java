@@ -83,7 +83,7 @@ public class KVStoreServerCLI {
                 kvStore.shutdown();
             } finally {
                 LOGGER.info("store stopped");
-                closeMetricsCollector();
+                shutdownBackgroundServices();
             }
         });
     }
@@ -93,8 +93,9 @@ public class KVStoreServerCLI {
         METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
     }
 
-    private static void closeMetricsCollector() {
+    private static void shutdownBackgroundServices() {
         METRICS_COLLECTOR_REF.get().close();
+        EventManager.getInstance().shutdown();
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {

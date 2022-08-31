@@ -75,7 +75,7 @@ public class NodeCLI {
                 node.shutdown();
             } finally {
                 LOGGER.info("node stopped");
-                closeMetricsCollector();
+                shutdownBackgroundServices();
             }
         });
     }
@@ -85,8 +85,9 @@ public class NodeCLI {
         METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
     }
 
-    private static void closeMetricsCollector() {
+    private static void shutdownBackgroundServices() {
         METRICS_COLLECTOR_REF.get().close();
+        EventManager.getInstance().shutdown();
     }
 
     public static AbstractNode<?> getNode(int nodeId) {
