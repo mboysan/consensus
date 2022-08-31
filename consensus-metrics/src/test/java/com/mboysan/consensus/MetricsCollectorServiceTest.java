@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MetricsCollectorTest {
+class MetricsCollectorServiceTest {
 
     @AfterEach
     void tearDown() {
@@ -128,6 +128,7 @@ class MetricsCollectorTest {
             EventManagerService.getInstance().fireAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
             EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
+            Thread.sleep(2000); // wait 2 more seconds to sync
             EventManagerService.getInstance().shutdown();
 
             collector.shutdown();   // measurements will be dumped upon close.
