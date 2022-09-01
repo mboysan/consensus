@@ -20,7 +20,7 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     void testKVOperationsSimpleSingleBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
                 .setNumBuckets(1)
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSimple(bizurCluster);
     }
@@ -28,8 +28,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsSimpleMultiBuckets() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSimple(bizurCluster);
     }
@@ -38,7 +38,7 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     void testKVOperationsSequentialSingleBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
                 .setNumBuckets(1)
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSequential(bizurCluster);
     }
@@ -46,8 +46,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsSequentialMultiBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSequential(bizurCluster);
     }
@@ -56,7 +56,7 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     void testKVOperationsMultiThreadedSingleBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
                 .setNumBuckets(1)
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsMultiThreaded(bizurCluster);
     }
@@ -64,8 +64,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsMultiThreadedMultiBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
         testKVOperationsMultiThreaded(bizurCluster);
     }
@@ -74,7 +74,7 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     void testKVStoreShutdownAndStartSingleBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
                 .setNumBuckets(1)
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVStoreShutdownAndStart(bizurCluster);
     }
@@ -82,8 +82,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVStoreShutdownAndStartMultiBucket() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
         testKVStoreShutdownAndStart(bizurCluster);
     }
@@ -91,8 +91,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVStoreLeaderFailure() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
 
         // key 'a' belongs to bucket-2 which belongs to node-2 (leader).
@@ -109,8 +109,8 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testCustomCommands() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
-                .setNumBuckets(5)
-                .setNumNodes(5)
+                .setNumBuckets(3)
+                .setNumNodes(3)
                 .build();
         testCustomCommands(bizurCluster);
     }
