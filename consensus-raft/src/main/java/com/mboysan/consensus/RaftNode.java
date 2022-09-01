@@ -280,7 +280,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         } else {
             granted = false;
         }
-        return new RequestVoteResponse(state.currentTerm, granted).responseTo(request);
+        return new RequestVoteResponse(state.currentTerm, granted);
     }
 
     @Override
@@ -289,7 +289,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             stepDown(request.getTerm());
         }
         if (state.currentTerm > request.getTerm()) {
-            return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
+            return new AppendEntriesResponse(state.currentTerm, false);
         } else {
             if (state.leaderId != request.getLeaderId()) {
                 LOGGER.info("node-{} claims to be the LEADER of term {}", request.getLeaderId(), state.currentTerm);
@@ -312,9 +312,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 if (isStronglyConsistent) {
                     update();   // sync for strong consistency
                 }
-                return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex()).responseTo(request);
+                return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex());
             } else {
-                return new AppendEntriesResponse(state.currentTerm, false).responseTo(request);
+                return new AppendEntriesResponse(state.currentTerm, false);
             }
         }
     }
@@ -342,13 +342,12 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         Thread.currentThread().interrupt();
                     }
                 }
-                return new StateMachineResponse(isEntryApplied(entryIndex, term)).responseTo(request);
+                return new StateMachineResponse(isEntryApplied(entryIndex, term));
             }
             leaderId = state.leaderId;
         }
 
-        return getRPC().stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()))
-                .responseTo(request);
+        return getRPC().stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()));
     }
 
     private boolean isEntryApplied(int entryIndex, int term) {
@@ -361,26 +360,24 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
             request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
-                    .responseTo(request);
+            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()));
         }
         synchronized (this) {
             switch (request.getRequest()) {
                 case "askState" -> {
                     String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
-                    return new CustomResponse(true, null, stateStr).responseTo(request);
+                    return new CustomResponse(true, null, stateStr);
                 }
                 case "askStateFull" -> {
                     String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
-                    return new CustomResponse(true, null, stateStr).responseTo(request);
+                    return new CustomResponse(true, null, stateStr);
                 }
                 case "askProtocol" -> {
-                    return new CustomResponse(true, null, "raft").responseTo(request);
+                    return new CustomResponse(true, null, "raft");
                 }
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
-                .responseTo(request);
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     /*----------------------------------------------------------------------------------

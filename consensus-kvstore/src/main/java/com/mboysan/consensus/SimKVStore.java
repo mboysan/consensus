@@ -25,10 +25,10 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
         try {
             SimMessage message = mapToSimMessage(request);
             getNode().simulate(message);
-            return new KVGetResponse(true, null, null).responseTo(request);
+            return new KVGetResponse(true, null, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVGetResponse(false, e, null).responseTo(request);
+            return new KVGetResponse(false, e, null);
         }
     }
 
@@ -37,10 +37,10 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
         try {
             SimMessage message = mapToSimMessage(request);
             getNode().simulate(message);
-            return new KVSetResponse(true, null).responseTo(request);
+            return new KVSetResponse(true, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVSetResponse(false, e).responseTo(request);
+            return new KVSetResponse(false, e);
         }
     }
 
@@ -49,10 +49,10 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
         try {
             SimMessage message = mapToSimMessage(request);
             getNode().simulate(message);
-            return new KVDeleteResponse(true, null).responseTo(request);
+            return new KVDeleteResponse(true, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVDeleteResponse(false, e).responseTo(request);
+            return new KVDeleteResponse(false, e);
         }
     }
 
@@ -61,10 +61,10 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
         try {
             SimMessage message = mapToSimMessage(request);
             getNode().simulate(message);
-            return new KVIterateKeysResponse(true, null, null).responseTo(request);
+            return new KVIterateKeysResponse(true, null, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVIterateKeysResponse(false, e, null).responseTo(request);
+            return new KVIterateKeysResponse(false, e, null);
         }
     }
 
@@ -74,7 +74,7 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
             return getNode().customRequest(request);
         } catch (Exception e) {
             logError(request, e);
-            return new CustomResponse(false, e, null).responseTo(request);
+            return new CustomResponse(false, e, null);
         }
     }
 
