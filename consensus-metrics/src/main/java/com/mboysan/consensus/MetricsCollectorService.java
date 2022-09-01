@@ -125,20 +125,18 @@ public final class MetricsCollectorService implements BackgroundService {
         }
 
         switch (measurementEvent.getMeasurementType()) {
-            case SAMPLE -> {
-                metricsAggregator.add(new Measurement(
+            case SAMPLE ->
+                    metricsAggregator.add(new Measurement(
                         measurementEvent.getName(),
                         value,
                         measurementEvent.getTimestamp()
-                ));
-            }
-            case AGGREGATE -> {
-                metricsAggregator.add(new LongAggregateMeasurement(
+                    ));
+            case AGGREGATE ->
+                    metricsAggregator.add(new LongAggregateMeasurement(
                         measurementEvent.getName(),
                         String.valueOf(value),
                         measurementEvent.getTimestamp()
-                ));
-            }
+                    ));
         }
     }
 
@@ -153,11 +151,12 @@ public final class MetricsCollectorService implements BackgroundService {
         return "MetricsCollectorService";
     }
 
-    public synchronized static MetricsCollectorService initAndStart(MetricsConfig metricsConfig) {
+    public static synchronized MetricsCollectorService initAndStart(MetricsConfig metricsConfig) {
         if (instance != null) {
             return instance;
         }
-        return instance = new MetricsCollectorService(metricsConfig);
+        instance = new MetricsCollectorService(metricsConfig);
+        return instance;
     }
 
     /**

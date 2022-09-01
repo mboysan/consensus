@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 public final class ShutdownUtil {
     private ShutdownUtil() {}
 
-    public static void close(Logger logger, ServerSocket serverSocket) {
+    public static void close(final Logger logger, final ServerSocket serverSocket) {
         shutdown(logger, () -> {
             if (serverSocket != null) {
                 serverSocket.close();
@@ -22,7 +22,7 @@ public final class ShutdownUtil {
         });
     }
 
-    public static void close(Logger logger, Socket socket) {
+    public static void close(final Logger logger, final Socket socket) {
         shutdown(logger, () -> {
             if (socket != null) {
                 ShutdownUtil.close(logger, socket.getOutputStream());
@@ -32,7 +32,7 @@ public final class ShutdownUtil {
         });
     }
 
-    public static void close(Logger logger, OutputStream outputStream) {
+    public static void close(final Logger logger, final OutputStream outputStream) {
         shutdown(logger, () -> {
             if (outputStream != null) {
                 synchronized (outputStream) {
@@ -42,7 +42,7 @@ public final class ShutdownUtil {
         });
     }
 
-    public static void close(Logger logger, InputStream inputStream) {
+    public static void close(final Logger logger, final InputStream inputStream) {
         shutdown(logger, () -> {
             if (inputStream != null) {
                 synchronized (inputStream) {
@@ -52,7 +52,7 @@ public final class ShutdownUtil {
         });
     }
 
-    public static void close(Logger logger, ObjectPool<?> pool) {
+    public static void close(final Logger logger, final ObjectPool<?> pool) {
         shutdown(logger, () -> {
             if (pool != null) {
                 pool.close();
@@ -60,17 +60,19 @@ public final class ShutdownUtil {
         });
     }
 
-    public static void shutdown(Logger logger, ExecutorService executor) {
-        shutdown(logger, executor::shutdown);
-        shutdown(logger, () -> {
-            boolean success = executor.awaitTermination(5000L, TimeUnit.MILLISECONDS);
-            if (!success) {
-                logger.warn("termination failed for executor");
-            }
-        });
+    public static void shutdown(final Logger logger, final ExecutorService executor) {
+        if (executor != null) {
+            shutdown(logger, executor::shutdown);
+            shutdown(logger, () -> {
+                boolean success = executor.awaitTermination(5000L, TimeUnit.MILLISECONDS);
+                if (!success) {
+                    logger.warn("termination failed for executor");
+                }
+            });
+        }
     }
 
-    public static void shutdown(Logger logger, ThrowingRunnable toShutdown) {
+    public static void shutdown(final Logger logger, final ThrowingRunnable toShutdown) {
         try {
             Objects.requireNonNull(toShutdown).run();
         } catch (Throwable e) {
