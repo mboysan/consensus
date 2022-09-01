@@ -2,7 +2,6 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.event.MeasurementAsyncEvent;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
@@ -24,11 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MetricsCollectorTest {
+class MetricsCollectorServiceTest {
 
     @AfterEach
     void tearDown() {
-        MetricsCollector.shutdown();
+        MetricsCollectorService.shutdownAndDereference();
     }
 
     // --------------------------------------------------------------------------------- jvm metrics
@@ -41,9 +40,9 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertFalse(Files.exists(metricsPath));
-            collector.close();
+            collector.shutdown();
         } finally {
             Files.deleteIfExists(metricsPath);
         }
@@ -57,9 +56,9 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
-            collector.close();
+            collector.shutdown();
         } finally {
             Files.deleteIfExists(metricsPath);
         }
@@ -76,11 +75,11 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
-            Thread.sleep(3000);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
+            Thread.sleep(2500L);
             assertTrue(Files.exists(metricsPath));
             List<String> metricsLines = Files.readAllLines(metricsPath);
-            collector.close();
+            collector.shutdown();
 
             assertTrue(metricsLines.size() > 0);
             for (String metric : metricsLines) {
@@ -96,7 +95,7 @@ class MetricsCollectorTest {
     // --------------------------------------------------------------------------------- insights metrics
 
     @Test
-    void assertSampleAndAggregate() throws IOException {
+    void assertSampleAndAggregate() throws IOException, InterruptedException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
@@ -106,30 +105,33 @@ class MetricsCollectorTest {
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
         try {
-            MetricsCollector collector = MetricsCollector.initAndStart(config);
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledStr", "value1"));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledStr", "value1"));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value2"));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 10));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledInt", 20));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledInt", 30));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledInt", 10));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledInt", 20));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledInt", 30));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledLong", 20L));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledLong", 10L));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledLong", 20L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledLong", 30L));
 
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.fireEvent(new MeasurementAsyncEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
-            EventManager.fireEvent(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
+            EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledMessageSize", new CustomRequest("")));
 
-            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
-            EventManager.fireEvent(new MeasurementAsyncEvent(AGGREGATE, "aggregatedLong", 20L));
-            EventManager.fireEvent(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 10L));
+            EventManagerService.getInstance().fireAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
+            EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
-            collector.close();   // measurements will be dumped upon close.
+            Thread.sleep(2000); // wait 2 more seconds to sync
+            EventManagerService.getInstance().shutdown();
+
+            collector.shutdown();   // measurements will be dumped upon close.
 
             AtomicInteger sampledStrCount = new AtomicInteger(0);
             AtomicInteger sampledIntTotal = new AtomicInteger(0);

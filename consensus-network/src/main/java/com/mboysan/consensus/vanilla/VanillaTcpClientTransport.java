@@ -1,13 +1,12 @@
 package com.mboysan.consensus.vanilla;
 
-import com.mboysan.consensus.EventManager;
+import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.configuration.Destination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
-import com.mboysan.consensus.event.MeasurementAsyncEvent;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
@@ -144,16 +143,8 @@ public class VanillaTcpClientTransport implements Transport {
         }
         isRunning = false;
         failureDetector.shutdown();
-        clientPools.forEach((i, pool) -> shutdown(pool::close));
+        clientPools.forEach((i, pool) -> ShutdownUtil.close(LOGGER, pool));
         clientPools.clear();
-    }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
     }
 
     public synchronized boolean verifyShutdown() {
@@ -200,10 +191,10 @@ public class VanillaTcpClientTransport implements Transport {
                     }
                 } catch (IOException | ClassNotFoundException e) {
                     LOGGER.error(e.getMessage());
-                    VanillaTcpClientTransport.shutdown(this::shutdown);
+                    shutdown();
                 } catch (InterruptedException e) {
                     LOGGER.error(e.getMessage());
-                    VanillaTcpClientTransport.shutdown(this::shutdown);
+                    shutdown();
                     Thread.currentThread().interrupt();
                 }
             }
@@ -223,9 +214,9 @@ public class VanillaTcpClientTransport implements Transport {
                 return;
             }
             isConnected = false;
-            VanillaTcpClientTransport.shutdown(() -> {if (os != null) os.close();});
-            VanillaTcpClientTransport.shutdown(() -> {if (is != null) is.close();});
-            VanillaTcpClientTransport.shutdown(() -> {if (socket != null) socket.close();});
+            ShutdownUtil.close(LOGGER, os);
+            ShutdownUtil.close(LOGGER, is);
+            ShutdownUtil.close(LOGGER, socket);
             semaphore.release();
         }
     }
@@ -239,9 +230,10 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static void sample(String name, Message message) {
-        if (EventManager.listenerExists(MeasurementAsyncEvent.class)) {
+        if (EventManagerService.getInstance().listenerExists(MeasurementEvent.class)) {
             // fire async measurement event
-            EventManager.fireEvent(new MeasurementAsyncEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
+            EventManagerService.getInstance().fireAsync(
+                    new MeasurementEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
         }
     }
 

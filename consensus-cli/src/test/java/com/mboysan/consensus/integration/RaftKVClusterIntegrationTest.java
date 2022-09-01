@@ -16,7 +16,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsSimple() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSimple(raftCluster);
     }
@@ -24,7 +24,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsSequential() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsSequential(raftCluster);
     }
@@ -32,7 +32,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVOperationsMultiThreaded() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVOperationsMultiThreaded(raftCluster);
     }
@@ -40,7 +40,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testKVStoreShutdownAndStart() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testKVStoreShutdownAndStart(raftCluster);
     }
@@ -48,7 +48,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testCustomCommands() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
         testCustomCommands(raftCluster);
     }

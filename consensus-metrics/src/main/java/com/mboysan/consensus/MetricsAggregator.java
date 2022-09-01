@@ -1,14 +1,13 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,16 +59,6 @@ class MetricsAggregator {
 
     synchronized void shutdown() {
         dumpMeasurements();
-        shutdown(executor::shutdown);
-        shutdown(() -> executor.awaitTermination(5000, TimeUnit.MILLISECONDS));
+        ShutdownUtil.shutdown(LOGGER, executor);
     }
-
-    private static void shutdown(ThrowingRunnable toShutdown) {
-        try {
-            Objects.requireNonNull(toShutdown).run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
-        }
-    }
-
 }

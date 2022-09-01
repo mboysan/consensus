@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
-public class RngUtil {
+public final class RngUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(RngUtil.class);
     private static final SecureRandom RNG;
     static {
@@ -14,6 +14,8 @@ public class RngUtil {
         LOGGER.info("message RNG seed = {}", seed);
         RNG = new SecureRandom(seed.getBytes(StandardCharsets.UTF_8));
     }
+
+    private RngUtil() {}
 
     public static int nextInt(int bound) {
         return RNG.nextInt(bound);

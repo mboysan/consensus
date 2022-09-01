@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
@@ -28,10 +29,14 @@ import java.util.function.UnaryOperator;
 
 public class InVMTransport implements Transport {
 
-    private static final long DEFAULT_CALLBACK_TIMEOUT_MS =
-            CoreConfig.getCached(TransportConfig.class).messageCallbackTimeoutMs();
-
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
+
+    private static final TransportConfig DEFAULT_CONFIG;
+    static {
+        final Properties properties = new Properties();
+        properties.put("transport.message.callbackTimeoutMs", 200 + "");    // set a default on callback timeout
+        DEFAULT_CONFIG = CoreConfig.newInstance(TransportConfig.class, properties);
+    }
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool(
             new BasicThreadFactory.Builder().namingPattern("invm-exec-%d").daemon(true).build()
@@ -39,6 +44,8 @@ public class InVMTransport implements Transport {
 
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
+
+    private final TransportConfig transportConfig;
     private final int associatedNodeId;
 
     public InVMTransport() {
@@ -46,7 +53,12 @@ public class InVMTransport implements Transport {
     }
 
     public InVMTransport(int associatedNodeId) {
-        EventManager.registerEventListener(NodeStoppedEvent.class, this::onNodeStopped);
+        this(DEFAULT_CONFIG, associatedNodeId);
+    }
+
+    public InVMTransport(TransportConfig transportConfig, int associatedNodeId) {
+        EventManagerService.getInstance().register(NodeStoppedEvent.class, this::onNodeStopped);
+        this.transportConfig = transportConfig;
         this.associatedNodeId = associatedNodeId;
     }
 
@@ -73,7 +85,8 @@ public class InVMTransport implements Transport {
                 server = new Server(messageProcessor);
                 // add this server to map and start processing
                 serverMap.put(nodeId, server);
-                serverMap.forEach((i, s) -> EventManager.fireEvent(new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
+                serverMap.forEach((i, s) -> EventManagerService.getInstance().fire(
+                        new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
                 serverExecutor.execute(server);
             }
             LOGGER.info("server-{} added", nodeId);
@@ -93,7 +106,7 @@ public class InVMTransport implements Transport {
             idsTmp.remove(nodeId);
             server.shutdown();
             serverMap.remove(nodeId);
-            EventManager.fireEvent(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
+            EventManagerService.getInstance().fire(new NodeListChangedEvent(nodeId, Set.copyOf(idsTmp)));
         }
         LOGGER.info("server-{} removed", nodeId);
     }
@@ -112,8 +125,9 @@ public class InVMTransport implements Transport {
     public Message sendRecv(Message message) throws IOException {
         Future<Message> msgFuture = sendRecvAsync(message);
         try {
-            Message response = DEFAULT_CALLBACK_TIMEOUT_MS > 0
-                    ? msgFuture.get(DEFAULT_CALLBACK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            final long callbackTimeoutMs = transportConfig.messageCallbackTimeoutMs();
+            Message response = callbackTimeoutMs > 0
+                    ? msgFuture.get(callbackTimeoutMs, TimeUnit.MILLISECONDS)
                     : msgFuture.get();  // wait indefinitely.
             LOGGER.debug("IN (response): {}", response);
             return response;

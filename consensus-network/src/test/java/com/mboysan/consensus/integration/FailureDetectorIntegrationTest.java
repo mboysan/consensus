@@ -3,7 +3,7 @@ package com.mboysan.consensus.integration;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.TestMessage;
-import com.mboysan.consensus.util.ThrowingRunnable;
+import com.mboysan.consensus.util.ShutdownUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.Assertions;
@@ -48,8 +48,8 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
             clientTransport.sendRecv(new TestMessage("").setReceiverId(0));
             latch.await();
         } finally {
-            shutdown(clientTransport::shutdown);
-            shutdown(serverTransport::shutdown);
+            ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
+            ShutdownUtil.shutdown(LOGGER, serverTransport::shutdown);
         }
     }
 
@@ -88,8 +88,8 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
             serverTransport.start();
             latch.await();
         } finally {
-            shutdown(clientTransport::shutdown);
-            shutdown(serverTransport::shutdown);
+            ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
+            ShutdownUtil.shutdown(LOGGER, serverTransport::shutdown);
         }
     }
 
@@ -98,14 +98,6 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
             Thread.sleep(time);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private static void shutdown(ThrowingRunnable runnable) {
-        try {
-            runnable.run();
-        } catch (Throwable e) {
-            LOGGER.error(e.getMessage());
         }
     }
 

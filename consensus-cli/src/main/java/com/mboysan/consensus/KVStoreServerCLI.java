@@ -18,12 +18,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class KVStoreServerCLI {
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreServerCLI.class);
-
-    private static final AtomicReference<MetricsCollector> METRICS_COLLECTOR_REF = new AtomicReference<>();
 
     private static final Map<Integer, AbstractKVStore<?>> STORE_REFERENCES = new ConcurrentHashMap<>();
 
@@ -82,19 +79,14 @@ public class KVStoreServerCLI {
             try {
                 kvStore.shutdown();
             } finally {
-                LOGGER.info("store stopped");
-                closeMetricsCollector();
+                BackgroundServiceRegistry.getInstance().shutdownAll();
             }
         });
     }
 
     private static void startMetricsCollector(Properties properties) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        METRICS_COLLECTOR_REF.compareAndSet(null, MetricsCollector.initAndStart(config));
-    }
-
-    private static void closeMetricsCollector() {
-        METRICS_COLLECTOR_REF.get().close();
+        MetricsCollectorService.initAndStart(config);
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {

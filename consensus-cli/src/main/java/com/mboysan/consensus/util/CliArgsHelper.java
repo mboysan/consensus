@@ -22,6 +22,7 @@ public final class CliArgsHelper {
         ALIAS_MAP.put("protocol", "node.consensus.protocol");
         ALIAS_MAP.put("port", "transport.tcp.server.port");
         ALIAS_MAP.put("destinations", "transport.tcp.destinations");
+        ALIAS_MAP.put("callbackTimeoutMs", "transport.message.callbackTimeoutMs");
     }
 
     private CliArgsHelper() {

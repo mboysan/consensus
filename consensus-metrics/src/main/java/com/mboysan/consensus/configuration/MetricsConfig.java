@@ -8,7 +8,7 @@ public interface MetricsConfig extends CoreConfig {
 
     @Key("metrics.separator")
     @DefaultValue(" ")
-    String seperator();
+    String separator();
 
     @Key("metrics.step")
     @DefaultValue("2000")

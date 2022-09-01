@@ -19,7 +19,7 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testAllOperations() throws Exception {
         this.simCluster = new SimKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
 
         // just check that no exceptions are being thrown.
@@ -33,7 +33,7 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     @Test
     void testCustomCommands() throws Exception {
         this.simCluster = new SimKVStoreCluster.Builder()
-                .setNumNodes(5)
+                .setNumNodes(3)
                 .build();
 
         String response;

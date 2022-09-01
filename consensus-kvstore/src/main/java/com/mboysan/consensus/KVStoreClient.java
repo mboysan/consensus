@@ -13,11 +13,14 @@ import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.util.ThrowingSupplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Set;
 
 public class KVStoreClient extends AbstractClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClient.class);
 
     public KVStoreClient(Transport transport) {
         super(transport);
@@ -28,6 +31,7 @@ public class KVStoreClient extends AbstractClient {
     }
     public void shutdown() {
         getTransport().shutdown();
+        LOGGER.info("client shutdown");
     }
 
     public void set(String key, String value) throws KVOperationException {
