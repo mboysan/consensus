@@ -89,7 +89,7 @@ abstract class ClusterIntegrationTestBase {
 
         cluster.getStore(0).start().get();
 
-        cluster.getClient(0).set("k1", "v1");
+        awaiting(KVOperationException.class, () -> cluster.getClient(0).set("k1", "v1"));
 
         assertEquals("v1", cluster.getClient(0).get("k1"));
         assertEquals("v0", cluster.getClient(1).get("k0"));
