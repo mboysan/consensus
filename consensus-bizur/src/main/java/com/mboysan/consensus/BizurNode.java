@@ -310,8 +310,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
             request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
-                    ;
+            return routeMessage(request, routeToId);
         }
         switch (request.getRequest()) {
             case "askState" -> {
@@ -328,31 +327,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 return new CustomResponse(true, null, "bizur");
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
-                ;
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {
-        logRequestRouting(request, getNodeId(), receiverId);
         if (receiverId == -1) {
             BizurException err = new BizurException("leader unresolved");
             logErrorForRequest(err, request);
             return response(request, false, err, null);
         }
-        if (request instanceof KVGetRequest) {
-            return (T) getRPC().get(request.setReceiverId(receiverId).setSenderId(getNodeId()));
-        }
-        if (request instanceof KVSetRequest) {
-            return (T) getRPC().set(request.setReceiverId(receiverId).setSenderId(getNodeId()));
-        }
-        if (request instanceof KVDeleteRequest) {
-            return (T) getRPC().delete(request.setReceiverId(receiverId).setSenderId(getNodeId()));
-        }
-        if (request instanceof KVIterateKeysRequest) {
-            return (T) getRPC().iterateKeys(request.setReceiverId(receiverId).setSenderId(getNodeId()));
-        }
-        throw new IllegalArgumentException("unrecognized request=" + request.toString());
+        return routeMessage(request, receiverId);
     }
 
     @SuppressWarnings("unchecked")
@@ -405,10 +389,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     int getNumRanges() {
         return Math.min(numPeers, numBuckets);
-    }
-
-    private void logRequestRouting(Message request, int from, int to) {
-        LOGGER.debug("routing request={}, from={} to={}", request, from, to);
     }
 
     private void logErrorForRequest(Exception exception, Message request) {

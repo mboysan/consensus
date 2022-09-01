@@ -347,7 +347,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             leaderId = state.leaderId;
         }
 
-        return getRPC().stateMachineRequest(request.setReceiverId(leaderId).setSenderId(getNodeId()));
+        return routeMessage(request, leaderId);
     }
 
     private boolean isEntryApplied(int entryIndex, int term) {
@@ -360,7 +360,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
             request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()));
+            return routeMessage(request, routeToId);
         }
         synchronized (this) {
             switch (request.getRequest()) {

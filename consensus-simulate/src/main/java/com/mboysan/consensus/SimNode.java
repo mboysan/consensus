@@ -94,7 +94,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
         } else {    // follower
             if (simConfig.forwardToLeader() && message.getSenderId() != LEADER_ID) {
                 // forward message to leader
-                return getRPC().simulate(message.setReceiverId(LEADER_ID).setSenderId(getNodeId()));
+                return routeMessage(message, LEADER_ID);
             }
         }
         // reply
