@@ -25,8 +25,6 @@ public final class ShutdownUtil {
     public static void close(final Logger logger, final Socket socket) {
         shutdown(logger, () -> {
             if (socket != null) {
-                ShutdownUtil.close(logger, socket.getOutputStream());
-                ShutdownUtil.close(logger, socket.getInputStream());
                 socket.close();
             }
         });
@@ -35,9 +33,7 @@ public final class ShutdownUtil {
     public static void close(final Logger logger, final OutputStream outputStream) {
         shutdown(logger, () -> {
             if (outputStream != null) {
-                synchronized (outputStream) {
-                    outputStream.close();
-                }
+                outputStream.close();
             }
         });
     }
@@ -45,9 +41,7 @@ public final class ShutdownUtil {
     public static void close(final Logger logger, final InputStream inputStream) {
         shutdown(logger, () -> {
             if (inputStream != null) {
-                synchronized (inputStream) {
-                    inputStream.close();
-                }
+                inputStream.close();
             }
         });
     }

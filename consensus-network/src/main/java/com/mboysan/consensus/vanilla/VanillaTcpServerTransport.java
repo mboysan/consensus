@@ -204,6 +204,12 @@ public class VanillaTcpServerTransport implements Transport {
                 return;
             }
             isRunning = false;
+            synchronized (os) {
+                ShutdownUtil.close(LOGGER, os);
+            }
+            synchronized (is) {
+                ShutdownUtil.close(LOGGER, is);
+            }
             ShutdownUtil.close(LOGGER, socket);
             ShutdownUtil.shutdown(LOGGER, requestExecutor);
         }

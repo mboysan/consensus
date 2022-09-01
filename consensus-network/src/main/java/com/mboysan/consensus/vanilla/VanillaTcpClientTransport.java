@@ -214,6 +214,8 @@ public class VanillaTcpClientTransport implements Transport {
                 return;
             }
             isConnected = false;
+            ShutdownUtil.close(LOGGER, os);
+            ShutdownUtil.close(LOGGER, is);
             ShutdownUtil.close(LOGGER, socket);
             semaphore.release();
         }
