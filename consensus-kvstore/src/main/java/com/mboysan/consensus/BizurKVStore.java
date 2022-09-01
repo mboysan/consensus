@@ -63,7 +63,7 @@ public class BizurKVStore extends AbstractKVStore<BizurNode> {
             return getNode().customRequest(request);
         } catch (Exception e) {
             logError(request, e);
-            return new CustomResponse(false, e, null).responseTo(request);
+            return new CustomResponse(false, e, null);
         }
     }
 }

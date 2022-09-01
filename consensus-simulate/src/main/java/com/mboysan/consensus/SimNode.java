@@ -94,11 +94,11 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
         } else {    // follower
             if (simConfig.forwardToLeader() && message.getSenderId() != LEADER_ID) {
                 // forward message to leader
-                return getRPC().simulate(message.setReceiverId(LEADER_ID).setSenderId(getNodeId())).responseTo(message);
+                return getRPC().simulate(message.setReceiverId(LEADER_ID).setSenderId(getNodeId()));
             }
         }
         // reply
-        return new SimMessage().responseTo(message);
+        return new SimMessage();
     }
 
     @Override
@@ -107,22 +107,20 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
             request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
-                    .responseTo(request);
+            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()));
         }
         synchronized (this) {
             switch (request.getRequest()) {
                 case "askState", "askStateFull" -> {
                     String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
-                    return new CustomResponse(true, null, stateStr).responseTo(request);
+                    return new CustomResponse(true, null, stateStr);
                 }
                 case "askProtocol" -> {
-                    return new CustomResponse(true, null, "simulate").responseTo(request);
+                    return new CustomResponse(true, null, "simulate");
                 }
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
-                .responseTo(request);
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     SimState getState() {

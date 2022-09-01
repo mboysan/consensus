@@ -28,6 +28,6 @@ public class EchoProtocolImpl implements RPCProtocol {
             }
         }
 
-        return new TestMessage(req.getPayload()).responseTo(req);
+        return new TestMessage(req.getPayload());
     }
 }
