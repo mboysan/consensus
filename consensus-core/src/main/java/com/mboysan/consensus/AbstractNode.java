@@ -4,6 +4,7 @@ import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
+import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.Scheduler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
@@ -140,8 +141,16 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
     void validateAction() {
         if (!isRunning) {
-            throw new IllegalStateException("raft node-" + nodeId + " not running");
+            throw new IllegalStateException("node-" + nodeId + " not running");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    <REQ extends Message, RESP extends Message> RESP routeMessage(REQ message, int receiverId) throws IOException {
+        validateAction();
+        LOGGER.debug("routing message={}, from={} to={}", message, getNodeId(), receiverId);
+        message.setReceiverId(receiverId).setSenderId(getNodeId());
+        return (RESP) transport.sendRecv(message);
     }
 
     abstract RPCProtocol getRPC();
