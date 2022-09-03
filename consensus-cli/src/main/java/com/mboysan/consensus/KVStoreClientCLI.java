@@ -5,7 +5,7 @@ import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
+import com.mboysan.consensus.network.VanillaTcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

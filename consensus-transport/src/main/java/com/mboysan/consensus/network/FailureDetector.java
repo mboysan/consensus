@@ -1,4 +1,4 @@
-package com.mboysan.consensus.vanilla;
+package com.mboysan.consensus.network;
 
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CustomRequest;

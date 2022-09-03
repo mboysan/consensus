@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>consensus-network</artifactId>
+    <artifactId>consensus-transport</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>

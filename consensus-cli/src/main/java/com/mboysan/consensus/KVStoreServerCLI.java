@@ -8,7 +8,7 @@ import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
+import com.mboysan.consensus.network.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

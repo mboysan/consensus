@@ -1,6 +1,6 @@
 package com.mboysan.consensus.util;
 
-import com.mboysan.consensus.configuration.Destination;
+import com.mboysan.consensus.configuration.TcpDestination;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -17,23 +17,23 @@ public final class NetUtil {
 
     private NetUtil(){}
 
-    public static String convertDestinationsListToProps(List<Destination> destinations) {
+    public static String convertDestinationsListToProps(List<TcpDestination> destinations) {
         Objects.requireNonNull(destinations);
         StringJoiner sj = new StringJoiner(",");
-        for (Destination destination : destinations) {
+        for (TcpDestination destination : destinations) {
             sj.add(destination.toString());
         }
         return sj.toString();
     }
 
-    public static Map<Integer, Destination> convertPropsToDestinationsMap(String destinationProps) {
-        List<Destination> destinations = convertPropsToDestinationsList(destinationProps);
-        return destinations.stream().collect(Collectors.toMap(Destination::nodeId, identity()));
+    public static Map<Integer, TcpDestination> convertPropsToDestinationsMap(String destinationProps) {
+        List<TcpDestination> destinations = convertPropsToDestinationsList(destinationProps);
+        return destinations.stream().collect(Collectors.toMap(TcpDestination::nodeId, identity()));
     }
 
-    public static List<Destination> convertPropsToDestinationsList(String destinationProps) {
+    public static List<TcpDestination> convertPropsToDestinationsList(String destinationProps) {
         Objects.requireNonNull(destinationProps);
-        List<Destination> destinations = new ArrayList<>();
+        List<TcpDestination> destinations = new ArrayList<>();
         destinationProps = destinationProps.replaceAll("\\s+","");    // remove whitespace
         String[] dests = destinationProps.split(",");
         for (String dest : dests) {
@@ -42,7 +42,7 @@ public final class NetUtil {
             String[] hostPort = idIp[1].split(":");
             String host = hostPort[0];
             int port = Integer.parseInt(hostPort[1]);
-            destinations.add(new Destination(id, host, port));
+            destinations.add(new TcpDestination(id, host, port));
         }
         return destinations;
     }

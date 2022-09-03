@@ -10,7 +10,7 @@
     <version>${revision}</version>
     <modules>
         <module>consensus-core</module>
-        <module>consensus-network</module>
+        <module>consensus-transport</module>
         <module>consensus-raft</module>
         <module>consensus-bizur</module>
         <module>consensus-kvstore</module>

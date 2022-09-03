@@ -20,7 +20,7 @@
         </dependency>
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-network</artifactId>
+            <artifactId>consensus-transport</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
