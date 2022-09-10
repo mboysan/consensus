@@ -2,10 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.network.VanillaTcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,8 +40,7 @@ public class KVStoreClientCLI {
 
         int clientId = resolveClientId(properties);
 
-        TcpTransportConfig clientTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        Transport clientTransport = new VanillaTcpClientTransport(clientTransportConfig);
+        Transport clientTransport = TransportFactory.createClientTransport(properties);
         KVStoreClient client = new KVStoreClient(clientTransport);
         CLIENT_REFERENCES.put(clientId, client);
 

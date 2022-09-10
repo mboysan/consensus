@@ -91,8 +91,8 @@ abstract class ClusterIntegrationTestBase {
 
         awaiting(KVOperationException.class, () -> cluster.getClient(0).set("k1", "v1"));
 
-        assertEquals("v1", cluster.getClient(0).get("k1"));
-        assertEquals("v0", cluster.getClient(1).get("k0"));
+        awaiting(KVOperationException.class, () -> assertEquals("v1", cluster.getClient(0).get("k1")));
+        awaiting(KVOperationException.class, () -> assertEquals("v0", cluster.getClient(1).get("k0")));
     }
 
     void testCustomCommands(KVStoreClusterBase cluster) throws CommandException {

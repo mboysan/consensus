@@ -1,12 +1,12 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.EchoProtocolImpl;
+import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.Transport;
+import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
-import com.mboysan.consensus.network.VanillaTcpClientTransport;
-import com.mboysan.consensus.network.VanillaTcpServerTransport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,32 +20,37 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
+abstract class TransportIntegrationTestBase {
 
-    private VanillaTcpServerTransport[] serverTransports;
-    private VanillaTcpClientTransport[] clientTransports;
+    static {
+        // no-op event listener to increase code coverage.
+        EventManagerService.getInstance().register(MeasurementEvent.class, measurementEvent -> {});
+    }
 
     @BeforeEach
-    void setUp() {
-        this.serverTransports = setupServers();
-        this.clientTransports = setupClients();
+    void doSetUp() throws IOException {
+        setUp();
     }
+    abstract void setUp() throws IOException;
 
     @AfterEach
-    void tearDown() {
-        teardownServers(serverTransports);
-        teardownClients(clientTransports);
+    void doTeardown() {
+        tearDown();
     }
+    abstract void tearDown();
+
+    abstract Transport createClientTransport();
+
+    abstract Transport[] getServerTransports();
+    abstract Transport[] getClientTransports();
 
     @Test
-    void testSomeUnhappyPaths() {
+    void testSomeUnhappyPaths() throws IOException {
         // --- server transport unhappy paths
-        VanillaTcpServerTransport server = serverTransports[0];
-        assertFalse(server.verifyShutdown());   // server should be running
+        Transport server = getServerTransports()[0];
 
         assertDoesNotThrow(server::start); // 2nd start does nothing (increase code cov)
 
@@ -54,18 +59,15 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
 
         server.shutdown();
         assertDoesNotThrow(server::shutdown); // 2nd shutdown does nothing (increase code cov)
-        assertTrue(server.verifyShutdown());   // server should be shut down
 
         // --- client transport unhappy paths
-        VanillaTcpClientTransport client = createClientTransport();
-        assertTrue(client.verifyShutdown());    // client is not started yet.
+        Transport client = createClientTransport();
 
         TestMessage testMsg2 = new TestMessage("");
         assertThrows(IllegalStateException.class, () -> client.sendRecv(testMsg2));
 
         client.start();
         assertDoesNotThrow(client::start); // 2nd start does nothing (increase code cov)
-        assertFalse(client.verifyShutdown());   // client should be running
 
         assertFalse(client.isShared());
 
@@ -77,12 +79,11 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
 
         client.shutdown();
         assertDoesNotThrow(client::shutdown); // 2nd shutdown does nothing (increase code cov)
-        assertTrue(client.verifyShutdown());   // server should be shut down
     }
 
     @Test
     void testClientToServerSimple() throws IOException {
-        Transport sender = clientTransports[0];
+        Transport sender = getClientTransports()[0];
         TestMessage request = testMessage(0, 0, 0);
         TestMessage response = (TestMessage) sender.sendRecv(request);
         assertResponse(request, response);
@@ -90,7 +91,7 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
 
     @Test
     void testMultiThreadClientToServerSimple() throws Exception {
-        Transport sender = clientTransports[0];
+        Transport sender = getClientTransports()[0];
         try (MultiThreadExecutor executor = new MultiThreadExecutor()) {
             for (int i = 0; i < 100; i++) {
                 int finalI = i;
@@ -105,12 +106,12 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
 
     @Test
     void testMultiThreadedServerToServerComm() throws ExecutionException, InterruptedException {
-        testMultithreadedComm(serverTransports);
+        testMultithreadedComm(getServerTransports());
     }
 
     @Test
     void testMultiThreadedClientToServerComm() throws ExecutionException, InterruptedException {
-        testMultithreadedComm(clientTransports);
+        testMultithreadedComm(getClientTransports());
     }
 
     void testMultithreadedComm(Transport[] transports) throws ExecutionException, InterruptedException {
@@ -136,22 +137,22 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
     }
 
     @Test
-    void testIOErrorOnReceiverShutdown() {
+    void testIOErrorOnReceiverShutdown() throws IOException {
         TestMessage request = testMessage(0, 0, 1);
 
-        serverTransports[1].shutdown();
-        awaiting(() -> assertThrows(IOException.class, () -> serverTransports[0].sendRecv(request)));
+        getServerTransports()[1].shutdown();
+        awaiting(() -> assertThrows(IOException.class, () -> getServerTransports()[0].sendRecv(request)));
 
-        serverTransports[1].start();
+        getServerTransports()[1].start();
         awaiting(() -> {
-            TestMessage response = (TestMessage) serverTransports[0].sendRecv(request);
+            TestMessage response = (TestMessage) getServerTransports()[0].sendRecv(request);
             assertResponse(request, response);
         });
     }
 
     @Test
     void testSocketTimeout() {
-        Transport sender = clientTransports[0];
+        Transport sender = getClientTransports()[0];
         // signal the server to wait before responding, this will end up socket to timeout before receiving a response.
         TestMessage request = new TestMessage(EchoProtocolImpl.PAYLOAD_WAIT)
                 .setSenderId(0)

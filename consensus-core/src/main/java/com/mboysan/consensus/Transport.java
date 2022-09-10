@@ -20,5 +20,6 @@ public interface Transport {
 
     void shutdown();
 
+    // TODO: remove
     boolean isShared();
 }

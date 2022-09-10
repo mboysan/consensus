@@ -8,24 +8,12 @@ import java.util.Map;
 
 public interface TcpTransportConfig extends TransportConfig {
 
-    @Key("transport.tcp.clientPoolSize")
-    @DefaultValue("-1")
-    int clientPoolSize();
-
     @Key("transport.tcp.server.port")
     int port();
 
     @Key("transport.tcp.server.socket.so_timeout")
     @DefaultValue("30000")  // 30 seconds
     int socketSoTimeout();
-
-    @Key("transport.tcp.client.failure.markServerAsFailedCount")
-    @DefaultValue("3")
-    int markServerAsFailedCount();
-
-    @Key("transport.tcp.client.failure.pingInterval")
-    @DefaultValue("5000")   // 5 seconds
-    long pingInterval();
 
     /**
      * Following is an example of supported TCP/IP destinations with node ids:

@@ -1,6 +1,6 @@
-package com.mboysan.consensus.network;
+package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.configuration.TransportConfig;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.ShutdownUtil;
 import org.slf4j.Logger;
@@ -18,14 +18,14 @@ class FailureDetector {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FailureDetector.class);
     private boolean isRunning = false;
-    private final VanillaTcpClientTransport clientTransport;
+    private final ClientTransport clientTransport;
     private final Map<Integer, FailedServer> failedServerMap = new HashMap<>();
     private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private final int markServerAsFailedCount;
 
     FailureDetector(
-            VanillaTcpClientTransport clientTransport, TcpTransportConfig config, int associatedServerId) {
+            ClientTransport clientTransport, TransportConfig config, int associatedServerId) {
         this.clientTransport = clientTransport;
         this.markServerAsFailedCount = config.markServerAsFailedCount();
 

@@ -1,11 +1,10 @@
 package com.mboysan.consensus.integration;
 
+import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.ShutdownUtil;
-import com.mboysan.consensus.network.VanillaTcpClientTransport;
-import com.mboysan.consensus.network.VanillaTcpServerTransport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -15,20 +14,24 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
+abstract class FailureDetectorIntegrationTestBase {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FailureDetectorIntegrationTest.class);
+    abstract Properties clientProperties();
+    abstract Transport createClientTransport(Properties properties);
+    abstract Transport createServerTransport(int serverId);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(FailureDetectorIntegrationTestBase.class);
 
     @Test
     void testFailureDetectionDisabled() throws IOException, InterruptedException {
         final long pingInterval = 100;
 
         Properties clientProperties = clientProperties();
-        clientProperties.put("transport.tcp.client.failure.markServerAsFailedCount", String.valueOf(-1));
-        clientProperties.put("transport.tcp.client.failure.pingInterval", String.valueOf(pingInterval));
-        final VanillaTcpClientTransport clientTransport = createClientTransport(clientProperties);
+        clientProperties.put("transport.failureDetector.markServerAsFailedCount", String.valueOf(-1));
+        clientProperties.put("transport.failureDetector.pingInterval", String.valueOf(pingInterval));
+        final Transport clientTransport = createClientTransport(clientProperties);
 
-        final VanillaTcpServerTransport serverTransport = createServerTransport(0);
+        final Transport serverTransport = createServerTransport(0);
         try {
             clientTransport.start();
 
@@ -54,15 +57,15 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
     }
 
     @Test
-    void testFailureDetectionEnabled() throws InterruptedException {
+    void testFailureDetectionEnabled() throws InterruptedException, IOException {
         final long pingInterval = 100;
 
         Properties clientProperties = clientProperties();
-        clientProperties.put("transport.tcp.client.failure.markServerAsFailedCount", String.valueOf(1));    // 1 failure is enough.
-        clientProperties.put("transport.tcp.client.failure.pingInterval", String.valueOf(pingInterval));
-        final VanillaTcpClientTransport clientTransport = createClientTransport(clientProperties);
+        clientProperties.put("transport.failureDetector.markServerAsFailedCount", String.valueOf(1));    // 1 failure is enough.
+        clientProperties.put("transport.failureDetector.pingInterval", String.valueOf(pingInterval));
+        final Transport clientTransport = createClientTransport(clientProperties);
 
-        final VanillaTcpServerTransport serverTransport = createServerTransport(0);
+        final Transport serverTransport = createServerTransport(0);
         try {
             clientTransport.start();
 

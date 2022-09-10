@@ -6,9 +6,7 @@ import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.SimConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.network.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,8 +34,7 @@ public class NodeCLI {
 
         startMetricsCollector(properties);
 
-        TcpTransportConfig serverTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        Transport nodeServingTransport = new VanillaTcpServerTransport(serverTransportConfig);
+        Transport nodeServingTransport = TransportFactory.createServerTransport(properties);
 
         AbstractNode<?> node;
 

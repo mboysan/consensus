@@ -1,9 +1,7 @@
-package com.mboysan.consensus.network;
+package com.mboysan.consensus;
 
-import com.mboysan.consensus.EventManagerService;
-import com.mboysan.consensus.Transport;
-import com.mboysan.consensus.configuration.TcpDestination;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
+import com.mboysan.consensus.configuration.TransportConfig;
+import com.mboysan.consensus.configuration.TransportConfigHelper;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.ShutdownUtil;
@@ -12,12 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.UncheckedIOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,15 +19,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.UnaryOperator;
 
-public class VanillaTcpServerTransport implements Transport {
-    private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpServerTransport.class);
+class ServerTransport implements Transport {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerTransport.class);
 
-    private final int port;
-    private final Map<Integer, TcpDestination> destinations;
-    private final int nodeIdOrPort;
+    private final TransportConfig config;
+    private final int serverId;
     private final Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
-
-    private ServerSocket serverSocket;
+    private ObjectIOServer ioServer;
     private ExecutorService clientHandlerExecutor;
 
     private volatile boolean isRunning = false;
@@ -43,19 +34,13 @@ public class VanillaTcpServerTransport implements Transport {
     /**
      * Id of the node that this transport is responsible from
      */
-    private final VanillaTcpClientTransport clientTransport;
-    private final int socketSoTimeout;
+    private final ClientTransport clientTransport;
 
-    public VanillaTcpServerTransport(TcpTransportConfig config) {
+    ServerTransport(TransportConfig config) {
         LOGGER.info("server transport config={}", config);
-        this.port = config.port();
-        this.destinations = config.destinations();
-        this.nodeIdOrPort = destinations.values().stream()
-                .filter(dest -> dest.port() == port)
-                .mapToInt(TcpDestination::nodeId)
-                .findFirst().orElse(port);
-        this.clientTransport = new VanillaTcpClientTransport(config, nodeIdOrPort);
-        this.socketSoTimeout = config.socketSoTimeout();
+        this.config = config;
+        this.serverId = TransportConfigHelper.resolveId(config);
+        this.clientTransport = TransportFactory.createClientTransport(config, serverId);
     }
 
     @Override
@@ -77,15 +62,15 @@ public class VanillaTcpServerTransport implements Transport {
             return;
         }
         try {
-            this.serverSocket = new ServerSocket(port);
+            this.ioServer = ObjectIOServer.create(config);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + nodeIdOrPort);
+        Thread serverThread = new Thread(this::serverThreadLoop, "server-" + serverId);
         serverThread.setDaemon(false);
         this.clientHandlerExecutor = Executors.newCachedThreadPool(
                 new BasicThreadFactory.Builder()
-                        .namingPattern("server-" + nodeIdOrPort +"-handler-" + "%d")
+                        .namingPattern("server-" + serverId +"-handler-" + "%d")
                         .daemon(false)
                         .build());
 
@@ -98,12 +83,8 @@ public class VanillaTcpServerTransport implements Transport {
         int clientCount = 0;
         while (isRunning) {
             try {
-                Socket clientSocket = serverSocket.accept();
-                clientSocket.setKeepAlive(true);
-                if (socketSoTimeout > 0) {
-                    clientSocket.setSoTimeout(socketSoTimeout);
-                }
-                ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);
+                ObjectIOClient ioClient = ioServer.accept();
+                ClientHandler clientHandler = new ClientHandler(ioClient, clientCount);
                 clientHandlers.put(clientCount + "", clientHandler);
                 clientHandlerExecutor.submit(clientHandler);
                 ++clientCount;
@@ -115,7 +96,7 @@ public class VanillaTcpServerTransport implements Transport {
 
     @Override
     public Set<Integer> getDestinationNodeIds() {
-        return Collections.unmodifiableSet(destinations.keySet());
+        return TransportConfigHelper.resolveDestinationNodeIds(config);
     }
 
     @Override
@@ -138,31 +119,23 @@ public class VanillaTcpServerTransport implements Transport {
             return;
         }
         isRunning = false;
-        ShutdownUtil.close(LOGGER, serverSocket);
+        ShutdownUtil.close(LOGGER, ioServer);
         ShutdownUtil.shutdown(LOGGER, clientHandlerExecutor);
         clientHandlers.forEach((s, ch) -> ShutdownUtil.shutdown(LOGGER, ch::shutdown));
         clientHandlers.clear();
         ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
     }
 
-    public synchronized boolean verifyShutdown() {
-        return !isRunning && clientTransport.verifyShutdown();
-    }
-
     private final class ClientHandler implements Runnable {
         private volatile boolean isRunning = true;
-        private final Socket socket;
-        private final ObjectOutputStream os;
-        private final ObjectInputStream is;
+        private final ObjectIOClient ioClient;
         private final ExecutorService requestExecutor;
 
-        private ClientHandler(Socket socket, int handlerId) throws IOException {
-            this.socket = socket;
-            this.os = new ObjectOutputStream(socket.getOutputStream());
-            this.is = new ObjectInputStream(socket.getInputStream());
+        private ClientHandler(ObjectIOClient ioClient, int handlerId) throws IOException {
+            this.ioClient = ioClient;
             this.requestExecutor = Executors.newCachedThreadPool(
                     new BasicThreadFactory.Builder()
-                            .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
+                            .namingPattern("server-" + serverId +"-handler-" + handlerId + "-exec-" + "%d")
                             .daemon(false)
                             .build());
         }
@@ -171,7 +144,7 @@ public class VanillaTcpServerTransport implements Transport {
         public void run() {
             while (isRunning) {
                 try {
-                    Message request = (Message) is.readObject();
+                    Message request = (Message) ioClient.readObject();
                     LOGGER.debug("IN (request): {}", request);
                     sampleReceive(request);
 
@@ -180,11 +153,9 @@ public class VanillaTcpServerTransport implements Transport {
                     requestExecutor.submit(() -> {
                         Message response = messageProcessor.apply(request);
                         try {
-                            synchronized (os) {
+                            synchronized (ioClient) {
                                 LOGGER.debug("OUT (response): {}", response);
-                                os.writeObject(response);
-                                os.flush();
-                                os.reset();
+                                ioClient.writeObject(response);
                                 sampleSend(response);
                             }
                         } catch (IOException e) {
@@ -204,23 +175,17 @@ public class VanillaTcpServerTransport implements Transport {
                 return;
             }
             isRunning = false;
-            synchronized (os) {
-                ShutdownUtil.close(LOGGER, os);
-            }
-            synchronized (is) {
-                ShutdownUtil.close(LOGGER, is);
-            }
-            ShutdownUtil.close(LOGGER, socket);
+            ShutdownUtil.close(LOGGER, ioClient);
             ShutdownUtil.shutdown(LOGGER, requestExecutor);
         }
     }
 
     private static void sampleSend(Message message) {
-        sample("insights.tcp.server.send.sizeOf." + message.getClass().getSimpleName(), message);
+        sample("insights.server.send.sizeOf." + message.getClass().getSimpleName(), message);
     }
 
     private static void sampleReceive(Message message) {
-        sample("insights.tcp.server.receive.sizeOf." + message.getClass().getSimpleName(), message);
+        sample("insights.server.receive.sizeOf." + message.getClass().getSimpleName(), message);
     }
 
     private static void sample(String name, Message message) {

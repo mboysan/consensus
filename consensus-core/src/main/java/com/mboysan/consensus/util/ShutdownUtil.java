@@ -1,12 +1,8 @@
 package com.mboysan.consensus.util;
 
-import org.apache.commons.pool2.ObjectPool;
 import org.slf4j.Logger;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.Closeable;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -14,42 +10,18 @@ import java.util.concurrent.TimeUnit;
 public final class ShutdownUtil {
     private ShutdownUtil() {}
 
-    public static void close(final Logger logger, final ServerSocket serverSocket) {
+    public static void close(final Logger logger, final AutoCloseable autoCloseable) {
         shutdown(logger, () -> {
-            if (serverSocket != null) {
-                serverSocket.close();
+            if (autoCloseable != null) {
+                autoCloseable.close();
             }
         });
     }
 
-    public static void close(final Logger logger, final Socket socket) {
+    public static void close(final Logger logger, final Closeable closeable) {
         shutdown(logger, () -> {
-            if (socket != null) {
-                socket.close();
-            }
-        });
-    }
-
-    public static void close(final Logger logger, final OutputStream outputStream) {
-        shutdown(logger, () -> {
-            if (outputStream != null) {
-                outputStream.close();
-            }
-        });
-    }
-
-    public static void close(final Logger logger, final InputStream inputStream) {
-        shutdown(logger, () -> {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-        });
-    }
-
-    public static void close(final Logger logger, final ObjectPool<?> pool) {
-        shutdown(logger, () -> {
-            if (pool != null) {
-                pool.close();
+            if (closeable != null) {
+                closeable.close();
             }
         });
     }
