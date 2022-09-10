@@ -17,12 +17,12 @@ class TcpTransportConfigTest {
         props.put("transport.tcp.destinations", "0-localhost:8080,1-localhost:8081, 2-localhost:8082");
         TcpTransportConfig config = CoreConfig.newInstance(TcpTransportConfig.class, props);
 
-        Map<Integer, Destination> expected = new HashMap<>() {{
-            put(0, new Destination(0, "localhost", 8080));
-            put(1, new Destination(1, "localhost", 8081));
-            put(2, new Destination(2, "localhost", 8082));
+        Map<Integer, TcpDestination> expected = new HashMap<>() {{
+            put(0, new TcpDestination(0, "localhost", 8080));
+            put(1, new TcpDestination(1, "localhost", 8081));
+            put(2, new TcpDestination(2, "localhost", 8082));
         }};
-        Map<Integer, Destination> actual = config.destinations();
+        Map<Integer, TcpDestination> actual = config.destinations();
 
         assertEquals(expected, actual);
     }
