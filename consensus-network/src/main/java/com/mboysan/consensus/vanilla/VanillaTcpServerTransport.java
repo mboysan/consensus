@@ -59,11 +59,6 @@ public class VanillaTcpServerTransport implements Transport {
     }
 
     @Override
-    public boolean isShared() {
-        return false;
-    }
-
-    @Override
     public void registerMessageProcessor(UnaryOperator<Message> messageProcessor) {
         if (this.messageProcessor != null && !this.messageProcessor.equals(messageProcessor)) {  // for restarts
             throw new IllegalStateException("request processor already registered");

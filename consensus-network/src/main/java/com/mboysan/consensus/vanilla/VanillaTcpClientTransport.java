@@ -62,11 +62,6 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     @Override
-    public boolean isShared() {
-        return false;
-    }
-
-    @Override
     public synchronized void start() {
         isRunning = true;
     }
