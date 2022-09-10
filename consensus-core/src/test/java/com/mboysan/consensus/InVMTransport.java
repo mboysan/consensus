@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
-import com.mboysan.consensus.configuration.TransportConfig;
+import com.mboysan.consensus.configuration.InVMTransportConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
 import com.mboysan.consensus.message.Message;
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
@@ -31,12 +30,7 @@ public class InVMTransport implements Transport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 
-    private static final TransportConfig DEFAULT_CONFIG;
-    static {
-        final Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 200 + "");    // set a default on callback timeout
-        DEFAULT_CONFIG = CoreConfig.newInstance(TransportConfig.class, properties);
-    }
+    private static final InVMTransportConfig DEFAULT_CONFIG = CoreConfig.newInstance(InVMTransportConfig.class);
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool(
             new BasicThreadFactory.Builder().namingPattern("invm-exec-%d").daemon(true).build()
@@ -45,7 +39,7 @@ public class InVMTransport implements Transport {
     private final Map<Integer, Server> serverMap = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> callbackMap = new ConcurrentHashMap<>();
 
-    private final TransportConfig transportConfig;
+    private final InVMTransportConfig transportConfig;
     private final int associatedNodeId;
 
     public InVMTransport() {
@@ -56,7 +50,7 @@ public class InVMTransport implements Transport {
         this(DEFAULT_CONFIG, associatedNodeId);
     }
 
-    public InVMTransport(TransportConfig transportConfig, int associatedNodeId) {
+    public InVMTransport(InVMTransportConfig transportConfig, int associatedNodeId) {
         EventManagerService.getInstance().register(NodeStoppedEvent.class, this::onNodeStopped);
         this.transportConfig = transportConfig;
         this.associatedNodeId = associatedNodeId;

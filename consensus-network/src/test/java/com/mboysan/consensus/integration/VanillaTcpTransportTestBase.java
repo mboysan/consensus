@@ -3,7 +3,7 @@ package com.mboysan.consensus.integration;
 import com.mboysan.consensus.EchoProtocolImpl;
 import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.configuration.CoreConfig;
-import com.mboysan.consensus.configuration.Destination;
+import com.mboysan.consensus.configuration.TcpDestination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.util.NetUtil;
@@ -21,7 +21,7 @@ class VanillaTcpTransportTestBase {
 
     private static final int NUM_SERVERS = 3;
     private static final int NUM_CLIENTS = 3;
-    private static final List<Destination> DESTINATIONS = new ArrayList<>();
+    private static final List<TcpDestination> DESTINATIONS = new ArrayList<>();
     static {
         addDestination(0, NetUtil.findFreePort());
         addDestination(1, NetUtil.findFreePort());
@@ -103,6 +103,6 @@ class VanillaTcpTransportTestBase {
     }
 
     private static void addDestination(int nodeId, int port) {
-        DESTINATIONS.add(new Destination(nodeId, HOST_NAME, port));
+        DESTINATIONS.add(new TcpDestination(nodeId, HOST_NAME, port));
     }
 }

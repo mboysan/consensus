@@ -1,6 +1,8 @@
 package com.mboysan.consensus;
 
-public class KVOperationException extends Exception {
+import com.mboysan.consensus.message.CommandException;
+
+public class KVOperationException extends CommandException {
     public KVOperationException(Throwable cause) {
         super(cause);
     }

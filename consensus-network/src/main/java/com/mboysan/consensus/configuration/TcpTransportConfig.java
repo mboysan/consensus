@@ -6,7 +6,11 @@ import org.aeonbits.owner.Converter;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-public interface TcpTransportConfig extends TransportConfig {
+public interface TcpTransportConfig extends CoreConfig {
+
+    @Key("transport.message.callbackTimeoutMs")
+    @DefaultValue("5000")
+    long messageCallbackTimeoutMs();
 
     @Key("transport.tcp.clientPoolSize")
     @DefaultValue("-1")
@@ -39,11 +43,11 @@ public interface TcpTransportConfig extends TransportConfig {
      */
     @Key("transport.tcp.destinations")
     @ConverterClass(DestinationsConverter.class)
-    Map<Integer, Destination> destinations();
+    Map<Integer, TcpDestination> destinations();
 
-    class DestinationsConverter implements Converter<Map<Integer, Destination>> {
+    class DestinationsConverter implements Converter<Map<Integer, TcpDestination>> {
         @Override
-        public Map<Integer, Destination> convert(Method method, String s) {
+        public Map<Integer, TcpDestination> convert(Method method, String s) {
             return NetUtil.convertPropsToDestinationsMap(s);
         }
     }
