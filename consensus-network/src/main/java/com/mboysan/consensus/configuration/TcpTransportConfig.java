@@ -6,7 +6,11 @@ import org.aeonbits.owner.Converter;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-public interface TcpTransportConfig extends TransportConfig {
+public interface TcpTransportConfig extends CoreConfig {
+
+    @Key("transport.message.callbackTimeoutMs")
+    @DefaultValue("5000")
+    long messageCallbackTimeoutMs();
 
     @Key("transport.tcp.clientPoolSize")
     @DefaultValue("-1")
