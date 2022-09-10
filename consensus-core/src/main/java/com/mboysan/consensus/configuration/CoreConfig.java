@@ -7,6 +7,7 @@ import java.util.Properties;
 
 @Config.Sources("classpath:application.properties")
 public interface CoreConfig extends Config {
+
     static <T extends CoreConfig> T newInstance(Class<T> configClass, Properties... properties) {
         return ConfigFactory.create(configClass, properties);
     }

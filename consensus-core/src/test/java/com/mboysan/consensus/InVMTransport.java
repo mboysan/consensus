@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
@@ -31,12 +30,7 @@ public class InVMTransport implements Transport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InVMTransport.class);
 
-    private static final InVMTransportConfig DEFAULT_CONFIG;
-    static {
-        final Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 200 + "");    // set a default on callback timeout
-        DEFAULT_CONFIG = CoreConfig.newInstance(InVMTransportConfig.class, properties);
-    }
+    private static final InVMTransportConfig DEFAULT_CONFIG = CoreConfig.newInstance(InVMTransportConfig.class);
 
     private final ExecutorService serverExecutor = Executors.newCachedThreadPool(
             new BasicThreadFactory.Builder().namingPattern("invm-exec-%d").daemon(true).build()

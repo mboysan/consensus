@@ -2,7 +2,7 @@ package com.mboysan.consensus.vanilla;
 
 import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.Transport;
-import com.mboysan.consensus.configuration.Destination;
+import com.mboysan.consensus.configuration.TcpDestination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
@@ -30,7 +30,7 @@ public class VanillaTcpServerTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpServerTransport.class);
 
     private final int port;
-    private final Map<Integer, Destination> destinations;
+    private final Map<Integer, TcpDestination> destinations;
     private final int nodeIdOrPort;
     private final Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
 
@@ -52,7 +52,7 @@ public class VanillaTcpServerTransport implements Transport {
         this.destinations = config.destinations();
         this.nodeIdOrPort = destinations.values().stream()
                 .filter(dest -> dest.port() == port)
-                .mapToInt(Destination::nodeId)
+                .mapToInt(TcpDestination::nodeId)
                 .findFirst().orElse(port);
         this.clientTransport = new VanillaTcpClientTransport(config, nodeIdOrPort);
         this.socketSoTimeout = config.socketSoTimeout();

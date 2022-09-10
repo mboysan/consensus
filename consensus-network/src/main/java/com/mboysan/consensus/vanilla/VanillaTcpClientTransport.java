@@ -2,7 +2,7 @@ package com.mboysan.consensus.vanilla;
 
 import com.mboysan.consensus.EventManagerService;
 import com.mboysan.consensus.Transport;
-import com.mboysan.consensus.configuration.Destination;
+import com.mboysan.consensus.configuration.TcpDestination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.Message;
@@ -36,7 +36,7 @@ public class VanillaTcpClientTransport implements Transport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpClientTransport.class);
 
-    private final Map<Integer, Destination> destinations;
+    private final Map<Integer, TcpDestination> destinations;
     private final int clientPoolSize;
     private volatile boolean isRunning = false;
 
@@ -128,7 +128,7 @@ public class VanillaTcpClientTransport implements Transport {
 
     private ObjectPool<TcpClient> getOrCreateClientPool(int receiverId) {
         return clientPools.computeIfAbsent(receiverId, id -> {
-            Destination dest = destinations.get(id);
+            TcpDestination dest = destinations.get(id);
             TcpClientFactory clientFactory = new TcpClientFactory(dest);
             GenericObjectPoolConfig<TcpClient> poolConfig = new GenericObjectPoolConfig<>();
             poolConfig.setMaxTotal(clientPoolSize);
@@ -165,7 +165,7 @@ public class VanillaTcpClientTransport implements Transport {
         private final ObjectInputStream is;
         private final Semaphore semaphore = new Semaphore(0);
 
-        TcpClient(int clientId, int associatedServerId, Destination destination) throws IOException {
+        TcpClient(int clientId, int associatedServerId, TcpDestination destination) throws IOException {
             this.socket = new Socket(destination.ip(), destination.port());
             this.os = new ObjectOutputStream(socket.getOutputStream());
             this.is = new ObjectInputStream(socket.getInputStream());
@@ -239,9 +239,9 @@ public class VanillaTcpClientTransport implements Transport {
 
     private class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {
         private final AtomicInteger clientId = new AtomicInteger(0);
-        private final Destination destination;
+        private final TcpDestination destination;
 
-        private TcpClientFactory(Destination destination) {
+        private TcpClientFactory(TcpDestination destination) {
             this.destination = destination;
         }
 
