@@ -9,39 +9,14 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>consensus-cli</artifactId>
+    <artifactId>consensus-transport</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-kvstore</artifactId>
+            <artifactId>consensus-core</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-transport</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mboysan.consensus</groupId>
-            <artifactId>consensus-metrics</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <!--
-            Both logging implementation and its configuration (log4j.properties) are provided in the classpath.
-            See README for more info.
-        -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-reload4j</artifactId>
-            <version>1.7.36</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.reload4j</groupId>
-            <artifactId>reload4j</artifactId>
-            <version>1.2.21</version>
         </dependency>
 
         <dependency>
@@ -52,8 +27,18 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -6,9 +6,7 @@ import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.configuration.SimConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,14 +34,10 @@ public class KVStoreServerCLI {
         startMetricsCollector(CliArgsHelper.getProperties(args));
 
         Properties nodeSectionProperties = CliArgsHelper.getNodeSectionProperties(args);
-        TcpTransportConfig nodeServingTransportConfig
-                = CoreConfig.newInstance(TcpTransportConfig.class, nodeSectionProperties);
-        Transport nodeServingTransport = new VanillaTcpServerTransport(nodeServingTransportConfig);
+        Transport nodeServingTransport = TransportFactory.createServerTransport(nodeSectionProperties);
 
         Properties storeSectionProperties = CliArgsHelper.getStoreSectionProperties(args);
-        TcpTransportConfig clientServingTransportConfig
-                = CoreConfig.newInstance(TcpTransportConfig.class, storeSectionProperties);
-        Transport clientServingTransport = new VanillaTcpServerTransport(clientServingTransportConfig);
+        Transport clientServingTransport = TransportFactory.createServerTransport(storeSectionProperties);
 
         AbstractKVStore<?> kvStore;
 

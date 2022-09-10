@@ -13,7 +13,7 @@ interface RPCProtocol extends UnaryOperator<Message> {
     @Override
     default Message apply(Message message) {
         try {
-            return processRequest(message);
+            return processRequest(message).responseTo(message);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

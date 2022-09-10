@@ -171,7 +171,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public HeartbeatResponse heartbeat(HeartbeatRequest request) {
-        return new HeartbeatResponse(System.currentTimeMillis()).responseTo(request);
+        return new HeartbeatResponse(System.currentTimeMillis());
     }
 
     @Override
@@ -181,12 +181,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             if (request.getElectId() > range.getVotedElectId()) {
                 range.setVotedElectId(request.getElectId());
                 range.setLeaderId(request.getSenderId());     // "update" vote
-                return new PleaseVoteResponse(true).responseTo(request);
+                return new PleaseVoteResponse(true);
             } else if (request.getElectId() == range.getVotedElectId()
                     && request.getSenderId() == range.getLeaderId()) {
-                return new PleaseVoteResponse(true).responseTo(request);
+                return new PleaseVoteResponse(true);
             }
-            return new PleaseVoteResponse(false).responseTo(request);
+            return new PleaseVoteResponse(false);
         } finally {
             range.unlock();
         }
@@ -201,11 +201,11 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         try {
             Bucket bucket = range.getBucket(bucketIndex);
             if (electId < range.getVotedElectId()) {
-                return new ReplicaReadResponse(false, null).responseTo(request);
+                return new ReplicaReadResponse(false, null);
             } else {
                 range.setVotedElectId(electId);
                 range.setLeaderId(source);    // "update" vote
-                return new ReplicaReadResponse(true, bucket).responseTo(request);
+                return new ReplicaReadResponse(true, bucket);
             }
         } finally {
             range.unlock();
@@ -219,7 +219,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             Bucket bucket = range.getBucket(request.getBucketIndex());
             Bucket bucketReceived = request.getBucket();
             if (bucketReceived.getVerElectId() < range.getVotedElectId()) {
-                return new ReplicaWriteResponse(false).responseTo(request);
+                return new ReplicaWriteResponse(false);
             } else {
                 range.setVotedElectId(bucketReceived.getVerElectId());
                 range.setLeaderId(request.getSenderId());     // "update" vote
@@ -227,7 +227,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 bucket.setVerElectId(bucketReceived.getVerElectId());
                 bucket.setVerCounter(bucketReceived.getVerCounter());
                 bucket.setBucketMap(bucketReceived.getBucketMap());
-                return new ReplicaWriteResponse(true).responseTo(request);
+                return new ReplicaWriteResponse(true);
             }
         } finally {
             range.unlock();
@@ -238,9 +238,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     public CollectKeysResponse collectKeys(CollectKeysRequest request) {
         try {
             Set<String> myKeys = new BizurRun(request.getCorrelationId(), this).collectKeys();
-            return new CollectKeysResponse(true, null, myKeys).responseTo(request);
+            return new CollectKeysResponse(true, null, myKeys);
         } catch (BizurException e) {
-            return new CollectKeysResponse(false, e, null).responseTo(request);
+            return new CollectKeysResponse(false, e, null);
         }
     }
 
@@ -310,52 +310,33 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         if (request.getRouteTo() != -1) {
             int routeToId = request.getRouteTo();
             request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()))
-                    .responseTo(request);
+            return routeMessage(request, routeToId);
         }
         switch (request.getRequest()) {
             case "askState" -> {
                 String state = new BizurRun(request.getCorrelationId(), this).apiGetState(true);
                 state = "State of node-" + getNodeId() + ": " + state;
-                return new CustomResponse(true, null, state).responseTo(request);
+                return new CustomResponse(true, null, state);
             }
             case "askStateFull" -> {
                 String state = new BizurRun(request.getCorrelationId(), this).apiGetState(false);
                 state = "Verbose State of node-" + getNodeId() + ": " + state;
-                return new CustomResponse(true, null, state).responseTo(request);
+                return new CustomResponse(true, null, state);
             }
             case "askProtocol" -> {
-                return new CustomResponse(true, null, "bizur").responseTo(request);
+                return new CustomResponse(true, null, "bizur");
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null)
-                .responseTo(request);
+        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {
-        logRequestRouting(request, getNodeId(), receiverId);
         if (receiverId == -1) {
             BizurException err = new BizurException("leader unresolved");
             logErrorForRequest(err, request);
             return response(request, false, err, null);
         }
-        if (request instanceof KVGetRequest) {
-            return getRPC().get(request.setReceiverId(receiverId).setSenderId(getNodeId()))
-                    .responseTo(request);
-        }
-        if (request instanceof KVSetRequest) {
-            return getRPC().set(request.setReceiverId(receiverId).setSenderId(getNodeId()))
-                    .responseTo(request);
-        }
-        if (request instanceof KVDeleteRequest) {
-            return getRPC().delete(request.setReceiverId(receiverId).setSenderId(getNodeId()))
-                    .responseTo(request);
-        }
-        if (request instanceof KVIterateKeysRequest) {
-            return getRPC().iterateKeys(request.setReceiverId(receiverId).setSenderId(getNodeId()))
-                    .responseTo(request);
-        }
-        throw new IllegalArgumentException("unrecognized request=" + request.toString());
+        return routeMessage(request, receiverId);
     }
 
     @SuppressWarnings("unchecked")
@@ -363,16 +344,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             Message request, boolean success, Exception err, Object payload)
     {
         if (request instanceof  KVGetRequest) {
-            return new KVGetResponse(success, err, (String) payload).responseTo(request);
+            return (T) new KVGetResponse(success, err, (String) payload);
         }
         if (request instanceof  KVSetRequest) {
-            return new KVSetResponse(success, err).responseTo(request);
+            return (T) new KVSetResponse(success, err);
         }
         if (request instanceof  KVDeleteRequest) {
-            return new KVDeleteResponse(success, err).responseTo(request);
+            return (T) new KVDeleteResponse(success, err);
         }
         if (request instanceof  KVIterateKeysRequest) {
-            return new KVIterateKeysResponse(success, err, (Set<String>) payload).responseTo(request);
+            return (T) new KVIterateKeysResponse(success, err, (Set<String>) payload);
         }
         throw new IllegalArgumentException("unrecognized request=" + request.toString());
     }
@@ -408,10 +389,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     int getNumRanges() {
         return Math.min(numPeers, numBuckets);
-    }
-
-    private void logRequestRouting(Message request, int from, int to) {
-        LOGGER.debug("routing request={}, from={} to={}", request, from, to);
     }
 
     private void logErrorForRequest(Exception exception, Message request) {

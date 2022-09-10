@@ -53,10 +53,10 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
             String key = request.getKey();
             boolean success = append(String.format("get%s%s", CMD_SEP, key), request);
             String value = store.get(Objects.requireNonNull(request.getKey()));
-            return new KVGetResponse(success, null, value).responseTo(request);
+            return new KVGetResponse(success, null, value);
         } catch (Exception e) {
             logError(request, e);
-            return new KVGetResponse(false, e, null).responseTo(request);
+            return new KVGetResponse(false, e, null);
         }
     }
 
@@ -66,10 +66,10 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
             String key = Objects.requireNonNull(request.getKey());
             String value = Objects.requireNonNull(request.getValue());
             boolean success = append(String.format("put%s%s%s%s", CMD_SEP, key, CMD_SEP, value), request);
-            return new KVSetResponse(success, null).responseTo(request);
+            return new KVSetResponse(success, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVSetResponse(false, e).responseTo(request);
+            return new KVSetResponse(false, e);
         }
     }
 
@@ -78,10 +78,10 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
         try {
             String key = Objects.requireNonNull(request.getKey());
             boolean success = append(String.format("rm%s%s", CMD_SEP, key), request);
-            return new KVDeleteResponse(success, null).responseTo(request);
+            return new KVDeleteResponse(success, null);
         } catch (Exception e) {
             logError(request, e);
-            return new KVDeleteResponse(false, e).responseTo(request);
+            return new KVDeleteResponse(false, e);
         }
     }
 
@@ -90,10 +90,10 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
         try {
             boolean success = append("iterateKeys", request);
             Set<String> keys = new HashSet<>(store.keySet());
-            return new KVIterateKeysResponse(success, null, keys).responseTo(request);
+            return new KVIterateKeysResponse(success, null, keys);
         } catch (Exception e) {
             logError(request, e);
-            return new KVIterateKeysResponse(false, e, null).responseTo(request);
+            return new KVIterateKeysResponse(false, e, null);
         }
     }
 
@@ -112,7 +112,7 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
             return getNode().customRequest(request);
         } catch (Exception e) {
             logError(request, e);
-            return new CustomResponse(false, e, null).responseTo(request);
+            return new CustomResponse(false, e, null);
         }
     }
 }

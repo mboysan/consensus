@@ -57,7 +57,7 @@ jobs:
           }
           touch tests.log
           append consensus-core
-          append consensus-network
+          append consensus-transport
           append consensus-bizur
           append consensus-raft
           append consensus-simulate

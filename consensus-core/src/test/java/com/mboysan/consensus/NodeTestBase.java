@@ -1,18 +1,9 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.CoreConfig;
-
 import java.io.IOException;
-import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 abstract class NodeTestBase {
-
-    static {
-        Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 100 + "");
-        CoreConfig.getCached(CoreConfig.class, properties); // InVMTransport's callbackTimeout will be overridden
-    }
 
     abstract InVMTransport getTransport();
     abstract AbstractNode<?> getNode(int nodeId);

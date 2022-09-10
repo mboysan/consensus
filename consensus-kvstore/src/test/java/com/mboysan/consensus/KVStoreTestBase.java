@@ -1,6 +1,5 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
@@ -22,12 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 abstract class KVStoreTestBase {
-
-    static {
-        Properties properties = new Properties();
-        properties.put("transport.message.callbackTimeoutMs", 1000 + "");
-        CoreConfig.getCached(CoreConfig.class, properties); // InVMTransport's callbackTimeout will be overridden
-    }
 
     void putGetSequentialTest() throws Exception {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
