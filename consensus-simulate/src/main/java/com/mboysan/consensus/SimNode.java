@@ -17,9 +17,6 @@ import static com.mboysan.consensus.SimState.Role.LEADER;
 public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SimNode.class);
-
-    private static final int LEADER_ID = 0;
-
     private final SimConfig simConfig;
     private final SimClient rpcClient;
     private final SimState state;
@@ -29,8 +26,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
         this.simConfig = config;
         this.rpcClient = new SimClient(transport);
 
-        SimState.Role role = getNodeId() == LEADER_ID ? LEADER : SimState.Role.FOLLOWER;
-        this.state = new SimState(role);
+        this.state = new SimState(getNodeId(), config.leaderId());
     }
 
     @Override
@@ -78,7 +74,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     public SimMessage simulate(SimMessage message) throws IOException {
         validateAction();
         state.getMessageReceiveCount().incrementAndGet();
-        if (state.getRole().equals(LEADER)) {  // leader
+        if (state.getRole().equals(LEADER)) {
             if (simConfig.broadcastToFollowers()) {
                 forEachPeerParallel(peer -> {
                     SimMessage request = new SimMessage()
@@ -92,9 +88,9 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
                 });
             }
         } else {    // follower
-            if (simConfig.forwardToLeader() && message.getSenderId() != LEADER_ID) {
+            if (simConfig.forwardToLeader() && message.getSenderId() != state.getLeaderId()) {
                 // forward message to leader
-                return routeMessage(message, LEADER_ID);
+                return routeMessage(message, state.getLeaderId());
             }
         }
         // reply
