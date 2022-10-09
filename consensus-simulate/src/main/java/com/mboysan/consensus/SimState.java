@@ -5,8 +5,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 class SimState {
     private final Role role;
 
-    SimState(Role role) {
-        this.role = role;
+    private final int leaderId;
+    private final int nodeId;
+
+    SimState(final int nodeId, final int leaderId) {
+        this.nodeId = nodeId;
+        this.leaderId = leaderId;
+        this.role = nodeId == leaderId ? Role.LEADER : Role.FOLLOWER;
     }
 
     enum Role {
@@ -23,11 +28,17 @@ class SimState {
         return role;
     }
 
+    public int getLeaderId() {
+        return leaderId;
+    }
+
     @Override
     public String toString() {
         return "SimState{" +
                 "role=" + role +
-                ", messageReceiveCount=" + messageReceiveCount.get() +
+                ", leaderId=" + leaderId +
+                ", nodeId=" + nodeId +
+                ", messageReceiveCount=" + messageReceiveCount +
                 '}';
     }
 }
