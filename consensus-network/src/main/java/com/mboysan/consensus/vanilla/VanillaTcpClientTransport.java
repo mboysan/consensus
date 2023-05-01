@@ -104,6 +104,7 @@ public class VanillaTcpClientTransport implements Transport {
         callbackMap.put(message.getId(), msgFuture);
         try {
             client = pool.borrowObject();
+            LOGGER.trace("TCPClients active={}, idle={}", pool.getNumActive(), pool.getNumIdle());
             client.send(message);
             Message response = messageCallbackTimeoutMs > 0
                     ? msgFuture.get(messageCallbackTimeoutMs, TimeUnit.MILLISECONDS)
@@ -171,6 +172,7 @@ public class VanillaTcpClientTransport implements Transport {
                     : "server-%d-client-%d-recv-server-%d".formatted(associatedServerId, clientId, destination.nodeId());
             Thread receiverThread = new Thread(this::receive, receiverThreadName);
             receiverThread.start();
+            LOGGER.debug("created new TcpClient={}", receiverThreadName);
         }
 
         void receive() {

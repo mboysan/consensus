@@ -65,13 +65,26 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
 
         transport.registerMessageProcessor(this);
 
-        peerExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2,
-                new BasicThreadFactory.Builder().namingPattern("node-" + nodeId + "-peer-exec-%d").daemon(true).build()
-        );
+        peerExecutor = createPeerExecutorService();
 
         EventManagerService.getInstance().fire(new NodeStartedEvent(nodeId));
 
         return startNode();
+    }
+
+    private ExecutorService createPeerExecutorService() {
+        BasicThreadFactory threadFactory = new BasicThreadFactory.Builder().namingPattern("node-" + nodeId + "-peer-exec-%d").daemon(true).build();
+        final int numThreads = this.nodeConfig.nodePeerExecutorThreadCount();
+        if (numThreads < 0) {
+            LOGGER.info("peerExecutor thread pool size=unlimited");
+            return Executors.newCachedThreadPool(threadFactory);
+        } else if (numThreads == 0) {
+            final int threadCount = Runtime.getRuntime().availableProcessors() * 2;
+            LOGGER.info("peerExecutor thread pool size={}", threadCount);
+            return Executors.newFixedThreadPool(threadCount, threadFactory);
+        }
+        LOGGER.info("peerExecutor thread pool size={}", numThreads);
+        return Executors.newFixedThreadPool(numThreads, threadFactory);
     }
 
     abstract Future<Void> startNode();
