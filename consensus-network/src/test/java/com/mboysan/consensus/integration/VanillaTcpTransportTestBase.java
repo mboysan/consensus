@@ -56,17 +56,21 @@ class VanillaTcpTransportTestBase {
         return clientTransports;
     }
 
-    void teardownServers(VanillaTcpServerTransport[] serverTransports) {
+    void teardownServers(VanillaTcpServerTransport... serverTransports) {
         for (VanillaTcpServerTransport serverTransport : serverTransports) {
-            serverTransport.shutdown();
-            assertTrue(serverTransport.verifyShutdown());
+            if (serverTransport != null) {
+                serverTransport.shutdown();
+                assertTrue(serverTransport.verifyShutdown());
+            }
         }
     }
 
-    void teardownClients(VanillaTcpClientTransport[] clientTransports) {
+    void teardownClients(VanillaTcpClientTransport... clientTransports) {
         for (VanillaTcpClientTransport clientTransport : clientTransports) {
-            clientTransport.shutdown();
-            assertTrue(clientTransport.verifyShutdown());
+            if (clientTransport != null) {
+                clientTransport.shutdown();
+                assertTrue(clientTransport.verifyShutdown());
+            }
         }
     }
 

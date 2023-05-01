@@ -2,6 +2,7 @@ package com.mboysan.consensus.integration;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -33,39 +34,48 @@ class VanillaTcpTransportObjectPoolingIntegrationTest extends VanillaTcpTranspor
         server1Props.put("transport.tcp.clientPoolSize", "-1");
         server1Props.put("transport.message.callbackTimeoutMs", "-1");
 
-        VanillaTcpServerTransport sendingServer = createServerTransport(server0Props);
-        sendingServer.start();
-        VanillaTcpServerTransport receivingServer = createServerTransport(server1Props);
-        receivingServer.start();
+        final VanillaTcpServerTransport sendingServer = createServerTransport(server0Props);
+        final VanillaTcpServerTransport receivingServer = createServerTransport(server1Props);
 
-        final int expectedTcpClientCount = 5;
-
-        CyclicBarrier barrier = new CyclicBarrier(expectedTcpClientCount);
-        AtomicInteger actualMsgCount = new AtomicInteger(0);
-        UnaryOperator<Message> messageProcessor = (req) -> {
-            try {
-                barrier.await();
-            } catch (InterruptedException | BrokenBarrierException e) {
-                LOGGER.error(e.getMessage(), e);
+        try {
+            sendingServer.start();
+            receivingServer.start();
+    
+            final int expectedTcpClientCount = 5;
+    
+            CyclicBarrier barrier = new CyclicBarrier(expectedTcpClientCount);
+            AtomicInteger actualMsgCount = new AtomicInteger(0);
+            UnaryOperator<Message> messageProcessor = (req) -> {
+                try {
+                    barrier.await();
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                actualMsgCount.incrementAndGet();
+                TestMessage request= (TestMessage) req;
+                return new TestMessage(request.getPayload()).responseTo(req);
+            };
+    
+            receivingServer.registerMessageProcessor(messageProcessor);
+    
+            try (MultiThreadExecutor executor = new MultiThreadExecutor(expectedTcpClientCount)) {
+                for (int payloadId = 0; payloadId < expectedTcpClientCount; payloadId++) {
+                    TestMessage request = testMessage(payloadId, 0, 1);
+                            executor.execute(() -> {
+                                TestMessage response = (TestMessage) sendingServer.sendRecv(request);
+                                assertResponse(request, response);
+                            });
+                }
             }
-            actualMsgCount.incrementAndGet();
-            TestMessage request= (TestMessage) req;
-            return new TestMessage(request.getPayload()).responseTo(req);
-        };
-
-        receivingServer.registerMessageProcessor(messageProcessor);
-
-        try (MultiThreadExecutor executor = new MultiThreadExecutor(expectedTcpClientCount)) {
-            for (int payloadId = 0; payloadId < expectedTcpClientCount; payloadId++) {
-                TestMessage request = testMessage(payloadId, 0, 1);
-                        executor.execute(() -> {
-                            TestMessage response = (TestMessage) sendingServer.sendRecv(request);
-                            assertResponse(request, response);
-                        });
-            }
+    
+            assertEquals(expectedTcpClientCount, actualMsgCount.get());
+        } catch (Throwable e) {
+            LOGGER.error(e.getMessage(), e);
+            fail(e);
+        } finally {
+            teardownServers(sendingServer, receivingServer);
         }
-
-        assertEquals(expectedTcpClientCount, actualMsgCount.get());
+        
     }
 
 }
