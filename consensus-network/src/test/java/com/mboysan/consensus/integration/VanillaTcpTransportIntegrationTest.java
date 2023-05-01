@@ -159,15 +159,4 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
         assertThrows(IOException.class, () -> sender.sendRecv(request));
     }
 
-    private TestMessage testMessage(int payloadId, int senderId, int receiverId) {
-        String payload = "some-payload-" + payloadId;
-        return new TestMessage(payload).setSenderId(senderId).setReceiverId(receiverId);
-    }
-
-    private void assertResponse(TestMessage request, TestMessage response) {
-        assertEquals(request.getPayload(), response.getPayload());
-        assertEquals(request.getId(), response.getId());
-        assertEquals(request.getSenderId(), response.getReceiverId());
-        assertEquals(request.getReceiverId(), response.getSenderId());
-    }
 }

@@ -6,6 +6,7 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.TcpDestination;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
+import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.NetUtil;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VanillaTcpTransportTestBase {
@@ -54,17 +56,21 @@ class VanillaTcpTransportTestBase {
         return clientTransports;
     }
 
-    void teardownServers(VanillaTcpServerTransport[] serverTransports) {
+    void teardownServers(VanillaTcpServerTransport... serverTransports) {
         for (VanillaTcpServerTransport serverTransport : serverTransports) {
-            serverTransport.shutdown();
-            assertTrue(serverTransport.verifyShutdown());
+            if (serverTransport != null) {
+                serverTransport.shutdown();
+                assertTrue(serverTransport.verifyShutdown());
+            }
         }
     }
 
-    void teardownClients(VanillaTcpClientTransport[] clientTransports) {
+    void teardownClients(VanillaTcpClientTransport... clientTransports) {
         for (VanillaTcpClientTransport clientTransport : clientTransports) {
-            clientTransport.shutdown();
-            assertTrue(clientTransport.verifyShutdown());
+            if (clientTransport != null) {
+                clientTransport.shutdown();
+                assertTrue(clientTransport.verifyShutdown());
+            }
         }
     }
 
@@ -100,6 +106,18 @@ class VanillaTcpTransportTestBase {
         Properties properties = new Properties();
         properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
         return properties;
+    }
+
+    TestMessage testMessage(int payloadId, int senderId, int receiverId) {
+        String payload = "some-payload-" + payloadId;
+        return new TestMessage(payload).setSenderId(senderId).setReceiverId(receiverId);
+    }
+
+    void assertResponse(TestMessage request, TestMessage response) {
+        assertEquals(request.getPayload(), response.getPayload());
+        assertEquals(request.getId(), response.getId());
+        assertEquals(request.getSenderId(), response.getReceiverId());
+        assertEquals(request.getReceiverId(), response.getSenderId());
     }
 
     private static void addDestination(int nodeId, int port) {
