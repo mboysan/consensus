@@ -116,6 +116,9 @@ public class VanillaTcpClientTransport implements Transport {
                 pool.invalidateObject(client);
             }
             failureDetector.markFailed(message.getReceiverId());
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw e;
         } finally {
             callbackMap.remove(message.getId());
