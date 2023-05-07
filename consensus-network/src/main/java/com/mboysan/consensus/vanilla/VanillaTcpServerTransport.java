@@ -11,6 +11,8 @@ import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -153,8 +155,9 @@ public class VanillaTcpServerTransport implements Transport {
 
         private ClientHandler(Socket socket, int handlerId) throws IOException {
             this.socket = socket;
-            this.os = new ObjectOutputStream(socket.getOutputStream());
-            this.is = new ObjectInputStream(socket.getInputStream());
+            this.os = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            this.os.flush();
+            this.is = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
             this.requestExecutor = Executors.newCachedThreadPool(
                     new BasicThreadFactory.Builder()
                             .namingPattern("server-" + nodeIdOrPort +"-handler-" + handlerId + "-exec-" + "%d")
@@ -179,7 +182,6 @@ public class VanillaTcpServerTransport implements Transport {
                                 LOGGER.debug("OUT (response): {}", response);
                                 os.writeObject(response);
                                 os.flush();
-                                os.reset();
                                 sampleSend(response);
                             }
                         } catch (IOException e) {
