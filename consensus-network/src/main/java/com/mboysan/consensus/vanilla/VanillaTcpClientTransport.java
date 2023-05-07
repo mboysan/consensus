@@ -16,6 +16,8 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -166,8 +168,8 @@ public class VanillaTcpClientTransport implements Transport {
 
         TcpClient(int clientId, int associatedServerId, TcpDestination destination) throws IOException {
             this.socket = new Socket(destination.ip(), destination.port());
-            this.os = new ObjectOutputStream(socket.getOutputStream());
-            this.is = new ObjectInputStream(socket.getInputStream());
+            this.os = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            this.is = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
             this.isConnected = true;
 
             String receiverThreadName = associatedServerId == -1
@@ -205,7 +207,6 @@ public class VanillaTcpClientTransport implements Transport {
             semaphore.release();
             os.writeObject(message);
             os.flush();
-            os.reset();
             sampleSend(message);
         }
 

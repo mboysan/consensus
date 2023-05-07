@@ -9,7 +9,10 @@ import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -25,6 +28,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpTransportIntegrationTest.class);
 
     private VanillaTcpServerTransport[] serverTransports;
     private VanillaTcpClientTransport[] clientTransports;
@@ -157,6 +162,24 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
                 .setSenderId(0)
                 .setReceiverId(1);
         assertThrows(IOException.class, () -> sender.sendRecv(request));
+    }
+
+    @Disabled
+    @Test
+    void testPerformance() throws IOException {
+        Transport sender = serverTransports[0];
+        
+        long start = System.currentTimeMillis();
+        LOGGER.info("perf test started");
+        for (int i = 0; i < 1000; i++) {
+            TestMessage request = testMessage(0, 0, 1);
+            sender.sendRecv(request);
+            if (i % 10 == 0) {
+                LOGGER.info("total sent={}", i);
+            }
+        }
+        long elapsed = System.currentTimeMillis() - start;
+        LOGGER.info("transport perf elapsed = {}ms", elapsed);
     }
 
 }
