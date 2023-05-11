@@ -161,7 +161,7 @@ public final class MetricsCollectorService implements BackgroundService {
         customReporters.forEach(r -> r.run());
     }
 
-    public synchronized void scheduleCustomReporter(Runnable metricsDumper) {
+    public synchronized void registerCustomReporter(Runnable metricsDumper) {
         Objects.requireNonNull(metricsDumper, "metricsDumper must not be null.");
         customReporters.add(metricsDumper);
     }
@@ -171,6 +171,7 @@ public final class MetricsCollectorService implements BackgroundService {
         ShutdownUtil.shutdown(LOGGER, () -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
         ShutdownUtil.shutdown(LOGGER, () -> {if (graphiteSender != null) graphiteSender.shutdown();});
         ShutdownUtil.shutdown(LOGGER, () -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});
+        customReporters.clear();
     }
 
     @Override

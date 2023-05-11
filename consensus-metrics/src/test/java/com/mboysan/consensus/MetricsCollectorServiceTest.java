@@ -197,11 +197,11 @@ class MetricsCollectorServiceTest {
             MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            collector.scheduleCustomReporter(() -> {
+            collector.registerCustomReporter(() -> {
                 EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
             });
 
-            collector.scheduleCustomReporter(() -> {
+            collector.registerCustomReporter(() -> {
                 EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1"));
             });
 

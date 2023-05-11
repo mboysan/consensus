@@ -87,7 +87,7 @@ public class KVStoreServerCLI {
     private static void startMetricsCollector(Properties properties, AbstractKVStore<?> kvStore) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         MetricsCollectorService metricsCollectorService = MetricsCollectorService.initAndStart(config);
-        metricsCollectorService.scheduleCustomReporter(() -> kvStore.dumpStoreMetricsAsync());
+        metricsCollectorService.registerCustomReporter(() -> kvStore.dumpStoreMetricsAsync());
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {
