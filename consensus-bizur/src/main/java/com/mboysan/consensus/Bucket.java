@@ -106,6 +106,18 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         }
     }
 
+    public long getSizeOfKeys() {
+        return bucketMap.keySet().stream().mapToLong(k -> k.length()).sum();
+    }
+
+    public long getSizeOfValues() {
+        return bucketMap.values().stream().mapToLong(v -> v.length()).sum();
+    }
+
+    public long getTotalSize() {
+        return bucketMap.keySet().stream().mapToLong(k -> k.length() + bucketMap.get(k).length()).sum();
+    }
+
     public String toThinString() {
         return "Bucket{" +
                 "index=" + index +

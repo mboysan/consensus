@@ -1,11 +1,5 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.CoreConfig;
-import com.mboysan.consensus.configuration.RaftConfig;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +7,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.RaftConfig;
 
 class RaftKVStoreTest extends KVStoreTestBase {
 
@@ -111,6 +112,12 @@ class RaftKVStoreTest extends KVStoreTestBase {
         RaftKVStore store = new RaftKVStore(node, null);
 
         testFailedResponses(store);
+    }
+
+    @Test
+    void testDumpMetrics() throws Exception {
+        this.initCluster(1);
+        super.dumpStoreMetricsTest();
     }
 
 }

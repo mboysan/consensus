@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.event.MeasurementEvent;
+import com.mboysan.consensus.event.MeasurementEvent.MeasurementType;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -45,6 +47,21 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
         };
 
         getNode().registerStateMachine(stateMachine);
+    }
+
+    @Override
+    void dumpStoreMetricsAsync() {
+        final long sizeOfKeys = store.keySet().stream().mapToLong(k -> k.length()).sum();
+        final long sizeOfValues = store.values().stream().mapToLong(v -> v.length()).sum();
+        final long totalSize = sizeOfKeys + sizeOfValues;
+
+        fireMeasurementAsync("insights.store.sizeOf.keys", sizeOfKeys);
+        fireMeasurementAsync("insights.store.sizeOf.values", sizeOfValues);
+        fireMeasurementAsync("insights.store.sizeOf.total", totalSize);
+    }
+
+    private void fireMeasurementAsync(String name, long value) {
+        EventManagerService.getInstance().fireAsync(new MeasurementEvent(MeasurementType.SAMPLE, name, value));
     }
 
     @Override

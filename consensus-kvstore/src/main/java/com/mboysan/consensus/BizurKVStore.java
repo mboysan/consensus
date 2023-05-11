@@ -18,6 +18,11 @@ public class BizurKVStore extends AbstractKVStore<BizurNode> {
     }
 
     @Override
+    void dumpStoreMetricsAsync() {
+        getNode().dumpMetricsAsync();
+    }
+
+    @Override
     public KVGetResponse get(KVGetRequest request) {
         try {
             return getNode().get(request);

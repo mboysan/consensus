@@ -1,11 +1,5 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.BizurConfig;
-import com.mboysan.consensus.configuration.CoreConfig;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +7,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import com.mboysan.consensus.configuration.BizurConfig;
+import com.mboysan.consensus.configuration.CoreConfig;
 
 class BizurKVStoreTest extends KVStoreTestBase {
 
@@ -139,5 +140,11 @@ class BizurKVStoreTest extends KVStoreTestBase {
         BizurKVStore store = new BizurKVStore(node, null);
 
         testFailedResponses(store);
+    }
+
+    @Test
+    void testDumpMetrics() throws Exception {
+        this.initCluster(1, 5);
+        super.dumpStoreMetricsTest();
     }
 }

@@ -5,6 +5,8 @@ import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
+
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MetricsCollectorServiceTest {
+
+    @AfterAll
+    static void tearDownAll() {
+        EventManagerService.getInstance().shutdown();
+    }
 
     @AfterEach
     void tearDown() {
@@ -95,7 +102,7 @@ class MetricsCollectorServiceTest {
     // --------------------------------------------------------------------------------- insights metrics
 
     @Test
-    void assertSampleAndAggregate() throws IOException, InterruptedException {
+    void testSampleAndAggregate() throws IOException, InterruptedException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
@@ -129,7 +136,6 @@ class MetricsCollectorServiceTest {
             EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
             Thread.sleep(2000); // wait 2 more seconds to sync
-            EventManagerService.getInstance().shutdown();
 
             collector.shutdown();   // measurements will be dumped upon close.
 
@@ -171,6 +177,61 @@ class MetricsCollectorServiceTest {
             assertEquals(60, sampledLongTotal.get());
             assertTrue(sampledMessageSizes.get() > 600);
             assertEquals(60, aggregatedLong.get());
+
+        } finally {
+            Files.deleteIfExists(metricsPath);
+        }
+    }
+
+    @Test
+    void testCustomReporters() throws IOException, InterruptedException {
+        String separator = " ";
+        Properties properties = new Properties();
+        properties.put("metrics.insights.enabled", "true");
+        properties.put("metrics.step", "1000");
+        properties.put("metrics.separator", separator);
+        MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
+        Path metricsPath = FileUtil.path(config.exportfile());
+        Files.deleteIfExists(metricsPath);
+        try {
+            MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
+            assertTrue(Files.exists(metricsPath));
+
+            collector.registerCustomReporter(() -> {
+                EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
+            });
+
+            collector.registerCustomReporter(() -> {
+                EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1"));
+            });
+
+            Thread.sleep(2000); // wait 2 more seconds to sync
+
+            collector.shutdown();   // measurements will be dumped upon close.
+
+            AtomicInteger sampledStrCount = new AtomicInteger(0);
+            AtomicInteger asyncSampledStrCount = new AtomicInteger(0);
+
+            List<String> metricsLines = Files.readAllLines(metricsPath);
+            for (String metric : metricsLines) {
+                String[] split = metric.split(separator);
+                final String name = split[0];
+                final String value = split[1];
+                final String timestamp = split[2];
+
+                assertNotNull(value);
+                assertNotNull(timestamp);
+
+                if (name.equals("sampledStr")) {
+                    sampledStrCount.incrementAndGet();
+                }
+                if (name.equals("asyncSampledStr")) {
+                    asyncSampledStrCount.incrementAndGet();
+                }
+            }
+
+            assertTrue(sampledStrCount.get() > 0);
+            assertTrue(asyncSampledStrCount.get() > 0);
 
         } finally {
             Files.deleteIfExists(metricsPath);

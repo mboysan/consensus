@@ -42,4 +42,6 @@ public abstract class AbstractKVStore<N extends AbstractNode<?>> implements KVSt
                     getNode().getClass().getSimpleName(), getNode().getNodeId(), err, request);
         }
     }
+
+    abstract void dumpStoreMetricsAsync();
 }

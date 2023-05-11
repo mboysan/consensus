@@ -391,6 +391,10 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         return Math.min(numPeers, numBuckets);
     }
 
+    void dumpMetricsAsync() {
+        new BizurRun(this).dumpMetricsAsync();
+    }
+
     private void logErrorForRequest(Exception exception, Message request) {
         if (LOGGER.isErrorEnabled()) {
             LOGGER.error("err on node-{}: exception={}, request={}", getNodeId(), exception.getMessage(), request);
