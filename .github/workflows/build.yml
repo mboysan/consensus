@@ -6,72 +6,76 @@ on:
   pull_request:
     types: [ opened, synchronize, reopened ]
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'zulu'
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Jacoco reports are uploaded per module, hence the leading dots.
-          # see for more info: https://github.com/SonarSource/sonar-scanning-examples/blob/master/doc/jacoco.md
-          COV_PATH: "../consensus-distribution/target/site/jacoco-aggregate/jacoco.xml"
-        run: >
-          mvn
-          -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
-          -Dmaven.javadoc.skip=true -DcreateChecksum=true
-          -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+  # build:
+  #   name: Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+  #     - name: Set up JDK 17
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: '17'
+  #         distribution: 'zulu'
+  #     - name: Cache SonarCloud packages
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ~/.sonar/cache
+  #         key: ${{ runner.os }}-sonar
+  #         restore-keys: ${{ runner.os }}-sonar
+  #     - name: Cache Maven packages
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ~/.m2
+  #         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+  #         restore-keys: ${{ runner.os }}-m2
+  #     - name: Build and analyze
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #         # Jacoco reports are uploaded per module, hence the leading dots.
+  #         # see for more info: https://github.com/SonarSource/sonar-scanning-examples/blob/master/doc/jacoco.md
+  #         COV_PATH: "../consensus-distribution/target/site/jacoco-aggregate/jacoco.xml"
+  #       run: >
+  #         mvn
+  #         -Dsonar.coverage.jacoco.xmlReportPaths=${{ env.COV_PATH }}
+  #         -Dmaven.javadoc.skip=true -DcreateChecksum=true
+  #         -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
-      - name: Build failed - concat logs (1)
-        if: ${{ failure() }}
-        run: |
-          function append() {
-            logDir="$1"
-            logFile="$logDir/target/tests.log"
-            if [ -f $logFile ]
-            then
-              echo -e "\n----- $logDir logs -----" >> tests.log
-              cat $logFile >> tests.log
-            fi
-          }
-          touch tests.log
-          append consensus-core
-          append consensus-network
-          append consensus-bizur
-          append consensus-raft
-          append consensus-simulate
-          append consensus-kvstore
-          append consensus-cli
-          append consensus-metrics
-      - name: Build failed - uploading logs (2)
-        if: ${{ failure() }}
-        run: curl --upload-file tests.log https://transfer.sh/tests.log
+  #     - name: Build failed - concat logs (1)
+  #       if: ${{ failure() }}
+  #       run: |
+  #         function append() {
+  #           logDir="$1"
+  #           logFile="$logDir/target/tests.log"
+  #           if [ -f $logFile ]
+  #           then
+  #             echo -e "\n----- $logDir logs -----" >> tests.log
+  #             cat $logFile >> tests.log
+  #           fi
+  #         }
+  #         touch tests.log
+  #         append consensus-core
+  #         append consensus-network
+  #         append consensus-bizur
+  #         append consensus-raft
+  #         append consensus-simulate
+  #         append consensus-kvstore
+  #         append consensus-cli
+  #         append consensus-metrics
+  #     - name: Build failed - uploading logs (2)
+  #       if: ${{ failure() }}
+  #       run: curl --upload-file tests.log https://transfer.sh/tests.log
 
   publish:
-    needs: build
+    # needs: build
     name: Publish
     runs-on: ubuntu-latest
+    env:
+      MVN_REPO_KEY: ${{ secrets.MVN_REPO_KEY }}
+      BUILD_NUMBER: ${{github.run_number}}
+      BRANCH_NAME: ${{ env.GITHUB_REF_NAME }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -82,29 +86,30 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
       - name: Publish packages
-        env:
-          MVN_REPO_KEY: ${{ secrets.MVN_REPO_KEY }}
-          BUILD_NUMBER: ${{github.run_number}}
         run: |
           REPO_DIR=$(pwd)
           
           # ------------------------------------- build and deploy as maven repository package
-          echo "build and deploy..."
-          
-          mvn install -DskipTests
-          
+          echo "Build and publish..."
+
           PROJ_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
+          echo "Current project version is $PROJ_VERSION"
+          
+          if [ "$BRANCH_NAME" == "main" ]; then
+            echo "On main branch, not changing version"
+            mvn clean install -DskipTests
+          else
+            PROJ_VERSION="$PROJ_VERSION-SNAPSHOT"
+            echo "On branch $BRANCH_NAME, setting project version to $PROJ_VERSION"
+            mvn -Drevision=$PROJ_VERSION clean install -DskipTests
+          fi
           
           # get repo branch
           cd $HOME
           git clone https://github.com/mboysan/mvn-repo.git
           cd mvn-repo
           
-          MVN_REPO_DIR=$(pwd)
-          
-          # clean dir & copy new files
-          [ -d "./com/mboysan/consensus" ] && rm -vr ./com/mboysan/consensus
-          mkdir -p ./com/mboysan/consensus
+          mkdir -p ./com/mboysan/consensus/
           cp -avr $HOME/.m2/repository/com/mboysan/consensus/* ./com/mboysan/consensus/
           
           # configure git
@@ -119,7 +124,7 @@ jobs:
           git push --quiet origin master
 
           # ------------------------------------- release the jar file
-          echo "release jar..."
+          echo "Release jar..."
           
           git fetch
           git checkout releases
