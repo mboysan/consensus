@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.event.MeasurementEvent;
+import com.mboysan.consensus.event.MeasurementEvent.MeasurementType;
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
 import com.mboysan.consensus.message.Message;
@@ -18,6 +20,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -351,5 +354,41 @@ final class BizurRun {
             }
         }
         return sj.toString();
+    }
+
+    void dumpMetricsAsync() {
+        for (int i = 0; i < getNumRanges(); i++) {
+            BucketRange range = getBucketRange(i).lock();
+            try {
+                AtomicLong sizeOfKeys = new AtomicLong(0);
+                AtomicLong sizeOfValues = new AtomicLong(0);
+                AtomicLong totalSize = new AtomicLong(0);
+                range.getBucketMap().entrySet().forEach(entry -> {
+                    int index = entry.getKey();
+                    Bucket bucket = entry.getValue();
+                    long sizeOfBucketKeys = bucket.getSizeOfKeys();
+                    long sizeOfBucketValues = bucket.getSizeOfValues();
+                    long bucketTotalSize = bucket.getTotalSize();
+
+                    sizeOfKeys.addAndGet(sizeOfBucketKeys);
+                    sizeOfValues.addAndGet(sizeOfBucketValues);
+                    totalSize.addAndGet(bucketTotalSize);
+
+                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].keys", sizeOfBucketKeys);
+                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].values", sizeOfBucketValues);
+                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].total", bucketTotalSize);
+                });
+
+                fireMeasurementAsync("insights.store.sizeOf.keys", sizeOfKeys.get());
+                fireMeasurementAsync("insights.store.sizeOf.values", sizeOfValues.get());
+                fireMeasurementAsync("insights.store.sizeOf.total", totalSize.get());
+            } finally {
+                range.unlock();
+            }
+        }
+    }
+
+    private void fireMeasurementAsync(String name, long value) {
+        EventManagerService.getInstance().fireAsync(new MeasurementEvent(MeasurementType.SAMPLE, name, value));
     }
 }

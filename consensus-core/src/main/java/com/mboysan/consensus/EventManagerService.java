@@ -47,7 +47,18 @@ public final class EventManagerService implements BackgroundService {
         } else {
             eventConsumers.consumers.add(eventConsumer);
         }
+    }
 
+    public synchronized <T extends IEvent> boolean deregister(Consumer<T> eventConsumerRef) {
+        if (!isRunning) {
+            return false;
+        }
+        for (var ec : eventConsumerMap.values()) {
+            if (ec.consumers.remove(eventConsumerRef)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")
@@ -56,11 +67,11 @@ public final class EventManagerService implements BackgroundService {
             return;
         }
         Objects.requireNonNull(event);
-        LOGGER.debug("firing event {}", event);
         EventConsumers<T> container = (EventConsumers<T>) eventConsumerMap.get(event.getClass());
         if (container != null) {
             for (Consumer<T> consumer : container.consumers) {
                 try {
+                    LOGGER.debug("firing event {}", event);
                     consumer.accept(event);
                 } catch (Exception e) {
                     LOGGER.error("error occurred while consuming the event={}", event, e);
@@ -73,7 +84,11 @@ public final class EventManagerService implements BackgroundService {
         if (!isRunning) {
             return;
         }
-        executor.submit(() -> fire(event));
+        
+        // do not submit if no listener exists
+        if (listenerExists(event.getClass())) {
+            executor.submit(() -> fire(event));
+        }
     }
 
     public <T extends IEvent> boolean listenerExists(Class<T> eventType) {
@@ -87,6 +102,7 @@ public final class EventManagerService implements BackgroundService {
         }
         isRunning = false;
         ShutdownUtil.shutdown(LOGGER, executor);
+        LOGGER.info("EventManagerService shutdown");
     }
 
     @Override

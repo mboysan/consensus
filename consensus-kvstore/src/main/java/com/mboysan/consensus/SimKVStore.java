@@ -21,6 +21,11 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
     }
 
     @Override
+    void dumpStoreMetricsAsync() {
+        // no store, so no-op.
+    }
+
+    @Override
     public KVGetResponse get(KVGetRequest request) {
         try {
             SimMessage message = mapToSimMessage(request);

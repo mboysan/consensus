@@ -33,8 +33,6 @@ public class KVStoreServerCLI {
     }
 
     private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
-        startMetricsCollector(CliArgsHelper.getProperties(args));
-
         Properties nodeSectionProperties = CliArgsHelper.getNodeSectionProperties(args);
         TcpTransportConfig nodeServingTransportConfig
                 = CoreConfig.newInstance(TcpTransportConfig.class, nodeSectionProperties);
@@ -70,6 +68,8 @@ public class KVStoreServerCLI {
 
         Runtime.getRuntime().addShutdownHook(createShutdownHookThread(kvStore));
 
+        startMetricsCollector(CliArgsHelper.getProperties(args), kvStore);
+
         kvStore.start().get();
         LOGGER.info("store started");
     }
@@ -84,9 +84,10 @@ public class KVStoreServerCLI {
         });
     }
 
-    private static void startMetricsCollector(Properties properties) {
+    private static void startMetricsCollector(Properties properties, AbstractKVStore<?> kvStore) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
-        MetricsCollectorService.initAndStart(config);
+        MetricsCollectorService metricsCollectorService = MetricsCollectorService.initAndStart(config);
+        metricsCollectorService.scheduleCustomReporter(() -> kvStore.dumpStoreMetricsAsync());
     }
 
     public static AbstractKVStore<?> getStore(int nodeId) {

@@ -17,12 +17,20 @@ import io.micrometer.core.instrument.dropwizard.DropwizardClock;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.graphite.GraphiteConfig;
 import io.micrometer.graphite.GraphiteMeterRegistry;
+
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public final class MetricsCollectorService implements BackgroundService {
 
@@ -33,6 +41,8 @@ public final class MetricsCollectorService implements BackgroundService {
     private GraphiteFileSender graphiteSender;
     private JvmGcMetrics jvmGcMetrics;  // AutoClosable
 
+    private final List<Runnable> customReporters = new ArrayList<>();
+    private ScheduledExecutorService customReportersExecutor;
     private MetricsAggregator metricsAggregator = null;
 
     private MetricsCollectorService(MetricsConfig metricsConfig) {
@@ -54,6 +64,13 @@ public final class MetricsCollectorService implements BackgroundService {
         if (metricsConfig.insightsMetricsEnabled()) {
             this.metricsAggregator = new MetricsAggregator(metricsConfig, graphiteSender);
             EventManagerService.getInstance().register(MeasurementEvent.class, this::measure);
+            this.customReportersExecutor = Executors.newSingleThreadScheduledExecutor(
+                new BasicThreadFactory.Builder()
+                        .namingPattern("metrics-reporters")
+                        .daemon(true)
+                        .build());
+            this.customReportersExecutor.scheduleAtFixedRate(
+                this::runCustomReporters, metricsConfig.step(), metricsConfig.step(), TimeUnit.MILLISECONDS);
         }
 
         if (!metricsConfig.jvmMetricsEnabled()) {
@@ -140,7 +157,17 @@ public final class MetricsCollectorService implements BackgroundService {
         }
     }
 
+    private synchronized void runCustomReporters() {
+        customReporters.forEach(r -> r.run());
+    }
+
+    public synchronized void scheduleCustomReporter(Runnable metricsDumper) {
+        Objects.requireNonNull(metricsDumper, "metricsDumper must not be null.");
+        customReporters.add(metricsDumper);
+    }
+
     public synchronized void shutdown() {
+        ShutdownUtil.shutdown(LOGGER, () -> {if (customReportersExecutor != null) customReportersExecutor.shutdown();});
         ShutdownUtil.shutdown(LOGGER, () -> {if (metricsAggregator != null) metricsAggregator.shutdown();});
         ShutdownUtil.shutdown(LOGGER, () -> {if (graphiteSender != null) graphiteSender.shutdown();});
         ShutdownUtil.shutdown(LOGGER, () -> {if (jvmGcMetrics != null) jvmGcMetrics.close();});

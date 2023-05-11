@@ -231,11 +231,8 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static void sample(String name, Message message) {
-        if (EventManagerService.getInstance().listenerExists(MeasurementEvent.class)) {
-            // fire async measurement event
-            EventManagerService.getInstance().fireAsync(
-                    new MeasurementEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
-        }
+        EventManagerService.getInstance().fireAsync(
+            new MeasurementEvent(MeasurementEvent.MeasurementType.SAMPLE, name, message));
     }
 
     private class TcpClientFactory extends BasePooledObjectFactory<TcpClient> {

@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.util.ShutdownUtil;
+
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,11 @@ class MetricsAggregator {
     private final GraphiteFileSender graphiteFileSender;
 
     MetricsAggregator(MetricsConfig config, GraphiteFileSender graphiteFileSender) {
-        this.executor = Executors.newSingleThreadScheduledExecutor();
+        this.executor = Executors.newSingleThreadScheduledExecutor(
+            new BasicThreadFactory.Builder()
+                    .namingPattern("metrics-aggregator")
+                    .daemon(true)
+                    .build());
         this.executor.scheduleAtFixedRate(this::dumpMeasurements, config.step(), config.step(), TimeUnit.MILLISECONDS);
         this.graphiteFileSender = graphiteFileSender;
     }
@@ -55,6 +61,7 @@ class MetricsAggregator {
             graphiteFileSender.send(measurement.getName(), measurement.getValue(), measurement.getTimestamp());
             msIter.remove();
         }
+        graphiteFileSender.flush();
     }
 
     synchronized void shutdown() {
