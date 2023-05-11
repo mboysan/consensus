@@ -57,22 +57,23 @@ public class KVStoreClientCLI {
         if (isInteractiveSession) {
             System.out.println("client ready to receive commands:");
 
-            Scanner scanner = new Scanner(System.in);
-            boolean exited = false;
-            while (!exited) {
-                try {
-                    String input = scanner.nextLine();
-                    String[] cmd = input.split(" ");
-                    switch (cmd[0]) {
-                        case "set" -> client.set(cmd[1], cmd[2]);
-                        case "get" -> System.out.println("result -> " + client.get(cmd[1]));
-                        case "delete" -> client.delete(cmd[1]);
-                        case "iterateKeys" -> System.out.println("result -> " + client.iterateKeys());
-                        case "exit" -> exited = true;
-                        default -> sendCustomCommand(client, input);
+            try (Scanner scanner = new Scanner(System.in)) {
+                boolean exited = false;
+                while (!exited) {
+                    try {
+                        String input = scanner.nextLine();
+                        String[] cmd = input.split(" ");
+                        switch (cmd[0]) {
+                            case "set" -> client.set(cmd[1], cmd[2]);
+                            case "get" -> System.out.println("result -> " + client.get(cmd[1]));
+                            case "delete" -> client.delete(cmd[1]);
+                            case "iterateKeys" -> System.out.println("result -> " + client.iterateKeys());
+                            case "exit" -> exited = true;
+                            default -> sendCustomCommand(client, input);
+                        }
+                    } catch (Exception e) {
+                        System.err.println(e);
                     }
-                } catch (Exception e) {
-                    System.err.println(e);
                 }
             }
             client.shutdown();
