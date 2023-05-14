@@ -144,7 +144,7 @@ class BizurKVStoreTest extends KVStoreTestBase {
 
     @Test
     void testDumpMetrics() throws Exception {
-        this.initCluster(1, 5);
+        this.initCluster(5, 50);
         super.dumpStoreMetricsTest();
     }
 }

@@ -71,6 +71,7 @@ public class NodeCLI {
                 node.shutdown();
             } finally {
                 BackgroundServiceRegistry.getInstance().shutdownAll();
+                LOGGER.info("Completed shutdown hook on node-{}", node.getNodeId());
             }
         });
     }
