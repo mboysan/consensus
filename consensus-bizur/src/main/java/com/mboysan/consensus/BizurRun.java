@@ -357,12 +357,12 @@ final class BizurRun {
     }
 
     void dumpMetricsAsync() {
+        AtomicLong sizeOfKeys = new AtomicLong(0);
+        AtomicLong sizeOfValues = new AtomicLong(0);
+        AtomicLong totalSize = new AtomicLong(0);
         for (int i = 0; i < getNumRanges(); i++) {
             BucketRange range = getBucketRange(i).lock();
             try {
-                AtomicLong sizeOfKeys = new AtomicLong(0);
-                AtomicLong sizeOfValues = new AtomicLong(0);
-                AtomicLong totalSize = new AtomicLong(0);
                 range.getBucketMap().entrySet().forEach(entry -> {
                     int index = entry.getKey();
                     Bucket bucket = entry.getValue();
@@ -378,14 +378,13 @@ final class BizurRun {
                     fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].values", sizeOfBucketValues);
                     fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].total", bucketTotalSize);
                 });
-
-                fireMeasurementAsync("insights.store.sizeOf.keys", sizeOfKeys.get());
-                fireMeasurementAsync("insights.store.sizeOf.values", sizeOfValues.get());
-                fireMeasurementAsync("insights.store.sizeOf.total", totalSize.get());
             } finally {
                 range.unlock();
             }
         }
+        fireMeasurementAsync("insights.store.sizeOf.keys", sizeOfKeys.get());
+        fireMeasurementAsync("insights.store.sizeOf.values", sizeOfValues.get());
+        fireMeasurementAsync("insights.store.sizeOf.total", totalSize.get());
     }
 
     private void fireMeasurementAsync(String name, long value) {
