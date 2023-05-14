@@ -116,7 +116,7 @@ class RaftKVStoreTest extends KVStoreTestBase {
 
     @Test
     void testDumpMetrics() throws Exception {
-        this.initCluster(1);
+        this.initCluster(5);
         super.dumpStoreMetricsTest();
     }
 

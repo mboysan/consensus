@@ -10,12 +10,14 @@ import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import com.mboysan.consensus.util.RngUtil;
+
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
@@ -95,22 +97,23 @@ abstract class KVStoreTestBase {
     void dumpStoreMetricsTest() throws Exception {
         CyclicBarrier barrier = new CyclicBarrier(4);
 
-        AtomicLong sizeOfKeys = new AtomicLong(0);
-        AtomicLong sizeOfValues = new AtomicLong(0);
-        AtomicLong sizeTotal = new AtomicLong(0);
+        AtomicLong actualSizeOfKeys = new AtomicLong(0);
+        AtomicLong actualSizeOfValues = new AtomicLong(0);
+        AtomicLong actualSizeTotal = new AtomicLong(0);
         Consumer<MeasurementEvent> eventConsumer = event -> {
+            LOGGER.info("captured measurement=[{}]", event);
             try {
                 switch (event.getName()) {
                     case "insights.store.sizeOf.keys" -> {
-                        sizeOfKeys.addAndGet((long) event.getPayload());
+                        actualSizeOfKeys.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
                     case "insights.store.sizeOf.values" -> {
-                        sizeOfValues.addAndGet((long) event.getPayload());
+                        actualSizeOfValues.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
                     case "insights.store.sizeOf.total" -> {
-                        sizeTotal.addAndGet((long) event.getPayload());
+                        actualSizeTotal.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
                 }
@@ -120,22 +123,47 @@ abstract class KVStoreTestBase {
         };
         EventManagerService.getInstance().register(MeasurementEvent.class, eventConsumer);
         try {
-            getStores()[0].dumpStoreMetricsAsync();
-            barrier.await();
-            barrier.reset();
-            assertEquals(0, sizeOfKeys.get());
-            assertEquals(0, sizeOfValues.get());
-            assertEquals(0, sizeTotal.get());
+            // check all stores have zero total size
+            for (AbstractKVStore<?> store : getStores()) {
+                store.dumpStoreMetricsAsync();
+                barrier.await();
+                barrier.reset();
+                assertEquals(0, actualSizeOfKeys.get());
+                assertEquals(0, actualSizeOfValues.get());
+                assertEquals(0, actualSizeTotal.get());
+            }
+
+            // put some values
+            final int totalNumKeys = 100;
+            long expectedSizeOfKeys = 0;
+            long expectedSizeOfValues = 0;
+            long expectedTotalSize = 0;
+            for (int i = 0; i < totalNumKeys; i++) {
+                String key = UUID.randomUUID().toString() + RngUtil.nextInt(Integer.MAX_VALUE);
+                String val = UUID.randomUUID().toString() + RngUtil.nextInt(Integer.MAX_VALUE);
+                getRandomClient().set(key, val);
+                expectedSizeOfKeys += key.length();
+                expectedSizeOfValues += val.length();
+                expectedTotalSize += (key.length() + val.length());
+            }
+
+            for (KVStoreClient client : getClients()) {
+                assertEquals(totalNumKeys, client.iterateKeys().size());
+            }
+
+            // check all stores have reported the same metrics
+            for (AbstractKVStore<?> store : getStores()) {
+                store.dumpStoreMetricsAsync();
+                barrier.await();
+                barrier.reset();
+                assertEquals(expectedSizeOfKeys, actualSizeOfKeys.get(), 0);
+                assertEquals(expectedSizeOfValues, actualSizeOfValues.get(), 0);
+                assertEquals(expectedTotalSize, actualSizeTotal.get(), 0);
     
-            String key = "key";
-            String val = "value";
-            getRandomClient().set(key, val);
-    
-            getStores()[0].dumpStoreMetricsAsync();
-            barrier.await();
-            assertEquals(key.length(), sizeOfKeys.get());
-            assertEquals(val.length(), sizeOfValues.get());
-            assertEquals((key.length() + val.length()), sizeTotal.get());
+                actualSizeOfKeys.set(0);
+                actualSizeOfValues.set(0);
+                actualSizeTotal.set(0);
+            }
         } finally {
             EventManagerService.getInstance().deregister(eventConsumer);
         }

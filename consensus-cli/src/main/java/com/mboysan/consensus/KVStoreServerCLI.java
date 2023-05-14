@@ -80,6 +80,7 @@ public class KVStoreServerCLI {
                 kvStore.shutdown();
             } finally {
                 BackgroundServiceRegistry.getInstance().shutdownAll();
+                LOGGER.info("Completed shutdown hook on store-{}", kvStore.getNode().getNodeId());
             }
         });
     }
