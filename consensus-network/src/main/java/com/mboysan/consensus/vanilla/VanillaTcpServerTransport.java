@@ -22,10 +22,7 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.UnaryOperator;
 
 public class VanillaTcpServerTransport implements Transport {
@@ -192,7 +189,7 @@ public class VanillaTcpServerTransport implements Transport {
                             shutdown();
                         }
                     });
-                } catch (IOException | ClassNotFoundException e) {
+                } catch (IOException | ClassNotFoundException | RejectedExecutionException e) {
                     LOGGER.error(e.getMessage());
                     shutdown();
                 }
