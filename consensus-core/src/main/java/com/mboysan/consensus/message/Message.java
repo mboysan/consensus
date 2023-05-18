@@ -2,9 +2,14 @@ package com.mboysan.consensus.message;
 
 import com.mboysan.consensus.util.RngUtil;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 public abstract class Message implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1_0L;
+
     /**
      * Unique id of a request and response message pair.
      * This value can only be modified with {@link #responseTo(Message)} method, i.e. in response to a certain request.
