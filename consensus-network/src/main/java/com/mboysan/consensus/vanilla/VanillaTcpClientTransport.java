@@ -207,6 +207,8 @@ public class VanillaTcpClientTransport implements Transport {
             semaphore.release();
             os.writeObject(message);
             os.flush();
+            // NB! reset() allows sending the same object.
+            os.reset();
             sampleSend(message);
         }
 

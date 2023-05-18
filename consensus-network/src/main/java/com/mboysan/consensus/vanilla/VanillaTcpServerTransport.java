@@ -182,6 +182,8 @@ public class VanillaTcpServerTransport implements Transport {
                                 LOGGER.debug("OUT (response): {}", response);
                                 os.writeObject(response);
                                 os.flush();
+                                // NB! reset() allows sending the same object.
+                                os.reset();
                                 sampleSend(response);
                             }
                         } catch (IOException e) {
