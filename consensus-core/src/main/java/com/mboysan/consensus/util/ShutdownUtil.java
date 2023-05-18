@@ -3,9 +3,11 @@ package com.mboysan.consensus.util;
 import org.slf4j.Logger;
 
 import java.io.Closeable;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public final class ShutdownUtil {
     private ShutdownUtil() {}
@@ -24,7 +26,11 @@ public final class ShutdownUtil {
             shutdown(logger, () -> {
                 boolean success = executor.awaitTermination(5000L, TimeUnit.MILLISECONDS);
                 if (!success) {
-                    logger.warn("termination failed for executor");
+                    final String nl = System.getProperty("line.separator");
+                    String stackTrace = Arrays.stream(Thread.currentThread().getStackTrace())
+                            .map(StackTraceElement::toString)
+                            .collect(Collectors.joining(nl + "\t at "));
+                    logger.warn("termination failed for executor. stackTrace -> {}", stackTrace);
                 }
             });
         }

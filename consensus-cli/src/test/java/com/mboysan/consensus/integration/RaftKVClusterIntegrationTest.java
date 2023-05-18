@@ -9,7 +9,7 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     private RaftKVStoreCluster raftCluster;
 
     @AfterEach
-    void teardown() {
+    void teardown() throws InterruptedException {
         raftCluster.cleanup();
     }
 

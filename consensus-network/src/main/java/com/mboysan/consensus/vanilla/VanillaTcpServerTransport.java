@@ -136,8 +136,9 @@ public class VanillaTcpServerTransport implements Transport {
         }
         isRunning = false;
         ShutdownUtil.close(LOGGER, serverSocket);
-        ShutdownUtil.shutdown(LOGGER, clientHandlerExecutor);
         clientHandlers.forEach((s, ch) -> ShutdownUtil.shutdown(LOGGER, ch::shutdown));
+        ShutdownUtil.shutdown(
+                LOGGER, clientHandlerExecutor);
         clientHandlers.clear();
         ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
     }
