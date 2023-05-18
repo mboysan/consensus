@@ -101,7 +101,7 @@ public class VanillaTcpServerTransport implements Transport {
                 clientHandlers.put(clientCount + "", clientHandler);
                 clientHandlerExecutor.submit(clientHandler);
                 ++clientCount;
-            } catch (IOException e) {
+            } catch (IOException | RejectedExecutionException e) {
                 LOGGER.error(e.getMessage());
             }
         }
