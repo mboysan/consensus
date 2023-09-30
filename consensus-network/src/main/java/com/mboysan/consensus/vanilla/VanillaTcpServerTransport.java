@@ -94,7 +94,7 @@ public class VanillaTcpServerTransport implements Transport {
             try {
                 Socket clientSocket = serverSocket.accept();
                 clientSocket.setKeepAlive(true);
-                if (socketSoTimeout > 0) {
+                if (socketSoTimeout >= 0) {
                     clientSocket.setSoTimeout(socketSoTimeout);
                 }
                 ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);

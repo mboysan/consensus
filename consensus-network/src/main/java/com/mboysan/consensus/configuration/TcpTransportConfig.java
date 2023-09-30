@@ -20,7 +20,7 @@ public interface TcpTransportConfig extends CoreConfig {
     int port();
 
     @Key("transport.tcp.server.socket.so_timeout")
-    @DefaultValue("30000")  // 30 seconds
+    @DefaultValue("0")  // no timeout
     int socketSoTimeout();
 
     @Key("transport.tcp.client.failure.markServerAsFailedCount")
