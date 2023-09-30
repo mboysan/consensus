@@ -11,10 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
@@ -64,10 +61,22 @@ public class KVStoreClientCLI {
                         String input = scanner.nextLine();
                         String[] cmd = input.split(" ");
                         switch (cmd[0]) {
-                            case "set" -> client.set(cmd[1], cmd[2]);
-                            case "get" -> System.out.println("result -> " + client.get(cmd[1]));
-                            case "delete" -> client.delete(cmd[1]);
-                            case "iterateKeys" -> System.out.println("result -> " + client.iterateKeys());
+                            case "set" -> {
+                                client.set(cmd[1], cmd[2]);
+                                System.out.println("result -> OK");
+                            }
+                            case "get" -> {
+                                String result = client.get(cmd[1]);
+                                System.out.println("result -> " + result);
+                            }
+                            case "delete" -> {
+                                client.delete(cmd[1]);
+                                System.out.println("result -> OK");
+                            }
+                            case "iterateKeys" -> {
+                                Set<String> result = client.iterateKeys();
+                                System.out.println("result -> " + result);
+                            }
                             case "exit" -> exited = true;
                             default -> sendCustomCommand(client, input);
                         }
