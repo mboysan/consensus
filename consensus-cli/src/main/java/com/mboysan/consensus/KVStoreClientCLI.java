@@ -63,19 +63,19 @@ public class KVStoreClientCLI {
                         switch (cmd[0]) {
                             case "set" -> {
                                 client.set(cmd[1], cmd[2]);
-                                System.out.println("result -> OK");
+                                printResult("OK");
                             }
                             case "get" -> {
                                 String result = client.get(cmd[1]);
-                                System.out.println("result -> " + result);
+                                printResult(result);
                             }
                             case "delete" -> {
                                 client.delete(cmd[1]);
-                                System.out.println("result -> OK");
+                                printResult("OK");
                             }
                             case "iterateKeys" -> {
                                 Set<String> result = client.iterateKeys();
-                                System.out.println("result -> " + result);
+                                printResult(result);
                             }
                             case "exit" -> exited = true;
                             default -> sendCustomCommand(client, input);
@@ -146,6 +146,10 @@ public class KVStoreClientCLI {
             command = "%d%s%s".formatted(-1, ROUTE_TO_SEPARATOR, command);
         }
         return command.split(ROUTE_TO_SEPARATOR);
+    }
+
+    private static void printResult(Object result) {
+        System.out.println("result -> " + result);
     }
 
     public static KVStoreClient getClient(int id) {
