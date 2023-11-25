@@ -2,7 +2,6 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.message.LogEntry;
 import com.mboysan.consensus.message.StateMachineRequest;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -400,13 +399,9 @@ class RaftNodeTest extends NodeTestBase {
         RaftLog log0;
         synchronized (nodes[0]) {
             log0 = nodes[0].getState().raftLog;
-            List<String> log0EntriesWithoutNoop = log0.logStream()
-                    .map(LogEntry::command)
-                    .filter(command -> !command.contains(RaftNode.NOOP_COMMAND))
-                    .toList();
-            assertEquals(commands.size(), log0EntriesWithoutNoop.size());
-            for (int i = 0; i < log0EntriesWithoutNoop.size(); i++) {
-                assertEquals(commands.get(i), log0EntriesWithoutNoop.get(i));
+            assertEquals(commands.size(), log0.size());
+            for (int i = 0; i < log0.size(); i++) {
+                assertEquals(commands.get(i), log0.get(i).command());
             }
         }
         assertNodeLogsEquals();

@@ -29,8 +29,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RaftNode.class);
 
-    static final String NOOP_COMMAND = "noop";
-
     private final RaftClient rpcClient;
 
     private boolean notified = false;
@@ -190,19 +188,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 state.seenLeader = true;
                 peers.forEach((peerId, peer) -> peer.nextIndex = (state.raftLog.lastLogIndex() + 1));
                 LOGGER.info("node-{} thinks it's leader", getNodeId());
-
-                // After becoming the leader, we need to apply a noop command in the log.
-                // This is addressed in raft paper "Client Interaction" section.
-                // fixme: add tests for this before enabling this feature. And what happens if this fails?
-                StateMachineResponse response;
-                try {
-                    response = stateMachineRequest(new StateMachineRequest(NOOP_COMMAND));
-                    if (!response.isApplied()) {
-                        LOGGER.error("node-{} failed to apply noop entry", getNodeId());
-                    }
-                } catch (IOException e) {
-                    LOGGER.error("node-{} failed to send noop entry", getNodeId(), e);
-                }
             }
         }
     }

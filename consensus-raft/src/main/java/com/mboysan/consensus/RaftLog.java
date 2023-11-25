@@ -4,7 +4,6 @@ import com.mboysan.consensus.message.LogEntry;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Index of the log entries start from 0 unlike described in Raft paper which starts from 1.
@@ -77,10 +76,6 @@ class RaftLog implements Comparable<RaftLog> {
             throw new IllegalArgumentException("index=" + indexIncluded + ", logSize=" + size);
         }
         return List.copyOf(entries.subList(indexIncluded, size));
-    }
-
-    Stream<LogEntry> logStream() {
-        return entries.stream();
     }
 
     void reset() {
