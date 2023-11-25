@@ -92,7 +92,7 @@ class MetricsCollectorServiceTest {
             List<String> metricsLines = Files.readAllLines(metricsPath);
             collector.shutdown();
 
-            assertTrue(metricsLines.size() > 0);
+            assertFalse(metricsLines.isEmpty());
             for (String metric : metricsLines) {
                 assertTrue(metric.contains(separator));
                 // 3 column per line -> name, value and timestamp
@@ -201,13 +201,11 @@ class MetricsCollectorServiceTest {
             MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            collector.registerCustomReporter(() -> {
-                EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
-            });
+            collector.registerCustomReporter(() ->
+                    EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0")));
 
-            collector.registerCustomReporter(() -> {
-                EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1"));
-            });
+            collector.registerCustomReporter(() ->
+                    EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1")));
 
             Thread.sleep(2000); // wait 2 more seconds to sync
 

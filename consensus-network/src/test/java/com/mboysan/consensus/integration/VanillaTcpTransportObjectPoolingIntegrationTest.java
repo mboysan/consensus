@@ -1,28 +1,25 @@
 package com.mboysan.consensus.integration;
 
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.IOException;
-import java.util.Properties;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.UnaryOperator;
-
+import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.TestMessage;
+import com.mboysan.consensus.util.MultiThreadExecutor;
 import com.mboysan.consensus.util.TestUtils;
+import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mboysan.consensus.message.Message;
-import com.mboysan.consensus.message.TestMessage;
-import com.mboysan.consensus.util.MultiThreadExecutor;
-import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
+import java.util.Properties;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.UnaryOperator;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class VanillaTcpTransportObjectPoolingIntegrationTest extends VanillaTcpTransportTestBase {
 
@@ -34,7 +31,7 @@ class VanillaTcpTransportObjectPoolingIntegrationTest extends VanillaTcpTranspor
     }
 
     @Test
-    void testCreateMultipleTcpClients() throws IOException, ExecutionException, InterruptedException {
+    void testCreateMultipleTcpClients() {
         Properties server0Props = serverProperties(0);
         server0Props.put("transport.tcp.clientPoolSize", "-1");
         server0Props.put("transport.message.callbackTimeoutMs", "-1");
