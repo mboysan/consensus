@@ -83,7 +83,7 @@ public class InVMTransport implements Transport {
                         new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
                 serverExecutor.execute(server);
             }
-            LOGGER.info("server-{} added", nodeId);
+            LOGGER.info("server-{} added to serverMap=[{}]", nodeId, serverMap);
         } else {
             Server server = new Server(messageProcessor);
             serverMap.put(associatedNodeId, server);
@@ -266,6 +266,14 @@ public class InVMTransport implements Transport {
             requestExecutor.shutdown();
             messageQueue.offer(new Message() {
             }.setCorrelationId("closingServer"));
+        }
+
+        @Override
+        public String toString() {
+            return "Server{" +
+                    "isConnectedToNetwork=" + isConnectedToNetwork +
+                    ", isRunning=" + isRunning +
+                    '}';
         }
     }
 }
