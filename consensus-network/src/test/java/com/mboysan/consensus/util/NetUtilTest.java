@@ -1,6 +1,8 @@
 package com.mboysan.consensus.util;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.ArrayList;
 
@@ -8,6 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NetUtilTest {
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @Test
     void testConvertFail() {

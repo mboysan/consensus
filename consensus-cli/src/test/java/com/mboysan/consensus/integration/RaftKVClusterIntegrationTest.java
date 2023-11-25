@@ -1,15 +1,23 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.RaftKVStoreCluster;
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private RaftKVStoreCluster raftCluster;
 
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
+
     @AfterEach
-    void teardown() throws InterruptedException {
+    void teardown() {
         raftCluster.cleanup();
     }
 

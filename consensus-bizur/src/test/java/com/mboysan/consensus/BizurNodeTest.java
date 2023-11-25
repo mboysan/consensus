@@ -12,8 +12,11 @@ import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +41,11 @@ class BizurNodeTest extends NodeTestBase {
     private boolean skipTeardown;
     private BizurNode[] nodes;
     private InVMTransport transport;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();

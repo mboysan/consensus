@@ -6,9 +6,8 @@ import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import com.mboysan.consensus.util.TestUtils;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MetricsCollectorServiceTest {
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @AfterAll
     static void tearDownAll() {

@@ -1,8 +1,11 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.BizurKVStoreCluster;
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private BizurKVStoreCluster bizurCluster;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @AfterEach
     void teardown() {

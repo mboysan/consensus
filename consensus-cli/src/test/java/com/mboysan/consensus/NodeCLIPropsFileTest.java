@@ -1,7 +1,10 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -10,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class NodeCLIPropsFileTest extends KVStoreClusterBase {
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @Test
     void testLoadPropertiesFromFile() throws IOException, ExecutionException, InterruptedException {

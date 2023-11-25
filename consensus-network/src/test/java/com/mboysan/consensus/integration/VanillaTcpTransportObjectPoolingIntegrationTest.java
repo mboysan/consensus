@@ -12,7 +12,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 
+import com.mboysan.consensus.util.TestUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +27,11 @@ import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 class VanillaTcpTransportObjectPoolingIntegrationTest extends VanillaTcpTransportTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpTransportObjectPoolingIntegrationTest.class);
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @Test
     void testCreateMultipleTcpClients() throws IOException, ExecutionException, InterruptedException {
