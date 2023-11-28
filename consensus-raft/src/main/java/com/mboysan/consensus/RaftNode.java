@@ -105,9 +105,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     synchronized void update() {
         LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getScheduler().currentTime());
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("node-{} prev state [{}]", getNodeId(), state);
-        }
+        LOGGER.trace("node-{} previous state [{}]", getNodeId(), state);
 
         startNewElection();
         sendRequestVoteToPeers();
@@ -116,9 +114,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         advanceCommitIndex();
         advanceStateMachine();
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("node-{} current state [{}]", getNodeId(), state);
-        }
+        LOGGER.trace("node-{} current state [{}]", getNodeId(), state);
     }
 
     private void startNewElection() {
