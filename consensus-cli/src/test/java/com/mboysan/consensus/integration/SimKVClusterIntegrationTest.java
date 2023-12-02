@@ -1,8 +1,11 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.SimKVStoreCluster;
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
     private SimKVStoreCluster simCluster;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @AfterEach
     void teardown() {

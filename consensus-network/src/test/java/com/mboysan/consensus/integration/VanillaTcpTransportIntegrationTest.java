@@ -5,12 +5,10 @@ import com.mboysan.consensus.Transport;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
+import com.mboysan.consensus.util.TestUtils;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +33,8 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
     private VanillaTcpClientTransport[] clientTransports;
 
     @BeforeEach
-    void setUp() {
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
         this.serverTransports = setupServers();
         this.clientTransports = setupClients();
     }

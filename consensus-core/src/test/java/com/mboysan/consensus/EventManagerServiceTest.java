@@ -1,7 +1,10 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.event.IEvent;
+import com.mboysan.consensus.util.TestUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,6 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 class EventManagerServiceTest {
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @Test
     void testEventRegistrationAndFire() {

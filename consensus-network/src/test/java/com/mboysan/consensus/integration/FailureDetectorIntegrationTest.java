@@ -4,10 +4,13 @@ import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.ShutdownUtil;
+import com.mboysan.consensus.util.TestUtils;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +21,11 @@ import java.util.concurrent.CountDownLatch;
 public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FailureDetectorIntegrationTest.class);
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @Test
     void testFailureDetectionDisabled() throws IOException, InterruptedException {

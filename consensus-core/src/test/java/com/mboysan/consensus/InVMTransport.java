@@ -83,7 +83,7 @@ public class InVMTransport implements Transport {
                         new NodeListChangedEvent(i, Set.copyOf(serverMap.keySet()))));
                 serverExecutor.execute(server);
             }
-            LOGGER.info("server-{} added", nodeId);
+            LOGGER.info("server-{} added to serverMap=[{}]", nodeId, serverMap);
         } else {
             Server server = new Server(messageProcessor);
             serverMap.put(associatedNodeId, server);
@@ -120,11 +120,9 @@ public class InVMTransport implements Transport {
         Future<Message> msgFuture = sendRecvAsync(message);
         try {
             final long callbackTimeoutMs = transportConfig.messageCallbackTimeoutMs();
-            Message response = callbackTimeoutMs > 0
+            return callbackTimeoutMs > 0
                     ? msgFuture.get(callbackTimeoutMs, TimeUnit.MILLISECONDS)
                     : msgFuture.get();  // wait indefinitely.
-            LOGGER.debug("IN (response): {}", response);
-            return response;
         } catch (Exception e) {
             LOGGER.error("sendRecv failed for message={}", message, e);
             if (e instanceof InterruptedException) {
@@ -142,7 +140,6 @@ public class InVMTransport implements Transport {
         verifyReceiverAlive(message);
 
         try {
-            LOGGER.debug("OUT (request) : {}", message);
             if (message.getSenderId() == message.getReceiverId()) {
                 return CompletableFuture.completedFuture(sendRecvSelf(message));
             }
@@ -266,6 +263,14 @@ public class InVMTransport implements Transport {
             requestExecutor.shutdown();
             messageQueue.offer(new Message() {
             }.setCorrelationId("closingServer"));
+        }
+
+        @Override
+        public String toString() {
+            return "Server{" +
+                    "isConnectedToNetwork=" + isConnectedToNetwork +
+                    ", isRunning=" + isRunning +
+                    '}';
         }
     }
 }

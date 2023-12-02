@@ -1,13 +1,17 @@
 package com.mboysan.consensus.util;
 
+import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionFactory;
+
 import java.util.concurrent.atomic.AtomicReference;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.awaitility.Awaitility.await;
 
 public final class AwaitUtil {
 
     private static final long DEFAULT_AWAIT_SECONDS = 20;
+    private static final long DEFAULT_POLL_INTERVAL_MILLIS = 500;
 
     private AwaitUtil() {
 
@@ -22,11 +26,11 @@ public final class AwaitUtil {
             ThrowingSupplier<T> supplier)
     {
         AtomicReference<T> ref = new AtomicReference<>();
-        await().atMost(DEFAULT_AWAIT_SECONDS, SECONDS).untilAsserted(() -> {
+        await().untilAsserted(() -> {
             try {
                 ref.set(supplier.get());
             } catch (Throwable t) {
-                if (expectedExceptionType == null || t.getClass().isAssignableFrom(expectedExceptionType)) {
+                if (isErrorExpected(t, expectedExceptionType)) {
                     throw new AssertionError(t);
                 }
                 throw t;
@@ -43,11 +47,11 @@ public final class AwaitUtil {
             Class<? extends Exception> expectedExceptionType,
             ThrowingRunnable runnable)
     {
-        await().atMost(DEFAULT_AWAIT_SECONDS, SECONDS).untilAsserted(() -> {
+        await().untilAsserted(() -> {
             try {
                 runnable.run();
             } catch (Throwable t) {
-                if (expectedExceptionType == null || t.getClass().isAssignableFrom(expectedExceptionType)) {
+                if (isErrorExpected(t, expectedExceptionType)) {
                     throw new AssertionError(t);
                 }
                 throw t;
@@ -62,5 +66,18 @@ public final class AwaitUtil {
         } catch (Throwable t) {
             throw new Error(t);
         }
+    }
+
+    private static ConditionFactory await() {
+        return Awaitility.await()
+                .atMost(DEFAULT_AWAIT_SECONDS, SECONDS)
+                .pollInterval(DEFAULT_POLL_INTERVAL_MILLIS, MILLISECONDS)
+                .pollDelay(0, MILLISECONDS);
+    };
+
+    private static boolean isErrorExpected(Throwable throwable, Class<? extends Exception> expectedExceptionType) {
+        return expectedExceptionType == null
+                || throwable.getClass().isAssignableFrom(expectedExceptionType)
+                || (throwable.getCause() != null && isErrorExpected(throwable.getCause(), expectedExceptionType));
     }
 }

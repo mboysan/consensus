@@ -8,8 +8,11 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
 import com.mboysan.consensus.configuration.BizurConfig;
@@ -21,6 +24,11 @@ class BizurKVStoreTest extends KVStoreTestBase {
     private BizurKVStore[] stores;
     private KVStoreClient[] clients;
     private boolean skipTeardown = false;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     void initCluster(int numNodes, int numBuckets) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();

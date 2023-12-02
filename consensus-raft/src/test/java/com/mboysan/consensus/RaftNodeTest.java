@@ -3,8 +3,11 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.message.StateMachineRequest;
+import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +32,11 @@ class RaftNodeTest extends NodeTestBase {
     private boolean skipTeardown;
     private RaftNode[] nodes;
     private InVMTransport transport;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     void initCluster(int numNodes) throws IOException, ExecutionException, InterruptedException {
         List<Future<Void>> futures = new ArrayList<>();
@@ -292,9 +300,9 @@ class RaftNodeTest extends NodeTestBase {
         initCluster(numServers);
         int oldLeaderId = assertOneLeader();
 
-        disconnect((oldLeaderId + 1) % numServers);
-        disconnect((oldLeaderId + 2) % numServers);
+        disconnect((oldLeaderId + 4) % numServers);
         disconnect((oldLeaderId + 3) % numServers);
+        disconnect((oldLeaderId + 2) % numServers);
 
         List<String> expectedCommands = new ArrayList<>(List.of("cmd0"));
 
@@ -302,16 +310,27 @@ class RaftNodeTest extends NodeTestBase {
         assertFalse(result);
 
         kill(oldLeaderId);
-        connect((oldLeaderId + 1) % numServers);
-        connect((oldLeaderId + 2) % numServers);
+        connect((oldLeaderId + 4) % numServers);
         connect((oldLeaderId + 3) % numServers);
+        connect((oldLeaderId + 2) % numServers);
         awaiting(() -> assertOneLeader());
+
+        // There is an interesting edge-case here. Assuming the oldLeader was node-0 and the node that was NOT
+        // disconnected was node-1: After append(cmd0) above, node-0 will send the AppendEntries request to node-1.
+        // This entry is not yet committed on any of the nodes but node-1 has this entry in its log. If by any chance
+        // node-1 is elected as the leader, this entry will be replicated to its followers. At this point, the clients
+        // will be very confused, because the result of the append(cmd0) request was false, but the entry is committed.
+        // Raft paper addresses this problem in the "Client Interaction" section, i.e. clients always send a
+        // unique id with each request. If the leader receives a request with a duplicate id,
+        // it will reject the request.
+        //
+        // That's why at the end of the test, instead of checking the logs for expectedCommands, we are just checking
+        // if the log entries on all the nodes are equal or not.
 
         revive(oldLeaderId);
         awaiting(() -> assertOneLeader());   // old leader will sync changes
 
-        expectedCommands.clear();
-        assertLogsEquals(expectedCommands);
+        awaiting(this::assertNodeLogsEquals);
     }
 
     /**
@@ -376,21 +395,22 @@ class RaftNodeTest extends NodeTestBase {
 
     // ------------------------------------------------------------- assertions
 
-    void assertLogsEquals(String... expectedCommands) {
-        assertLogsEquals(Arrays.stream(expectedCommands).toList());
-    }
-
     void assertLogsEquals(List<String> commands) {
         RaftLog log0;
         synchronized (nodes[0]) {
             log0 = nodes[0].getState().raftLog;
             assertEquals(commands.size(), log0.size());
-            for (int i = 0; i < nodes[0].getState().raftLog.size(); i++) {
+            for (int i = 0; i < log0.size(); i++) {
                 assertEquals(commands.get(i), log0.get(i).command());
             }
         }
+        assertNodeLogsEquals();
+    }
+
+    void assertNodeLogsEquals() {
         for (RaftNode server : nodes) {
             synchronized (server) {
+                RaftLog log0 = nodes[0].getState().raftLog;
                 assertEquals(log0, server.getState().raftLog);
             }
         }

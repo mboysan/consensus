@@ -4,7 +4,10 @@ import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.message.SimMessage;
 import com.mboysan.consensus.util.RngUtil;
+import com.mboysan.consensus.util.TestUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,6 +25,11 @@ class SimNodeTest extends NodeTestBase {
     private SimNode[] nodes;
 
     private InVMTransport transport;
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     void initCluster(TestConfig testConfig) throws IOException, ExecutionException, InterruptedException {
         final int numNodes = testConfig.numNodes;

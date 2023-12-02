@@ -104,12 +104,17 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     @Override
     synchronized void update() {
         LOGGER.debug("node-{} update timeout, time={}", getNodeId(), getScheduler().currentTime());
+
+        LOGGER.trace("node-{} previous state [{}]", getNodeId(), state);
+
         startNewElection();
         sendRequestVoteToPeers();
         becomeLeader();
         sendAppendEntriesToPeers();
         advanceCommitIndex();
         advanceStateMachine();
+
+        LOGGER.trace("node-{} current state [{}]", getNodeId(), state);
     }
 
     private void startNewElection() {
@@ -177,7 +182,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 state.role = LEADER;
                 state.leaderId = getNodeId();
                 state.seenLeader = true;
-                peers.forEach((peerId, peer) -> peer.nextIndex = state.raftLog.size());
+                peers.forEach((peerId, peer) -> peer.nextIndex = (state.raftLog.lastLogIndex() + 1));
                 LOGGER.info("node-{} thinks it's leader", getNodeId());
             }
         }
@@ -309,9 +314,9 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 state.commitIndex = Math.min(request.getLeaderCommit(), state.raftLog.lastLogIndex());
                 state.votedFor = request.getLeaderId();
 
-                if (isStronglyConsistent) {
-                    update();   // sync for strong consistency
-                }
+                // this is needed to apply the changes to the state machine
+                update();
+
                 return new AppendEntriesResponse(state.currentTerm, true, state.raftLog.lastLogIndex());
             } else {
                 return new AppendEntriesResponse(state.currentTerm, false);

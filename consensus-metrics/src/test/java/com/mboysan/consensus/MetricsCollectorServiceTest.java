@@ -6,9 +6,8 @@ import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.FileUtil;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import com.mboysan.consensus.util.TestUtils;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MetricsCollectorServiceTest {
+
+    @BeforeEach
+    void setUp(TestInfo testInfo) {
+        TestUtils.logTestName(testInfo);
+    }
 
     @AfterAll
     static void tearDownAll() {
@@ -88,7 +92,7 @@ class MetricsCollectorServiceTest {
             List<String> metricsLines = Files.readAllLines(metricsPath);
             collector.shutdown();
 
-            assertTrue(metricsLines.size() > 0);
+            assertFalse(metricsLines.isEmpty());
             for (String metric : metricsLines) {
                 assertTrue(metric.contains(separator));
                 // 3 column per line -> name, value and timestamp
@@ -197,13 +201,11 @@ class MetricsCollectorServiceTest {
             MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
             assertTrue(Files.exists(metricsPath));
 
-            collector.registerCustomReporter(() -> {
-                EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0"));
-            });
+            collector.registerCustomReporter(() ->
+                    EventManagerService.getInstance().fire(new MeasurementEvent(SAMPLE, "sampledStr", "value0")));
 
-            collector.registerCustomReporter(() -> {
-                EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1"));
-            });
+            collector.registerCustomReporter(() ->
+                    EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1")));
 
             Thread.sleep(2000); // wait 2 more seconds to sync
 
