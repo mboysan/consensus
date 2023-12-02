@@ -330,7 +330,7 @@ class RaftNodeTest extends NodeTestBase {
         revive(oldLeaderId);
         awaiting(() -> assertOneLeader());   // old leader will sync changes
 
-        assertNodeLogsEquals();
+        awaiting(this::assertNodeLogsEquals);
     }
 
     /**

@@ -127,7 +127,7 @@ class BizurNodeTest extends NodeTestBase {
     @Test
     void testWhenNonExistingKeyThenGetReturnsNull() throws Exception {
         initCluster(3, 1);
-        assertNull(get(0, "some-non-existing-key"));
+        assertNull(getAwaiting(0, "some-non-existing-key"));
     }
 
     @Test
@@ -155,10 +155,10 @@ class BizurNodeTest extends NodeTestBase {
 
         for (String expKey : expectedKVs.keySet()) {
             String expVal = expectedKVs.get(expKey);
-            set(0, expKey, expVal);
-            assertEquals(expVal, get(1, expKey));
+            setAwaiting(0, expKey, expVal);
+            assertEquals(expVal, getAwaiting(1, expKey));
         }
-        delete(2, "k3");
+        deleteAwaiting(2, "k3");
         expectedKVs.remove("k3");
 
         assertKeyValueIntegrity(expectedKVs);
@@ -182,10 +182,10 @@ class BizurNodeTest extends NodeTestBase {
         // for which node-0 will be elected as its leader.
         kill(0);
         assertThrows(IllegalStateException.class, () -> set(0, "k0", "v0"));
-        awaiting(() -> set(1, "k0", "v0"));
+        setAwaiting(1, "k0", "v0");
 
         revive(0);
-        set(0, "k1", "v1");
+        setAwaiting(0, "k1", "v1");
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
@@ -203,11 +203,11 @@ class BizurNodeTest extends NodeTestBase {
         final String expectedKey = "a";
         final String expectedValue = "v0";
 
-        set(0, expectedKey, expectedValue);
+        setAwaiting(0, expectedKey, expectedValue);
 
         kill(2);
 
-        String actualValue = awaiting(() -> get(0, expectedKey));
+        String actualValue = getAwaiting(0, expectedKey);
         assertEquals(expectedValue, actualValue);
     }
 
@@ -227,10 +227,10 @@ class BizurNodeTest extends NodeTestBase {
         // for which node-0 will be elected as its leader.
         kill(1);    // follower of range-0
         assertThrows(IllegalStateException.class, () -> set(1, "k0", "v0"));
-        set(0, "k0", "v0");
+        setAwaiting(0, "k0", "v0");
 
         revive(1);
-        set(1, "k1", "v1");
+        setAwaiting(1, "k1", "v1");
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
@@ -253,10 +253,10 @@ class BizurNodeTest extends NodeTestBase {
         // for which node-0 will be elected as its leader.
         disconnect(0);
         assertThrows(BizurException.class, () -> set(0, "k0", "v0"));
-        awaiting(() -> set(1, "k0", "v0"));
+        setAwaiting(1, "k0", "v0");
 
         connect(0);
-        awaiting(() -> set(0, "k1", "v1"));
+        setAwaiting(0, "k1", "v1");
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
@@ -279,13 +279,13 @@ class BizurNodeTest extends NodeTestBase {
         // for which node-0 will be elected as its leader.
         disconnect(1);  // follower of range-0
         assertThrows(IOException.class, () -> set(1, "k0", "v0"));
-        set(0, "k0", "v0");
+        setAwaiting(0, "k0", "v0");
 
         // at this point, if enough time passed, node-1 will try to assume leadership and since it's disconnected
         // from the network its leader id for range-0 will be -1.
         connect(1);
         // Since it might have already lost the active leader, it might throw exceptions.
-        awaiting(() -> set(1, "k1", "v1"));
+        setAwaiting(1, "k1", "v1");
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
@@ -346,17 +346,33 @@ class BizurNodeTest extends NodeTestBase {
         });
     }
 
-    private void assertKeyValueIntegrity(Map<String, String> expectedKVMap) throws Exception {
+    private void assertKeyValueIntegrity(Map<String, String> expectedKVMap) {
         for (BizurNode node : nodes) {
-            Set<String> actualKeys = iterateKeys(node.getNodeId());
+            Set<String> actualKeys = iterateKeysAwaiting(node.getNodeId());
             assertEquals(expectedKVMap.size(), actualKeys.size());
             for (String key : actualKeys) {
-                assertEquals(expectedKVMap.get(key), get(node.getNodeId(), key));
+                assertEquals(expectedKVMap.get(key), getAwaiting(node.getNodeId(), key));
             }
         }
     }
 
     // ------------------------------------------------------------- node operations
+
+    private String getAwaiting(int byNodeId, String key) {
+        return awaiting(() -> get(byNodeId, key));
+    }
+
+    private void setAwaiting(int byNodeId, String key, String value) {
+        awaiting(() -> set(byNodeId, key, value));
+    }
+
+    private void deleteAwaiting(int byNodeId, String key) {
+        awaiting(() -> delete(byNodeId, key));
+    }
+
+    private Set<String> iterateKeysAwaiting(int byNodeId) {
+        return awaiting(() -> iterateKeys(byNodeId));
+    }
 
     private String get(int byNodeId, String key) throws Exception {
         KVGetRequest request = new KVGetRequest(key);
@@ -371,13 +387,13 @@ class BizurNodeTest extends NodeTestBase {
         validateResponse(response, request);
     }
 
-    public void delete(int byNodeId, String key) throws Exception {
+    private void delete(int byNodeId, String key) throws Exception {
         KVDeleteRequest request = new KVDeleteRequest(key);
         KVDeleteResponse response = nodes[byNodeId].delete(request);
         validateResponse(response, request);
     }
 
-    public Set<String> iterateKeys(int byNodeId) throws Exception {
+    private Set<String> iterateKeys(int byNodeId) throws Exception {
         KVIterateKeysRequest request = new KVIterateKeysRequest();
         KVIterateKeysResponse response = nodes[byNodeId].iterateKeys(request);
         validateResponse(response, request);

@@ -17,10 +17,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -32,37 +34,37 @@ abstract class KVStoreTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreTestBase.class);
 
-    void putGetSequentialTest() throws Exception {
+    void putGetSequentialTest() {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
         for (int i = 0; i < 100; i++) {
             String key = "testKey" + i;
             String val = "testVal" + i;
-            getRandomClient().set(key, val);
+            setAwaiting(getRandomClientId(), key, val);
             expectedEntries.put(key, val);
         }
         assertEntriesForAll(expectedEntries);
     }
 
-    void deleteSequentialTest() throws Exception {
+    void deleteSequentialTest() {
         for (int i = 0; i < 100; i++) {
             String key = "testKey" + i;
-            getRandomClient().set(key, "val" + i);
-            getRandomClient().delete(key);
+            setAwaiting(getRandomClientId(), key, "val" + i);
+            deleteAwaiting(getRandomClientId(), key);
         }
         assertStoreSizeForAll(0);
     }
 
     void multiThreadTest() throws Exception {
         Map<String, String> expectedEntries = new ConcurrentHashMap<>();
-        try (MultiThreadExecutor exec = new MultiThreadExecutor()) {
+        try (MultiThreadExecutor exec = new MultiThreadExecutor(4)) {
             for (int i = 0; i < 100; i++) {
                 int finalI = i;
                 exec.execute(() -> {
                     String key = "testKey" + finalI;
                     String val = "testVal" + finalI;
-                    getRandomClient().set(key ,val);
+                    setAwaiting(getRandomClientId(), key, val);
                     if (RngUtil.nextBoolean()) {   // in some cases, remove the entry
-                        getRandomClient().delete(key);
+                        deleteAwaiting(getRandomClientId(), key);
                     } else {    // in other cases, just leave it inserted.
                         expectedEntries.put(key, val);
                     }
@@ -84,7 +86,7 @@ abstract class KVStoreTestBase {
             int anotherStore = (storeToDisconnect + 1) % numStores;
             String expKey = "k" + storeToDisconnect;
             String expVal = "v" + storeToDisconnect;
-            awaiting(() -> getClient(anotherStore).set(expKey, expVal));    // allow sync time
+            awaiting(() -> setAwaiting(anotherStore, expKey, expVal)); // allow sync time
             expectedEntries.put(expKey, expVal);
 
             connect(storeToDisconnect);
@@ -141,14 +143,14 @@ abstract class KVStoreTestBase {
             for (int i = 0; i < totalNumKeys; i++) {
                 String key = UUID.randomUUID().toString() + RngUtil.nextInt(Integer.MAX_VALUE);
                 String val = UUID.randomUUID().toString() + RngUtil.nextInt(Integer.MAX_VALUE);
-                getRandomClient().set(key, val);
+                setAwaiting(getRandomClientId(), key, val);
                 expectedSizeOfKeys += key.length();
                 expectedSizeOfValues += val.length();
                 expectedTotalSize += (key.length() + val.length());
             }
 
-            for (KVStoreClient client : getClients()) {
-                assertEquals(totalNumKeys, client.iterateKeys().size());
+            for (int clientId = 0; clientId < getClients().length; clientId++) {
+                assertEquals(totalNumKeys, iterateKeysAwaiting(clientId).size());
             }
 
             // check all stores have reported the same metrics
@@ -192,8 +194,13 @@ abstract class KVStoreTestBase {
     abstract InVMTransport getNodeServingTransport();
     abstract InVMTransport getClientServingTransport(int storeId);
 
+
+    int getRandomClientId() {
+        return RngUtil.nextInt(getClients().length);
+    }
+
     KVStoreClient getRandomClient() {
-        return getClient(RngUtil.nextInt(getClients().length));
+        return getClient(getRandomClientId());
     }
     KVStoreClient getClient(int clientId) {
         return getClients()[clientId];
@@ -208,18 +215,34 @@ abstract class KVStoreTestBase {
         getNodeServingTransport().connectedToNetwork(storeId, true);
     }
 
-    void assertEntriesForAll(Map<String, String> expectedEntries) throws KVOperationException {
+    void assertEntriesForAll(Map<String, String> expectedEntries) {
         assertStoreSizeForAll(expectedEntries.size());
         for (String expKey : expectedEntries.keySet()) {
-            for (int i = 0; i < getClients().length; i++) {
-                assertEquals(expectedEntries.get(expKey), getClient(i).get(expKey));
+            for (int clientId = 0; clientId < getClients().length; clientId++) {
+                assertEquals(expectedEntries.get(expKey), getAwaiting(clientId, expKey));
             }
         }
     }
 
-    void assertStoreSizeForAll(int size) throws KVOperationException {
-        for (int i = 0; i < getClients().length; i++) {
-            assertEquals(size, getClient(i).iterateKeys().size());
+    void assertStoreSizeForAll(int size) {
+        for (int clientId = 0; clientId < getClients().length; clientId++) {
+            assertEquals(size, iterateKeysAwaiting(clientId).size());
         }
+    }
+
+    private String getAwaiting(int clientId, String key) {
+        return awaiting(TimeoutException.class, () -> getClient(clientId).get(key));
+    }
+
+    private void setAwaiting(int clientId, String key, String value) {
+        awaiting(TimeoutException.class, () -> getClient(clientId).set(key, value));
+    }
+
+    private void deleteAwaiting(int clientId, String key) {
+        awaiting(TimeoutException.class, () -> getClient(clientId).delete(key));
+    }
+
+    private Set<String> iterateKeysAwaiting(int clientId) {
+        return awaiting(TimeoutException.class, () -> getClient(clientId).iterateKeys());
     }
 }
