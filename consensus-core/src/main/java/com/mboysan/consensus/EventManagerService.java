@@ -67,11 +67,11 @@ public final class EventManagerService implements BackgroundService {
             return;
         }
         Objects.requireNonNull(event);
+        LOGGER.debug("firing event {}", event);
         EventConsumers<T> container = (EventConsumers<T>) eventConsumerMap.get(event.getClass());
         if (container != null) {
             for (Consumer<T> consumer : container.consumers) {
                 try {
-                    LOGGER.debug("firing event {}", event);
                     consumer.accept(event);
                 } catch (Exception e) {
                     LOGGER.error("error occurred while consuming the event={}", event, e);
