@@ -16,8 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
 
-    private static volatile boolean isInteractiveSession = true;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
 
     private static final String ROUTE_TO_SEPARATOR = "#";
@@ -49,9 +47,7 @@ public class KVStoreClientCLI {
         client.start();
         LOGGER.info("client started");
 
-        isInteractiveSession = isInteractiveSession(properties);
-
-        if (isInteractiveSession) {
+        if (isInteractiveSession(properties)) {
             LOGGER.info("client ready to receive commands:");
 
             try (Scanner scanner = new Scanner(System.in)) {
