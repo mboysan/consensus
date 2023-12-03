@@ -70,12 +70,9 @@ public class KVStoreClient extends AbstractClient {
         });
     }
 
-    private void validateResponse(KVOperationResponse response) throws Exception {
+    private void validateResponse(KVOperationResponse response) throws KVOperationException {
         if (!response.isSuccess()) {
-            Exception e = response.getException();
-            if (e != null) {
-                throw e;
-            }
+            throw new KVOperationException(response.getException());
         }
     }
 

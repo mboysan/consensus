@@ -235,20 +235,20 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         if (state.role == LEADER) {
             /* If there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N,
                and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).*/
-            int N = IntStream.concat(
+            int n = IntStream.concat(
                             peers.values().stream().flatMapToInt(peer -> IntStream.of(peer.matchIndex)),
                             IntStream.of(state.raftLog.lastLogIndex())) // append our view of the matchIndex
                     .max().orElseThrow();
-            if (N > state.commitIndex) {
-                int countGreaterEquals = state.raftLog.lastLogIndex() >= N ? 1 : 0;
+            if (n > state.commitIndex) {
+                int countGreaterEquals = state.raftLog.lastLogIndex() >= n ? 1 : 0;
                 for (RaftPeer peer : peers.values()) {
-                    if (peer.matchIndex >= N) {
+                    if (peer.matchIndex >= n) {
                         countGreaterEquals++;
                     }
                 }
                 if (countGreaterEquals > peers.size() / 2
-                        && state.raftLog.logTerm(N) == state.currentTerm) {
-                    state.commitIndex = N;
+                        && state.raftLog.logTerm(n) == state.currentTerm) {
+                    state.commitIndex = n;
                 }
             }
         }
@@ -380,9 +380,12 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 case "askProtocol" -> {
                     return new CustomResponse(true, null, "raft");
                 }
+                default -> {
+                    return new CustomResponse(
+                            false, new UnsupportedOperationException(request.getRequest()), null);
+                }
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     /*----------------------------------------------------------------------------------

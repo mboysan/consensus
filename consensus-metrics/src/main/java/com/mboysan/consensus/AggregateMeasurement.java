@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
 public abstract class AggregateMeasurement extends Measurement {
-    public AggregateMeasurement(String name, String value, long timestamp) {
+    AggregateMeasurement(String name, String value, long timestamp) {
         super(name, value, timestamp);
     }
 

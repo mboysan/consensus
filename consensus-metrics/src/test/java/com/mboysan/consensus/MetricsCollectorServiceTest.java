@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static com.mboysan.consensus.event.MeasurementEvent.MeasurementType.AGGREGATE;
 import static com.mboysan.consensus.event.MeasurementEvent.MeasurementType.SAMPLE;
+import static com.mboysan.consensus.util.AwaitUtil.doSleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -87,7 +88,7 @@ class MetricsCollectorServiceTest {
         Files.deleteIfExists(metricsPath);
         try {
             MetricsCollectorService collector = MetricsCollectorService.initAndStart(config);
-            Thread.sleep(2500L);
+            doSleep(2500L);
             assertTrue(Files.exists(metricsPath));
             List<String> metricsLines = Files.readAllLines(metricsPath);
             collector.shutdown();
@@ -139,7 +140,7 @@ class MetricsCollectorServiceTest {
             EventManagerService.getInstance().fireAsync(new MeasurementEvent(AGGREGATE, "aggregatedLong", 20L));
             EventManagerService.getInstance().fire(new MeasurementEvent(AGGREGATE, "aggregatedLong", 30L));
 
-            Thread.sleep(2000); // wait 2 more seconds to sync
+            doSleep(2000); // wait 2 more seconds to sync
 
             collector.shutdown();   // measurements will be dumped upon close.
 
@@ -207,7 +208,7 @@ class MetricsCollectorServiceTest {
             collector.registerCustomReporter(() ->
                     EventManagerService.getInstance().fireAsync(new MeasurementEvent(SAMPLE, "asyncSampledStr", "value1")));
 
-            Thread.sleep(2000); // wait 2 more seconds to sync
+            doSleep(2000); // wait 2 more seconds to sync
 
             collector.shutdown();   // measurements will be dumped upon close.
 

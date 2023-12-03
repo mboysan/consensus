@@ -17,6 +17,8 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 class SimKVStoreTest extends KVStoreTestBase {
 
     private InVMTransport nodeServingTransport;
@@ -87,10 +89,10 @@ class SimKVStoreTest extends KVStoreTestBase {
     @Test
     void testAllOperations() throws Exception {
         this.initCluster(3);
-        getRandomClient().set("a", "b");
-        getRandomClient().get("a");
-        getRandomClient().delete("a");
-        getRandomClient().iterateKeys();
+        assertDoesNotThrow(() -> getRandomClient().set("a", "b"));
+        assertDoesNotThrow(() -> getRandomClient().get("a"));
+        assertDoesNotThrow(() -> getRandomClient().delete("a"));
+        assertDoesNotThrow(() -> getRandomClient().iterateKeys());
     }
 
     @Test

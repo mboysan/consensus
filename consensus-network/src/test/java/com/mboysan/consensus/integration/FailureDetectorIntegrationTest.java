@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
+import static com.mboysan.consensus.util.AwaitUtil.doSleep;
+
+class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FailureDetectorIntegrationTest.class);
 
@@ -43,7 +45,7 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
             CountDownLatch latch = new CountDownLatch(1);
             serverTransport.registerMessageProcessor(message -> {
                 if (message instanceof TestMessage) {
-                    sleep(pingInterval * 2);
+                    doSleep(pingInterval * 2);
                     latch.countDown();
                 }
                 if (message instanceof CustomRequest request) {
@@ -91,21 +93,13 @@ public class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase 
                 } catch (IOException ignore) {}
             }
 
-            sleep(pingInterval * 10);   // ping messages will be sent in-between.
+            doSleep(pingInterval * 10); // wait for the ping messages to be sent.
 
             serverTransport.start();
             latch.await();
         } finally {
             ShutdownUtil.shutdown(LOGGER, clientTransport::shutdown);
             ShutdownUtil.shutdown(LOGGER, serverTransport::shutdown);
-        }
-    }
-
-    private static void sleep(long time) {
-        try {
-            Thread.sleep(time);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
 

@@ -7,6 +7,6 @@ class SimPeer extends AbstractPeer {
 
     @Override
     void reset() {
-
+        // no-op
     }
 }

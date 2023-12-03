@@ -59,9 +59,13 @@ public final class AwaitUtil {
         });
     }
 
-    public static void awaitingAtLeast(long milliseconds, ThrowingRunnable runnable) throws Exception {
-        Thread.sleep(milliseconds);
+    public static void doSleep(long milliseconds) {
+        awaitingAtLeast(milliseconds, () -> {});
+    }
+
+    public static void awaitingAtLeast(long milliseconds, ThrowingRunnable runnable) {
         try {
+            Thread.sleep(milliseconds);
             runnable.run();
         } catch (Throwable t) {
             throw new Error(t);

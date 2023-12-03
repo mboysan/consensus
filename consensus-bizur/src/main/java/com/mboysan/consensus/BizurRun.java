@@ -320,7 +320,7 @@ final class BizurRun {
         return keysIamResponsible;
     }
 
-    Set<String> apiIterateKeys() throws BizurException {
+    Set<String> apiIterateKeys() {
         Set<String> keySet = new HashSet<>();
         forEachPeerParallel(peer -> {
             CollectKeysRequest req = new CollectKeysRequest()

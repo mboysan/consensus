@@ -56,7 +56,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
 
     @Override
     void update() {
-
+        throw new UnsupportedOperationException("SimNode does not support update");
     }
 
     @Override
@@ -114,9 +114,12 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
                 case "askProtocol" -> {
                     return new CustomResponse(true, null, "simulate");
                 }
+                default -> {
+                    return new CustomResponse(
+                            false, new UnsupportedOperationException(request.getRequest()), null);
+                }
             }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     SimState getState() {

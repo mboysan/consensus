@@ -293,15 +293,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
         validateAction();
-        try {
-            Set<String> keySet = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
-            return response(request, true, null, keySet);
-        } catch (IllegalLeaderException e) {
-            return route(request, e.getLeaderId());
-        } catch (BizurException e) {
-            logErrorForRequest(e, request);
-            return response(request, false, e, null);
-        }
+        Set<String> keySet = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
+        return response(request, true, null, keySet);
     }
 
     @Override
@@ -326,8 +319,11 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             case "askProtocol" -> {
                 return new CustomResponse(true, null, "bizur");
             }
+            default -> {
+                return new CustomResponse(
+                        false, new UnsupportedOperationException(request.getRequest()), null);
+            }
         }
-        return new CustomResponse(false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {

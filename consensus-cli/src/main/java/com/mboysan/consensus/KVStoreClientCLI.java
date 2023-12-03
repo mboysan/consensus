@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
 
-    public static volatile boolean isInteractiveSession = true;
+    private static volatile boolean isInteractiveSession = true;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
 
@@ -52,7 +52,7 @@ public class KVStoreClientCLI {
         isInteractiveSession = isInteractiveSession(properties);
 
         if (isInteractiveSession) {
-            System.out.println("client ready to receive commands:");
+            LOGGER.info("client ready to receive commands:");
 
             try (Scanner scanner = new Scanner(System.in)) {
                 boolean exited = false;
@@ -81,7 +81,7 @@ public class KVStoreClientCLI {
                             default -> sendCustomCommand(client, input);
                         }
                     } catch (Exception e) {
-                        System.err.println(e);
+                        LOGGER.error(e.getMessage());
                     }
                 }
             }
@@ -133,11 +133,7 @@ public class KVStoreClientCLI {
         int routeToId = Integer.parseInt(request[0]);
         String command = request[1];
         String result = client.customRequest(command, routeToId);
-        if (isInteractiveSession) {
-            System.out.println("result -> " + result);
-        } else {
-            LOGGER.info("{}", result);
-        }
+        printResult(result);
     }
 
     private static String[] prepareRequest(String command) {
@@ -149,7 +145,7 @@ public class KVStoreClientCLI {
     }
 
     private static void printResult(Object result) {
-        System.out.println("result -> " + result);
+        LOGGER.info("result: {}", result);
     }
 
     public static KVStoreClient getClient(int id) {

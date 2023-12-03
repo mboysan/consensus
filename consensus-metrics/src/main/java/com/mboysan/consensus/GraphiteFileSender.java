@@ -44,6 +44,7 @@ public class GraphiteFileSender implements GraphiteSender {
 
     @Override
     public void connect() {
+        // not needed
     }
 
     @Override
@@ -68,6 +69,7 @@ public class GraphiteFileSender implements GraphiteSender {
 
     @Override
     public void close() {
+        // not needed
     }
 
     public void shutdown() {
