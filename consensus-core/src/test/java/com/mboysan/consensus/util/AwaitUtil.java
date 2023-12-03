@@ -77,7 +77,7 @@ public final class AwaitUtil {
                 .atMost(DEFAULT_AWAIT_SECONDS, SECONDS)
                 .pollInterval(DEFAULT_POLL_INTERVAL_MILLIS, MILLISECONDS)
                 .pollDelay(0, MILLISECONDS);
-    };
+    }
 
     private static boolean isErrorExpected(Throwable throwable, Class<? extends Exception> expectedExceptionType) {
         return expectedExceptionType == null

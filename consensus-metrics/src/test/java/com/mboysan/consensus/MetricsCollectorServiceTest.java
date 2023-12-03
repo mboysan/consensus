@@ -77,7 +77,7 @@ class MetricsCollectorServiceTest {
     }
 
     @Test
-    void testJvmMetricsCollectionWithSeparator() throws IOException, InterruptedException {
+    void testJvmMetricsCollectionWithSeparator() throws IOException {
         String separator = "###";
         Properties properties = new Properties();
         properties.put("metrics.jvm.enabled", "true");
@@ -107,7 +107,7 @@ class MetricsCollectorServiceTest {
     // --------------------------------------------------------------------------------- insights metrics
 
     @Test
-    void testSampleAndAggregate() throws IOException, InterruptedException {
+    void testSampleAndAggregate() throws IOException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
@@ -189,7 +189,7 @@ class MetricsCollectorServiceTest {
     }
 
     @Test
-    void testCustomReporters() throws IOException, InterruptedException {
+    void testCustomReporters() throws IOException {
         String separator = " ";
         Properties properties = new Properties();
         properties.put("metrics.insights.enabled", "true");
