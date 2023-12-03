@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
+import java.io.IOException;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,7 +22,7 @@ class KVStoreClientTest {
     }
 
     @Test
-    void testValidateResponseFail() throws Exception {
+    void testValidateResponseFail() throws IOException {
         KVIterateKeysResponse response = new KVIterateKeysResponse(false, new IllegalArgumentException(), null);
 
         Transport transport = mock(Transport.class);

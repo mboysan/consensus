@@ -1,5 +1,10 @@
 ![build](https://github.com/mboysan/consensus/actions/workflows/build.yml/badge.svg)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=alert_status)](https://sonarcloud.io/dashboard?id=mboysan_consensus)
+
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mboysan_consensus)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=mboysan_consensus)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=mboysan_consensus)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=mboysan_consensus)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=mboysan_consensus&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=mboysan_consensus)
 
 ---------------- Draft ----------------
 

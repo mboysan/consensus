@@ -159,11 +159,11 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
     }
 
     @SuppressWarnings("unchecked")
-    <REQ extends Message, RESP extends Message> RESP routeMessage(REQ message, int receiverId) throws IOException {
+    <Q extends Message, S extends Message> S routeMessage(Q message, int receiverId) throws IOException {
         validateAction();
         LOGGER.debug("routing message={}, from={} to={}", message, getNodeId(), receiverId);
         message.setReceiverId(receiverId).setSenderId(getNodeId());
-        return (RESP) transport.sendRecv(message);
+        return (S) transport.sendRecv(message);
     }
 
     abstract RPCProtocol getRPC();

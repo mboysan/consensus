@@ -7,8 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
@@ -30,12 +29,10 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
                 .setNumNodes(3)
                 .build();
 
-        // just check that no exceptions are being thrown.
-
-        simCluster.getRandomClient().set("a", "b");
-        simCluster.getRandomClient().get("a");
-        simCluster.getRandomClient().delete("a");
-        simCluster.getRandomClient().iterateKeys();
+        assertDoesNotThrow(() -> simCluster.getRandomClient().set("a", "b"));
+        assertDoesNotThrow(() -> simCluster.getRandomClient().get("a"));
+        assertDoesNotThrow(() -> simCluster.getRandomClient().delete("a"));
+        assertDoesNotThrow(() -> simCluster.getRandomClient().iterateKeys());
     }
 
     @Test

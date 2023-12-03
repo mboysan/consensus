@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class AwaitUtilTest {
+class AwaitUtilTest {
 
     @Test
     void testAwaitingSupplierWithExpectedException() {

@@ -14,6 +14,9 @@ public final class BackgroundServiceRegistry {
 
     private final List<BackgroundService> services = new ArrayList<>();
 
+    private BackgroundServiceRegistry() {
+    }
+
     public synchronized void register(BackgroundService service) {
         services.add(service);
         LOGGER.info("registered new background service={}", service);

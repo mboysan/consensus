@@ -59,9 +59,13 @@ public final class AwaitUtil {
         });
     }
 
-    public static void awaitingAtLeast(long milliseconds, ThrowingRunnable runnable) throws Exception {
-        Thread.sleep(milliseconds);
+    public static void doSleep(long milliseconds) {
+        awaitingAtLeast(milliseconds, () -> {});
+    }
+
+    public static void awaitingAtLeast(long milliseconds, ThrowingRunnable runnable) {
         try {
+            Thread.sleep(milliseconds);
             runnable.run();
         } catch (Throwable t) {
             throw new Error(t);
@@ -73,7 +77,7 @@ public final class AwaitUtil {
                 .atMost(DEFAULT_AWAIT_SECONDS, SECONDS)
                 .pollInterval(DEFAULT_POLL_INTERVAL_MILLIS, MILLISECONDS)
                 .pollDelay(0, MILLISECONDS);
-    };
+    }
 
     private static boolean isErrorExpected(Throwable throwable, Class<? extends Exception> expectedExceptionType) {
         return expectedExceptionType == null

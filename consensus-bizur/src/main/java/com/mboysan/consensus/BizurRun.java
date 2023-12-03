@@ -320,7 +320,7 @@ final class BizurRun {
         return keysIamResponsible;
     }
 
-    Set<String> apiIterateKeys() throws BizurException {
+    Set<String> apiIterateKeys() {
         Set<String> keySet = new HashSet<>();
         forEachPeerParallel(peer -> {
             CollectKeysRequest req = new CollectKeysRequest()
@@ -363,9 +363,7 @@ final class BizurRun {
         for (int i = 0; i < getNumRanges(); i++) {
             BucketRange range = getBucketRange(i).lock();
             try {
-                range.getBucketMap().entrySet().forEach(entry -> {
-                    int index = entry.getKey();
-                    Bucket bucket = entry.getValue();
+                range.getBucketMap().forEach((index, bucket) -> {
                     long sizeOfBucketKeys = bucket.getSizeOfKeys();
                     long sizeOfBucketValues = bucket.getSizeOfValues();
                     long bucketTotalSize = bucket.getTotalSize();

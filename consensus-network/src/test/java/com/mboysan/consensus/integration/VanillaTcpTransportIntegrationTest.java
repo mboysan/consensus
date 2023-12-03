@@ -163,6 +163,9 @@ class VanillaTcpTransportIntegrationTest extends VanillaTcpTransportTestBase {
         assertThrows(IOException.class, () -> sender.sendRecv(request));
     }
 
+    /**
+     * This test is disabled by default as it takes a long time to complete, and not really a unit test anyways.
+     */
     @Disabled
     @Test
     void testPerformance() throws IOException {
