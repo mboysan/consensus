@@ -73,6 +73,9 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     env:
+      # This is the secret for mvn-repo repository which is fetched from https://github.com/settings/tokens
+      # Once rotated, make sure you also update the secret value in the repository settings.
+      # (i.e. goto repository -> settings/secrets/actions and edit MVN_REPO_KEY)
       MVN_REPO_KEY: ${{ secrets.MVN_REPO_KEY }}
       BUILD_NUMBER: ${{github.run_number}}
       BRANCH_NAME: ${{ github.ref_name }}

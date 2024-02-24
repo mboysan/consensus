@@ -31,7 +31,7 @@ public abstract class KVStoreClusterBase {
         return sj.toString();    // it will look like -> 0-localhost:8080,1-localhost:8081 ...
     }
 
-    public AbstractNode<?> getNode(int nodeId) {
+    AbstractNode<?> getNode(int nodeId) {
         return NodeCLI.getNode(nodeId);
     }
 

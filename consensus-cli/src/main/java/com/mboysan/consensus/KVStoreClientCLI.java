@@ -2,16 +2,18 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class KVStoreClientCLI {
@@ -33,16 +35,13 @@ public class KVStoreClientCLI {
     private static void main0(String[] args) throws IOException, CommandException {
         Properties properties = CliArgsHelper.getProperties(args);
 
-        startMetricsCollector(properties);
-
         int clientId = resolveClientId(properties);
-
-        TcpTransportConfig clientTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        Transport clientTransport = new VanillaTcpClientTransport(clientTransportConfig);
-        KVStoreClient client = new KVStoreClient(clientTransport);
+        KVStoreClient client = CLIFactory.createKVStoreClient(properties);
         CLIENT_REFERENCES.put(clientId, client);
 
         Runtime.getRuntime().addShutdownHook(createShutdownHookThread(client));
+
+        startMetricsCollector(properties);
 
         client.start();
         LOGGER.info("client started");
@@ -144,11 +143,11 @@ public class KVStoreClientCLI {
         LOGGER.info("result: {}", result);
     }
 
-    public static KVStoreClient getClient(int id) {
+    static KVStoreClient getClient(int id) {
         return CLIENT_REFERENCES.get(id);
     }
 
-    public static Collection<KVStoreClient> getClients() {
+    static Collection<KVStoreClient> getClients() {
         return CLIENT_REFERENCES.values();
     }
 }

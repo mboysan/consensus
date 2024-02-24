@@ -1,14 +1,8 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.configuration.NodeConfig;
-import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.configuration.SimConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,42 +27,16 @@ public class KVStoreServerCLI {
     }
 
     private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
-        Properties nodeSectionProperties = CliArgsHelper.getNodeSectionProperties(args);
-        TcpTransportConfig nodeServingTransportConfig
-                = CoreConfig.newInstance(TcpTransportConfig.class, nodeSectionProperties);
-        Transport nodeServingTransport = new VanillaTcpServerTransport(nodeServingTransportConfig);
+        Properties allProperties = CliArgsHelper.getProperties(args);
+        Properties storeProperties = CliArgsHelper.getStoreSectionProperties(args);
+        Properties nodeProperties = CliArgsHelper.getNodeSectionProperties(args);
 
-        Properties storeSectionProperties = CliArgsHelper.getStoreSectionProperties(args);
-        TcpTransportConfig clientServingTransportConfig
-                = CoreConfig.newInstance(TcpTransportConfig.class, storeSectionProperties);
-        Transport clientServingTransport = new VanillaTcpServerTransport(clientServingTransportConfig);
-
-        AbstractKVStore<?> kvStore;
-
-        NodeConfig conf = CoreConfig.newInstance(NodeConfig.class, nodeSectionProperties);
-        switch (conf.nodeConsensusProtocol()) {
-            case "raft" -> {
-                RaftConfig raftConfig = CoreConfig.newInstance(RaftConfig.class, nodeSectionProperties);
-                RaftNode raftNode = new RaftNode(raftConfig, nodeServingTransport);
-                kvStore = new RaftKVStore(raftNode, clientServingTransport);
-            }
-            case "bizur" -> {
-                BizurConfig bizurConfig = CoreConfig.newInstance(BizurConfig.class, nodeSectionProperties);
-                BizurNode bizurNode = new BizurNode(bizurConfig, nodeServingTransport);
-                kvStore = new BizurKVStore(bizurNode, clientServingTransport);
-            }
-            case "simulate" -> {
-                SimConfig simConfig = CoreConfig.newInstance(SimConfig.class, nodeSectionProperties);
-                SimNode simNode = new SimNode(simConfig, nodeServingTransport);
-                kvStore = new SimKVStore(simNode, clientServingTransport);
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + conf.nodeConsensusProtocol());
-        }
+        AbstractKVStore<?> kvStore = CLIFactory.createKVStore(storeProperties, nodeProperties);
         STORE_REFERENCES.put(kvStore.getNode().getNodeId(), kvStore);
 
         Runtime.getRuntime().addShutdownHook(createShutdownHookThread(kvStore));
 
-        startMetricsCollector(CliArgsHelper.getProperties(args), kvStore);
+        startMetricsCollector(allProperties, kvStore);
 
         kvStore.start().get();
         LOGGER.info("store started");
@@ -91,11 +59,11 @@ public class KVStoreServerCLI {
         metricsCollectorService.registerCustomReporter(kvStore::dumpStoreMetricsAsync);
     }
 
-    public static AbstractKVStore<?> getStore(int nodeId) {
+    static AbstractKVStore<?> getStore(int nodeId) {
         return STORE_REFERENCES.get(nodeId);
     }
 
-    public static Collection<AbstractKVStore<?>> getStores() {
+    static Collection<AbstractKVStore<?>> getStores() {
         return STORE_REFERENCES.values();
     }
 }

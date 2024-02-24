@@ -16,7 +16,7 @@ public final class CliArgsHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CliArgsHelper.class);
 
-    private static final Map<String, String> ALIAS_MAP = new HashMap<>();
+    static final Map<String, String> ALIAS_MAP = new HashMap<>();
 
     static {
         ALIAS_MAP.put("protocol", "node.consensus.protocol");
@@ -26,6 +26,14 @@ public final class CliArgsHelper {
     }
 
     private CliArgsHelper() {
+    }
+
+    public static Properties getProperties(String[] args) {
+        Properties properties = new Properties();
+        for (String arg : args) {
+            addProperty(arg, properties);
+        }
+        return properties;
     }
 
     public static Properties getNodeSectionProperties(String[] args) {
@@ -40,7 +48,7 @@ public final class CliArgsHelper {
         return properties;
     }
 
-    public static Properties getSectionProperties(String[] args, String sectionName) {
+    private static Properties getSectionProperties(String[] args, String sectionName) {
         Properties properties = new Properties();
         boolean inSection = false;
         for (String arg : args) {
@@ -51,18 +59,11 @@ public final class CliArgsHelper {
             if (inSection) {
                 if (arg.startsWith("--")) {
                     // new section
-                    break;
+                    inSection = false;
+                    continue;
                 }
                 addProperty(arg, properties);
             }
-        }
-        return properties;
-    }
-
-    public static Properties getProperties(String[] args) {
-        Properties properties = new Properties();
-        for (String arg : args) {
-            addProperty(arg, properties);
         }
         return properties;
     }

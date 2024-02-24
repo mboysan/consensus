@@ -1,14 +1,8 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
-import com.mboysan.consensus.configuration.NodeConfig;
-import com.mboysan.consensus.configuration.RaftConfig;
-import com.mboysan.consensus.configuration.SimConfig;
-import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.util.CliArgsHelper;
-import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,32 +28,12 @@ public class NodeCLI {
     private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
         Properties properties = CliArgsHelper.getProperties(args);
 
-        startMetricsCollector(properties);
-
-        TcpTransportConfig serverTransportConfig = CoreConfig.newInstance(TcpTransportConfig.class, properties);
-        Transport nodeServingTransport = new VanillaTcpServerTransport(serverTransportConfig);
-
-        AbstractNode<?> node;
-
-        NodeConfig conf = CoreConfig.newInstance(NodeConfig.class, properties);
-        switch (conf.nodeConsensusProtocol()) {
-            case "raft" -> {
-                RaftConfig raftConfig = CoreConfig.newInstance(RaftConfig.class, properties);
-                node = new RaftNode(raftConfig, nodeServingTransport);
-            }
-            case "bizur" -> {
-                BizurConfig bizurConfig = CoreConfig.newInstance(BizurConfig.class, properties);
-                node = new BizurNode(bizurConfig, nodeServingTransport);
-            }
-            case "simulate" -> {
-                SimConfig simConfig = CoreConfig.newInstance(SimConfig.class, properties);
-                node = new SimNode(simConfig, nodeServingTransport);
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + conf.nodeConsensusProtocol());
-        }
+        AbstractNode<?> node = CLIFactory.createNode(properties);
         NODE_REFERENCES.put(node.getNodeId(), node);
 
         Runtime.getRuntime().addShutdownHook(createShutdownHookThread(node));
+
+        startMetricsCollector(properties);
 
         node.start().get();
         LOGGER.info("node started");
@@ -81,11 +55,11 @@ public class NodeCLI {
         MetricsCollectorService.initAndStart(config);
     }
 
-    public static AbstractNode<?> getNode(int nodeId) {
+    static AbstractNode<?> getNode(int nodeId) {
         return NODE_REFERENCES.get(nodeId);
     }
 
-    public static Collection<AbstractNode<?>> getNodes() {
+    static Collection<AbstractNode<?>> getNodes() {
         return NODE_REFERENCES.values();
     }
 }
