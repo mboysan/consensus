@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +50,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         super(config, transport);
         this.rpcClient = new BizurClient(transport);
 
-        this.numPeers = config.numPeers();
+        this.numPeers = config.numPeers() > 0
+                ? config.numPeers()
+                : Objects.requireNonNull(transport.getDestinationNodeIds(), "numPeers not resolved").size();
         this.numBuckets = config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
     }

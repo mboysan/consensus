@@ -19,7 +19,6 @@ public class BizurKVStoreCluster extends KVStoreClusterBase {
                     "protocol=bizur",
                     "port=" + ports[i][0],  // nodes will connect to this node
                     "destinations=" + destinations,
-                    "bizur.numPeers=" + builder.numNodes,
                     "bizur.numBuckets=" + builder.numBuckets,
 
                     "--store",
