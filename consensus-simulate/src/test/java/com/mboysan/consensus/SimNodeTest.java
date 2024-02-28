@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.message.SimMessage;
 import com.mboysan.consensus.util.RngUtil;
@@ -50,7 +51,7 @@ class SimNodeTest extends NodeTestBase {
     }
 
     private SimConfig simConfig(int nodeId, Properties properties) {
-        properties.put("node.id", nodeId + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
         return CoreConfig.newInstance(SimConfig.class, properties);
     }
 

@@ -1,5 +1,7 @@
 package com.mboysan.consensus.util;
 
+import com.mboysan.consensus.configuration.NodeConfig;
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,10 +21,10 @@ public final class CliArgsHelper {
     static final Map<String, String> ALIAS_MAP = new HashMap<>();
 
     static {
-        ALIAS_MAP.put("protocol", "node.consensus.protocol");
-        ALIAS_MAP.put("port", "transport.tcp.server.port");
-        ALIAS_MAP.put("destinations", "transport.tcp.destinations");
-        ALIAS_MAP.put("callbackTimeoutMs", "transport.message.callbackTimeoutMs");
+        ALIAS_MAP.put("protocol", NodeConfig.Param.NODE_CONSENSUS_PROTOCOL);
+        ALIAS_MAP.put("port", TcpTransportConfig.Param.SERVER_PORT);
+        ALIAS_MAP.put("destinations", TcpTransportConfig.Param.DESTINATIONS);
+        ALIAS_MAP.put("callbackTimeoutMs", TcpTransportConfig.Param.MESSAGE_CALLBACK_TIMEOUT_MS);
     }
 
     private CliArgsHelper() {

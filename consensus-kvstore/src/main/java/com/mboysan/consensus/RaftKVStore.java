@@ -51,8 +51,8 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
 
     @Override
     void dumpStoreMetricsAsync() {
-        final long sizeOfKeys = store.keySet().stream().mapToLong(k -> k.length()).sum();
-        final long sizeOfValues = store.values().stream().mapToLong(v -> v.length()).sum();
+        final long sizeOfKeys = store.keySet().stream().mapToLong(String::length).sum();
+        final long sizeOfValues = store.values().stream().mapToLong(String::length).sum();
         final long totalSize = sizeOfKeys + sizeOfValues;
 
         fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys);

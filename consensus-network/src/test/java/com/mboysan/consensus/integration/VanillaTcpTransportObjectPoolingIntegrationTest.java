@@ -1,6 +1,7 @@
 package com.mboysan.consensus.integration;
 
 
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.TestMessage;
 import com.mboysan.consensus.util.MultiThreadExecutor;
@@ -33,11 +34,11 @@ class VanillaTcpTransportObjectPoolingIntegrationTest extends VanillaTcpTranspor
     @Test
     void testCreateMultipleTcpClients() {
         Properties server0Props = serverProperties(0);
-        server0Props.put("transport.tcp.clientPoolSize", "-1");
-        server0Props.put("transport.message.callbackTimeoutMs", "-1");
+        server0Props.put(TcpTransportConfig.Param.CLIENT_POOL_SIZE, "-1");
+        server0Props.put(TcpTransportConfig.Param.MESSAGE_CALLBACK_TIMEOUT_MS, "-1");
         Properties server1Props = serverProperties(1);
-        server1Props.put("transport.tcp.clientPoolSize", "-1");
-        server1Props.put("transport.message.callbackTimeoutMs", "-1");
+        server1Props.put(TcpTransportConfig.Param.CLIENT_POOL_SIZE, "-1");
+        server1Props.put(TcpTransportConfig.Param.MESSAGE_CALLBACK_TIMEOUT_MS, "-1");
 
         final VanillaTcpServerTransport sendingServer = createServerTransport(server0Props);
         final VanillaTcpServerTransport receivingServer = createServerTransport(server1Props);

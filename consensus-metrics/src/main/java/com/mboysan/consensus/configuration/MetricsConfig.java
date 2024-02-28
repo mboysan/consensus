@@ -2,43 +2,56 @@ package com.mboysan.consensus.configuration;
 
 public interface MetricsConfig extends CoreConfig {
 
-    @Key("metrics.exportfile")
+    interface Param {
+        String EXPORTFILE = "metrics.exportfile";
+        String SEPARATOR = "metrics.separator";
+        String STEP = "metrics.step";
+        String INSIGHTS_ENABLED = "metrics.insights.enabled";
+        String JVM_ENABLED = "metrics.jvm.enabled";
+        String JVM_CLASSLOADER_ENABLED = "metrics.jvm.classloader.enabled";
+        String JVM_MEMORY_ENABLED = "metrics.jvm.memory.enabled";
+        String JVM_GC_ENABLED = "metrics.jvm.gc.enabled";
+        String JVM_PROCESSOR_ENABLED = "metrics.jvm.processor.enabled";
+        String JVM_THREAD_ENABLED = "metrics.jvm.thread.enabled";
+    }
+
+    @Key(Param.EXPORTFILE)
     @DefaultValue("/tmp/metrics.txt")
     String exportfile();
 
-    @Key("metrics.separator")
+    @Key(Param.SEPARATOR)
     @DefaultValue(" ")
     String separator();
 
-    @Key("metrics.step")
+    @Key(Param.STEP)
     @DefaultValue("2000")
     long step();
 
-    @Key("metrics.insights.enabled")
+    @Key(Param.INSIGHTS_ENABLED)
     @DefaultValue("false")
     boolean insightsMetricsEnabled();
 
-    @Key("metrics.jvm.enabled")
+    @Key(Param.JVM_ENABLED)
     @DefaultValue("false")
     boolean jvmMetricsEnabled();
 
-    @Key("metrics.jvm.classloader.enabled")
+    @Key(Param.JVM_CLASSLOADER_ENABLED)
     @DefaultValue("true")
     boolean jvmClassLoaderMetricsEnabled();
 
-    @Key("metrics.jvm.memory.enabled")
+    @Key(Param.JVM_MEMORY_ENABLED)
     @DefaultValue("true")
     boolean jvmMemoryMetricsEnabled();
 
-    @Key("metrics.jvm.gc.enabled")
+    @Key(Param.JVM_GC_ENABLED)
     @DefaultValue("true")
     boolean jvmGcMetricsEnabled();
 
-    @Key("metrics.jvm.processor.enabled")
+    @Key(Param.JVM_PROCESSOR_ENABLED)
     @DefaultValue("true")
     boolean jvmProcessorMetricsEnabled();
 
-    @Key("metrics.jvm.thread.enabled")
+    @Key(Param.JVM_THREAD_ENABLED)
     @DefaultValue("true")
     boolean jvmThreadMetricsEnabled();
 

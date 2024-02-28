@@ -1,5 +1,6 @@
 package com.mboysan.consensus.integration;
 
+import com.mboysan.consensus.configuration.TcpTransportConfig;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.TestMessage;
@@ -19,6 +20,7 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
 import static com.mboysan.consensus.util.AwaitUtil.doSleep;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
 
@@ -34,8 +36,8 @@ class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
         final long pingInterval = 100;
 
         Properties clientProperties = clientProperties();
-        clientProperties.put("transport.tcp.client.failure.markServerAsFailedCount", String.valueOf(-1));
-        clientProperties.put("transport.tcp.client.failure.pingInterval", String.valueOf(pingInterval));
+        clientProperties.put(TcpTransportConfig.Param.MARK_SERVER_AS_FAILED_COUNT, String.valueOf(-1));
+        clientProperties.put(TcpTransportConfig.Param.PING_INTERVAL, String.valueOf(pingInterval));
         final VanillaTcpClientTransport clientTransport = createClientTransport(clientProperties);
 
         final VanillaTcpServerTransport serverTransport = createServerTransport(0);
@@ -49,7 +51,7 @@ class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
                     latch.countDown();
                 }
                 if (message instanceof CustomRequest request) {
-                    Assertions.fail("ping request must not have been received, request=" + request);
+                    fail("ping request must not have been received, request=" + request);
                 }
                 return new CustomResponse(true, null, null).responseTo(message);
             });
@@ -68,8 +70,8 @@ class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
         final long pingInterval = 100;
 
         Properties clientProperties = clientProperties();
-        clientProperties.put("transport.tcp.client.failure.markServerAsFailedCount", String.valueOf(1));    // 1 failure is enough.
-        clientProperties.put("transport.tcp.client.failure.pingInterval", String.valueOf(pingInterval));
+        clientProperties.put(TcpTransportConfig.Param.MARK_SERVER_AS_FAILED_COUNT, String.valueOf(1));    // 1 failure is enough.
+        clientProperties.put(TcpTransportConfig.Param.PING_INTERVAL, String.valueOf(pingInterval));
         final VanillaTcpClientTransport clientTransport = createClientTransport(clientProperties);
 
         final VanillaTcpServerTransport serverTransport = createServerTransport(0);
@@ -89,7 +91,7 @@ class FailureDetectorIntegrationTest extends VanillaTcpTransportTestBase {
             for (int i = 0; i < 5; i++) {
                 try {
                     clientTransport.sendRecv(new TestMessage(i + "").setReceiverId(0));
-                    Assertions.fail("the message must not have been sent.");
+                    fail("the message must not have been sent.");
                 } catch (IOException ignore) {}
             }
 

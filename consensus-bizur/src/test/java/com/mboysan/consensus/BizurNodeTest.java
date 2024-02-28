@@ -2,6 +2,7 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.message.KVDeleteRequest;
 import com.mboysan.consensus.message.KVDeleteResponse;
 import com.mboysan.consensus.message.KVGetRequest;
@@ -69,10 +70,10 @@ class BizurNodeTest extends NodeTestBase {
 
     private BizurConfig bizurConfig(int nodeId, int numPeers, int numBuckets) {
         Properties properties = new Properties();
-        properties.put("node.id", nodeId + "");
-        properties.put("bizur.numPeers", numPeers + "");
-        properties.put("bizur.numBuckets", numBuckets + "");
-        properties.put("bizur.updateIntervalMs", 50 + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
+        properties.put(BizurConfig.Param.NUM_PEERS, numPeers + "");
+        properties.put(BizurConfig.Param.NUM_BUCKETS, numBuckets + "");
+        properties.put(BizurConfig.Param.UPDATE_INTERVAL_MS, 50 + "");
         return CoreConfig.newInstance(BizurConfig.class, properties);
     }
 

@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.message.StateMachineRequest;
 import com.mboysan.consensus.util.TestUtils;
@@ -57,9 +58,9 @@ class RaftNodeTest extends NodeTestBase {
 
     private RaftConfig raftConfig(int nodeId) {
         Properties properties = new Properties();
-        properties.put("node.id", nodeId + "");
-        properties.put("raft.updateIntervalMs", 50 + "");
-        properties.put("raft.electionTimeoutMs", 100 + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
+        properties.put(RaftConfig.Param.UPDATE_INTERVAL_MS, 50 + "");
+        properties.put(RaftConfig.Param.ELECTION_TIMEOUT_MS, 100 + "");
         return CoreConfig.newInstance(RaftConfig.class, properties);
     }
 
