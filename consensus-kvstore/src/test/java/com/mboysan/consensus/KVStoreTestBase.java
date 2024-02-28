@@ -10,8 +10,6 @@ import com.mboysan.consensus.message.KVOperationResponse;
 import com.mboysan.consensus.message.KVSetRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import com.mboysan.consensus.util.RngUtil;
-
-import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +26,7 @@ import java.util.function.Consumer;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 abstract class KVStoreTestBase {
@@ -106,15 +105,15 @@ abstract class KVStoreTestBase {
             LOGGER.info("captured measurement=[{}]", event);
             try {
                 switch (event.getName()) {
-                    case "insights.store.sizeOf.keys" -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS -> {
                         actualSizeOfKeys.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
-                    case "insights.store.sizeOf.values" -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES -> {
                         actualSizeOfValues.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
-                    case "insights.store.sizeOf.total" -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL -> {
                         actualSizeTotal.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
@@ -174,19 +173,19 @@ abstract class KVStoreTestBase {
     void testFailedResponses(AbstractKVStore<?> storeWithMockedNode) throws IOException {
         KVOperationResponse response;
         response = storeWithMockedNode.get(new KVGetRequest("a"));
-        Assertions.assertTrue(response.getException() instanceof IOException);
+        assertInstanceOf(IOException.class, response.getException());
 
         response = storeWithMockedNode.set(new KVSetRequest("a", "b"));
-        Assertions.assertTrue(response.getException() instanceof IOException);
+        assertInstanceOf(IOException.class, response.getException());
 
         response = storeWithMockedNode.delete(new KVDeleteRequest("a"));
-        Assertions.assertTrue(response.getException() instanceof IOException);
+        assertInstanceOf(IOException.class, response.getException());
 
         response = storeWithMockedNode.iterateKeys(new KVIterateKeysRequest());
-        Assertions.assertTrue(response.getException() instanceof IOException);
+        assertInstanceOf(IOException.class, response.getException());
 
         CustomResponse resp = storeWithMockedNode.customRequest(new CustomRequest(""));
-        Assertions.assertTrue(resp.getException() instanceof IOException);
+        assertInstanceOf(IOException.class, resp.getException());
     }
 
     abstract KVStoreClient[] getClients();

@@ -11,9 +11,9 @@ import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
 
 import java.util.Properties;
 
-import static com.mboysan.consensus.Constants.Protocol.BIZUR;
-import static com.mboysan.consensus.Constants.Protocol.RAFT;
-import static com.mboysan.consensus.Constants.Protocol.SIMULATE;
+import static com.mboysan.consensus.CliConstants.Protocol.BIZUR;
+import static com.mboysan.consensus.CliConstants.Protocol.RAFT;
+import static com.mboysan.consensus.CliConstants.Protocol.SIMULATE;
 
 public final class CLIFactory {
     private CLIFactory() {

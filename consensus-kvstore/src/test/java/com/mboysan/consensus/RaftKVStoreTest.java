@@ -8,6 +8,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,9 +52,9 @@ class RaftKVStoreTest extends KVStoreTestBase {
 
     private RaftConfig raftConfig(int nodeId) {
         Properties properties = new Properties();
-        properties.put("node.id", nodeId + "");
-        properties.put("raft.updateIntervalMs", 50 + "");
-        properties.put("raft.electionTimeoutMs", 100 + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
+        properties.put(RaftConfig.Param.UPDATE_INTERVAL_MS, 50 + "");
+        properties.put(RaftConfig.Param.ELECTION_TIMEOUT_MS, 100 + "");
         return CoreConfig.newInstance(RaftConfig.class, properties);
     }
 

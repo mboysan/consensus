@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.SimConfig;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -53,7 +54,7 @@ class SimKVStoreTest extends KVStoreTestBase {
 
     private SimConfig simConfig(int nodeId) {
         Properties properties = new Properties();
-        properties.put("node.id", nodeId + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
         return CoreConfig.newInstance(SimConfig.class, properties);
     }
 

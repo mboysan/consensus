@@ -1,13 +1,8 @@
 package com.mboysan.consensus;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
+import com.mboysan.consensus.configuration.BizurConfig;
+import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
-import com.mboysan.consensus.configuration.BizurConfig;
-import com.mboysan.consensus.configuration.CoreConfig;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 class BizurKVStoreTest extends KVStoreTestBase {
 
@@ -51,10 +51,10 @@ class BizurKVStoreTest extends KVStoreTestBase {
 
     private BizurConfig bizurConfig(int nodeId, int numPeers, int numBuckets) {
         Properties properties = new Properties();
-        properties.put("node.id", nodeId + "");
-        properties.put("bizur.numPeers", numPeers + "");
-        properties.put("bizur.numBuckets", numBuckets + "");
-        properties.put("bizur.updateIntervalMs", 50 + "");
+        properties.put(NodeConfig.Param.NODE_ID, nodeId + "");
+        properties.put(BizurConfig.Param.NUM_PEERS, numPeers + "");
+        properties.put(BizurConfig.Param.NUM_BUCKETS, numBuckets + "");
+        properties.put(BizurConfig.Param.UPDATE_INTERVAL_MS, 50 + "");
         return CoreConfig.newInstance(BizurConfig.class, properties);
     }
 

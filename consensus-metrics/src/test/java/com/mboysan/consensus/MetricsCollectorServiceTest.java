@@ -47,7 +47,7 @@ class MetricsCollectorServiceTest {
     @Test
     void testJvmMetricsCollectionDisabled() throws IOException {
         Properties properties = new Properties();
-        properties.put("metrics.jvm.enabled", "false");
+        properties.put(MetricsConfig.Param.JVM_ENABLED, "false");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
@@ -63,7 +63,7 @@ class MetricsCollectorServiceTest {
     @Test
     void testJvmMetricsCollectionEnabled() throws IOException {
         Properties properties = new Properties();
-        properties.put("metrics.jvm.enabled", "true");
+        properties.put(MetricsConfig.Param.JVM_ENABLED, "true");
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
@@ -80,9 +80,9 @@ class MetricsCollectorServiceTest {
     void testJvmMetricsCollectionWithSeparator() throws IOException {
         String separator = "###";
         Properties properties = new Properties();
-        properties.put("metrics.jvm.enabled", "true");
-        properties.put("metrics.step", "1000");
-        properties.put("metrics.separator", separator);
+        properties.put(MetricsConfig.Param.JVM_ENABLED, "true");
+        properties.put(MetricsConfig.Param.STEP, "1000");
+        properties.put(MetricsConfig.Param.SEPARATOR, separator);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
@@ -110,9 +110,9 @@ class MetricsCollectorServiceTest {
     void testSampleAndAggregate() throws IOException {
         String separator = " ";
         Properties properties = new Properties();
-        properties.put("metrics.insights.enabled", "true");
-        properties.put("metrics.step", "1000");
-        properties.put("metrics.separator", separator);
+        properties.put(MetricsConfig.Param.INSIGHTS_ENABLED, "true");
+        properties.put(MetricsConfig.Param.STEP, "1000");
+        properties.put(MetricsConfig.Param.SEPARATOR, separator);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);
@@ -192,9 +192,9 @@ class MetricsCollectorServiceTest {
     void testCustomReporters() throws IOException {
         String separator = " ";
         Properties properties = new Properties();
-        properties.put("metrics.insights.enabled", "true");
-        properties.put("metrics.step", "1000");
-        properties.put("metrics.separator", separator);
+        properties.put(MetricsConfig.Param.INSIGHTS_ENABLED, "true");
+        properties.put(MetricsConfig.Param.STEP, "1000");
+        properties.put(MetricsConfig.Param.SEPARATOR, separator);
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         Path metricsPath = FileUtil.path(config.exportfile());
         Files.deleteIfExists(metricsPath);

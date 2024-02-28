@@ -86,9 +86,9 @@ class VanillaTcpTransportTestBase {
 
     Properties serverProperties(int serverId) {
         Properties properties = new Properties();
-        properties.put("transport.tcp.server.port", String.valueOf(DESTINATIONS.get(serverId).port()));
-        properties.put("transport.tcp.destinations", NetUtil.convertDestinationsListToProps(DESTINATIONS));
-        properties.put("transport.tcp.server.socket.so_timeout", String.valueOf(2500)); // 2.5 seconds timeout
+        properties.put(TcpTransportConfig.Param.SERVER_PORT, String.valueOf(DESTINATIONS.get(serverId).port()));
+        properties.put(TcpTransportConfig.Param.DESTINATIONS, NetUtil.convertDestinationsListToProps(DESTINATIONS));
+        properties.put(TcpTransportConfig.Param.SOCKET_SO_TIMEOUT, String.valueOf(2500)); // 2.5 seconds timeout
         return properties;
     }
 
