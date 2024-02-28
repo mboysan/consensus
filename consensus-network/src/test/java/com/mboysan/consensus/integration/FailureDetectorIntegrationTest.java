@@ -8,7 +8,6 @@ import com.mboysan.consensus.util.ShutdownUtil;
 import com.mboysan.consensus.util.TestUtils;
 import com.mboysan.consensus.vanilla.VanillaTcpClientTransport;
 import com.mboysan.consensus.vanilla.VanillaTcpServerTransport;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
