@@ -55,9 +55,9 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
         final long sizeOfValues = store.values().stream().mapToLong(v -> v.length()).sum();
         final long totalSize = sizeOfKeys + sizeOfValues;
 
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys);
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES, sizeOfValues);
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL, totalSize);
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys);
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES, sizeOfValues);
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL, totalSize);
     }
 
     private void fireMeasurementAsync(String name, long value) {

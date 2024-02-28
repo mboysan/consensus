@@ -106,15 +106,15 @@ abstract class KVStoreTestBase {
             LOGGER.info("captured measurement=[{}]", event);
             try {
                 switch (event.getName()) {
-                    case Constants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS -> {
                         actualSizeOfKeys.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
-                    case Constants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES -> {
                         actualSizeOfValues.addAndGet((long) event.getPayload());
                         barrier.await();
                     }
-                    case Constants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL -> {
+                    case CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL -> {
                         actualSizeTotal.addAndGet((long) event.getPayload());
                         barrier.await();
                     }

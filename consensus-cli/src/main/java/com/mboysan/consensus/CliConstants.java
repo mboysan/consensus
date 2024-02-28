@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-public interface Constants {
+public interface CliConstants {
 
     interface Protocol {
         String RAFT = "raft";

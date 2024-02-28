@@ -22,7 +22,7 @@ class NodeCLIPropsFileTest extends KVStoreClusterBase {
     @Test
     void testLoadPropertiesFromFile() throws IOException, ExecutionException, InterruptedException {
         int expectedNodeId = 123;
-        String expectedConsensusProtocol = Constants.Protocol.RAFT;
+        String expectedConsensusProtocol = CliConstants.Protocol.RAFT;
 
         int[][] ports = ports(1);
         int port = ports[0][0];

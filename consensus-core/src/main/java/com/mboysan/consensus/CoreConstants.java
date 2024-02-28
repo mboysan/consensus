@@ -1,6 +1,6 @@
 package com.mboysan.consensus;
 
-public interface Constants {
+public interface CoreConstants {
 
     interface Metrics {
         String INSIGHTS_STORE_SIZE_OF_KEYS = "insights.store.sizeOf.keys";

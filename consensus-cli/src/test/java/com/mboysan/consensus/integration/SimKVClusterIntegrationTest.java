@@ -1,6 +1,6 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.Constants;
+import com.mboysan.consensus.CliConstants;
 import com.mboysan.consensus.SimKVStoreCluster;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -57,7 +57,7 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
         assertTrue(response.startsWith("Verbose State of node-1"));
 
         response = simCluster.getClient(0).customRequest("askProtocol");
-        assertEquals(Constants.Protocol.SIMULATE, response);
+        assertEquals(CliConstants.Protocol.SIMULATE, response);
     }
 
 }

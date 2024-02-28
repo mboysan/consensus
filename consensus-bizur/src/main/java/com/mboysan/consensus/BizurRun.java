@@ -376,9 +376,9 @@ final class BizurRun {
                 range.unlock();
             }
         }
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys.get());
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES, sizeOfValues.get());
-        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL, totalSize.get());
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys.get());
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES, sizeOfValues.get());
+        fireMeasurementAsync(CoreConstants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL, totalSize.get());
     }
 
     private void fireMeasurementAsync(String name, long value) {

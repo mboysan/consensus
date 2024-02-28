@@ -1,7 +1,7 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.BizurKVStoreCluster;
-import com.mboysan.consensus.Constants;
+import com.mboysan.consensus.CliConstants;
 import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
@@ -116,10 +116,10 @@ abstract class ClusterIntegrationTestBase {
 
         response = cluster.getClient(0).customRequest("askProtocol");
         if (cluster instanceof RaftKVStoreCluster) {
-            assertEquals(Constants.Protocol.RAFT, response);
+            assertEquals(CliConstants.Protocol.RAFT, response);
         }
         if (cluster instanceof BizurKVStoreCluster) {
-            assertEquals(Constants.Protocol.BIZUR, response);
+            assertEquals(CliConstants.Protocol.BIZUR, response);
         }
     }
 
