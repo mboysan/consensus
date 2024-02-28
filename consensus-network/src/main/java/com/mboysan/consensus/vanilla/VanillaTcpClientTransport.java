@@ -34,6 +34,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 
+import static com.mboysan.consensus.CoreConstants.Metrics.INSIGHTS_TCP_CLIENT_RECEIVE_SIZEOF;
+import static com.mboysan.consensus.CoreConstants.Metrics.INSIGHTS_TCP_CLIENT_SEND_SIZEOF;
+
 public class VanillaTcpClientTransport implements Transport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpClientTransport.class);
@@ -225,11 +228,11 @@ public class VanillaTcpClientTransport implements Transport {
     }
 
     private static void sampleSend(Message message) {
-        sample("insights.tcp.client.send.sizeOf." + message.getClass().getSimpleName(), message);
+        sample(INSIGHTS_TCP_CLIENT_SEND_SIZEOF.formatted(message.getClass().getSimpleName()), message);
     }
 
     private static void sampleReceive(Message message) {
-        sample("insights.tcp.client.receive.sizeOf." + message.getClass().getSimpleName(), message);
+        sample(INSIGHTS_TCP_CLIENT_RECEIVE_SIZEOF.formatted(message.getClass().getSimpleName()), message);
     }
 
     private static void sample(String name, Message message) {

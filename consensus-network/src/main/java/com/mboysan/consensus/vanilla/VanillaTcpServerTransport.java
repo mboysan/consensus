@@ -22,8 +22,15 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.UnaryOperator;
+
+import static com.mboysan.consensus.CoreConstants.Metrics.INSIGHTS_TCP_SERVER_RECEIVE_SIZEOF;
+import static com.mboysan.consensus.CoreConstants.Metrics.INSIGHTS_TCP_SERVER_SEND_SIZEOF;
 
 public class VanillaTcpServerTransport implements Transport {
     private static final Logger LOGGER = LoggerFactory.getLogger(VanillaTcpServerTransport.class);
@@ -213,11 +220,11 @@ public class VanillaTcpServerTransport implements Transport {
     }
 
     private static void sampleSend(Message message) {
-        sample("insights.tcp.server.send.sizeOf." + message.getClass().getSimpleName(), message);
+        sample(INSIGHTS_TCP_SERVER_SEND_SIZEOF.formatted(message.getClass().getSimpleName()), message);
     }
 
     private static void sampleReceive(Message message) {
-        sample("insights.tcp.server.receive.sizeOf." + message.getClass().getSimpleName(), message);
+        sample(INSIGHTS_TCP_SERVER_RECEIVE_SIZEOF.formatted(message.getClass().getSimpleName()), message);
     }
 
     private static void sample(String name, Message message) {
