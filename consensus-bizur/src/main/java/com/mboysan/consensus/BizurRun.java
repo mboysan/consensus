@@ -371,18 +371,14 @@ final class BizurRun {
                     sizeOfKeys.addAndGet(sizeOfBucketKeys);
                     sizeOfValues.addAndGet(sizeOfBucketValues);
                     totalSize.addAndGet(bucketTotalSize);
-
-                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].keys", sizeOfBucketKeys);
-                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].values", sizeOfBucketValues);
-                    fireMeasurementAsync("insights.store.sizeOf.bucket[" + index + "].total", bucketTotalSize);
                 });
             } finally {
                 range.unlock();
             }
         }
-        fireMeasurementAsync("insights.store.sizeOf.keys", sizeOfKeys.get());
-        fireMeasurementAsync("insights.store.sizeOf.values", sizeOfValues.get());
-        fireMeasurementAsync("insights.store.sizeOf.total", totalSize.get());
+        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_KEYS, sizeOfKeys.get());
+        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_VALUES, sizeOfValues.get());
+        fireMeasurementAsync(Constants.Metrics.INSIGHTS_STORE_SIZE_OF_TOTAL, totalSize.get());
     }
 
     private void fireMeasurementAsync(String name, long value) {
