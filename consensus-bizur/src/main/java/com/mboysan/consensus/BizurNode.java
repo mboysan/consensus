@@ -53,7 +53,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         this.numPeers = config.numPeers() > 0
                 ? config.numPeers()
                 : Objects.requireNonNull(transport.getDestinationNodeIds(), "numPeers not resolved").size();
-        this.numBuckets = config.numBuckets();
+        this.numBuckets = config.numBuckets() <= 0 ? Integer.MAX_VALUE : config.numBuckets();
         this.updateIntervalMs = config.updateIntervalMs();
     }
 

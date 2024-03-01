@@ -45,7 +45,7 @@ public class BizurKVStoreCluster extends KVStoreClusterBase {
 
     public static class Builder {
         private int numNodes;
-        private int numBuckets;
+        private int numBuckets = -1;
 
         public Builder setNumNodes(int numNodes) {
             this.numNodes = numNodes;

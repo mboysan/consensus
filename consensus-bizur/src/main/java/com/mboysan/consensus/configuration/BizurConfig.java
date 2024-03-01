@@ -13,7 +13,7 @@ public interface BizurConfig extends NodeConfig {
     int numPeers();
 
     @Key(Param.NUM_BUCKETS)
-    @DefaultValue("1")
+    @DefaultValue("0")
     int numBuckets();
 
     @Key(Param.UPDATE_INTERVAL_MS)
