@@ -179,9 +179,9 @@ class SimNodeTest extends NodeTestBase {
 
         Properties asProperties() {
             Properties properties = new Properties();
-            put(properties, "simulate.leaderId", leaderId);
-            put(properties, "simulate.follower.forwardToLeader", forwardToLeader);
-            put(properties, "simulate.leader.broadcastToFollowers", broadcastToFollowers);
+            put(properties, SimConfig.Param.LEADER_ID, leaderId);
+            put(properties, SimConfig.Param.FORWARD_TO_LEADER, forwardToLeader);
+            put(properties, SimConfig.Param.BROADCAST_TO_FOLLOWERS, broadcastToFollowers);
             return properties;
         }
 

@@ -33,6 +33,8 @@ public class KVStoreClientCLI {
     }
 
     private static void main0(String[] args) throws IOException, CommandException {
+        CliArgsHelper.logArgs(args);
+
         Properties properties = CliArgsHelper.getProperties(args);
 
         int clientId = resolveClientId(properties);

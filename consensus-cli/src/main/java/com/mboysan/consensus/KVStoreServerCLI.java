@@ -27,6 +27,8 @@ public class KVStoreServerCLI {
     }
 
     private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
+        CliArgsHelper.logArgs(args);
+
         Properties allProperties = CliArgsHelper.getProperties(args);
         Properties storeProperties = CliArgsHelper.getStoreSectionProperties(args);
         Properties nodeProperties = CliArgsHelper.getNodeSectionProperties(args);
