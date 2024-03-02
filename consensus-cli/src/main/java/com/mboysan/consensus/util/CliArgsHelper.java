@@ -30,6 +30,10 @@ public final class CliArgsHelper {
     private CliArgsHelper() {
     }
 
+    public static void logArgs(String[] args) {
+        LOGGER.info("Program arguments received=[{}]", String.join(" ", args));
+    }
+
     public static Properties getProperties(String[] args) {
         Properties properties = new Properties();
         for (String arg : args) {

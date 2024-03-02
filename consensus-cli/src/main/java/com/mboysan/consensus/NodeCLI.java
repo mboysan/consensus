@@ -26,6 +26,8 @@ public class NodeCLI {
     }
 
     private static void main0(String[] args) throws IOException, ExecutionException, InterruptedException {
+        CliArgsHelper.logArgs(args);
+
         Properties properties = CliArgsHelper.getProperties(args);
 
         AbstractNode<?> node = CLIFactory.createNode(properties);
