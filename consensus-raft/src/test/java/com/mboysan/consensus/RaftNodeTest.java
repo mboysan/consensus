@@ -3,6 +3,7 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.RaftConfig;
+import com.mboysan.consensus.message.CheckRaftIntegrityRequest;
 import com.mboysan.consensus.message.StateMachineRequest;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -90,7 +91,10 @@ class RaftNodeTest extends NodeTestBase {
         int leaderId = this.assertOneLeader();
 
         // wait a while and check again to see if leader remained unchanged
-        awaitingAtLeast(2000L, () -> assertEquals(leaderId, assertOneLeader()));
+        awaitingAtLeast(2000L, () -> {
+            assertEquals(leaderId, assertOneLeader());
+            assertIntegrityCheckPassed();
+        });
     }
 
     /**
@@ -109,7 +113,10 @@ class RaftNodeTest extends NodeTestBase {
         // rejoin old leader, old leader might try to recover its leadership due to its short update interval
         // but at the end there must still be one leader
         connect(oldLeaderId);
-        awaiting(() -> assertOneLeader());
+        awaiting(() -> {
+            assertOneLeader();
+            assertIntegrityCheckPassed();
+        });
     }
 
     /**
@@ -134,7 +141,10 @@ class RaftNodeTest extends NodeTestBase {
         revive(follower2);
 
         assertLeaderNotChanged(leaderId);   // leader is visible by everyone.
-        awaiting(() -> assertOneLeader());
+        awaiting(() -> {
+            assertOneLeader();
+            assertIntegrityCheckPassed();
+        });
     }
 
     /**
@@ -156,6 +166,7 @@ class RaftNodeTest extends NodeTestBase {
         awaitingAtLeast(2000L, () -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
+            assertIntegrityCheckPassed();
         });
     }
 
@@ -194,6 +205,7 @@ class RaftNodeTest extends NodeTestBase {
         awaitingAtLeast(2000L, () -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
+            assertIntegrityCheckPassed();
         });
     }
 
@@ -217,6 +229,7 @@ class RaftNodeTest extends NodeTestBase {
         awaiting(() -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
+            assertIntegrityCheckPassed();
         });
     }
 
@@ -244,6 +257,7 @@ class RaftNodeTest extends NodeTestBase {
 
         assertLeaderNotChanged(newLeaderId);
         assertLogsEquals(expectedCommands);
+        awaiting(this::assertIntegrityCheckPassed);
     }
 
     /**
@@ -270,6 +284,7 @@ class RaftNodeTest extends NodeTestBase {
         awaiting(() -> {
             assertOneLeader();
             assertLogsEquals(expectedCommands);
+            assertIntegrityCheckPassed();
         });
     }
 
@@ -329,9 +344,12 @@ class RaftNodeTest extends NodeTestBase {
         // if the log entries on all the nodes are equal or not.
 
         revive(oldLeaderId);
-        awaiting(() -> assertOneLeader());   // old leader will sync changes
-
-        awaiting(this::assertNodeLogsEquals);
+        awaiting(() -> {
+            // old leader will sync changes
+            assertOneLeader();
+            assertNodeLogsEquals();
+            assertIntegrityCheckPassed();
+        });
     }
 
     /**
@@ -366,6 +384,7 @@ class RaftNodeTest extends NodeTestBase {
 
         expectedCommands = List.of("cmd1");
         assertLogsEquals(expectedCommands); // log item will be applied as soon as the quorum is formed again.
+        awaiting(this::assertIntegrityCheckPassed);
     }
 
     /**
@@ -391,12 +410,19 @@ class RaftNodeTest extends NodeTestBase {
         awaiting(() -> {
             assertOneLeader();  // leader might've changed but there must still be only one leader.
             assertLogsEquals(expectedCommands);
+            assertIntegrityCheckPassed();
         });
     }
 
     // ------------------------------------------------------------- assertions
 
-    void assertLogsEquals(List<String> commands) {
+    private void assertIntegrityCheckPassed() throws IOException {
+        for (RaftNode node : nodes) {
+            assertTrue(checkIntegrity(node.getNodeId()));
+        }
+    }
+
+    private void assertLogsEquals(List<String> commands) {
         RaftLog log0;
         synchronized (nodes[0]) {
             log0 = nodes[0].getState().raftLog;
@@ -408,7 +434,7 @@ class RaftNodeTest extends NodeTestBase {
         assertNodeLogsEquals();
     }
 
-    void assertNodeLogsEquals() {
+    private void assertNodeLogsEquals() {
         for (RaftNode server : nodes) {
             synchronized (server) {
                 RaftLog log0 = nodes[0].getState().raftLog;
@@ -423,7 +449,7 @@ class RaftNodeTest extends NodeTestBase {
      * @param currentLeaderId          node id of the current leader
      * @param changeInvisibleOnNodeIds node ids that the leader changes are not visible
      */
-    void assertLeaderNotChanged(int currentLeaderId, int... changeInvisibleOnNodeIds) {
+    private void assertLeaderNotChanged(int currentLeaderId, int... changeInvisibleOnNodeIds) {
         assertEquals(currentLeaderId, assertOneLeader(changeInvisibleOnNodeIds));
     }
 
@@ -434,7 +460,7 @@ class RaftNodeTest extends NodeTestBase {
      * @param changeInvisibleOnNodeIds node ids that the leader changes are not visible
      * @return new leader id
      */
-    int assertLeaderChanged(int oldLeader, int... changeInvisibleOnNodeIds) {
+    private int assertLeaderChanged(int oldLeader, int... changeInvisibleOnNodeIds) {
         int newLeaderId = assertOneLeader(changeInvisibleOnNodeIds);
         assertNotEquals(oldLeader, newLeaderId);
         return newLeaderId;
@@ -446,7 +472,7 @@ class RaftNodeTest extends NodeTestBase {
      * @param changeInvisibleOnNodeIds node ids that the leader changes are not visible
      * @return id of the leader
      */
-    int assertOneLeader(int... changeInvisibleOnNodeIds) {
+    private int assertOneLeader(int... changeInvisibleOnNodeIds) {
         int leaderId = -1;
         for (RaftNode node : nodes) {
             OptionalInt invisibleNode = Arrays.stream(changeInvisibleOnNodeIds)
@@ -470,6 +496,12 @@ class RaftNodeTest extends NodeTestBase {
 
     private boolean append(int nodeId, String command) throws IOException {
         return nodes[nodeId].stateMachineRequest(new StateMachineRequest(command)).isApplied();
+    }
+
+    private boolean checkIntegrity(int nodeId) throws IOException {
+        return nodes[nodeId].checkRaftIntegrity(
+                new CheckRaftIntegrityRequest(CheckRaftIntegrityRequest.Level.STATE_FROM_ALL)).isSuccess();
+
     }
 
     @AfterEach

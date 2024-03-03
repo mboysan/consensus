@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.AppendEntriesRequest;
 import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.CheckRaftIntegrityRequest;
+import com.mboysan.consensus.message.CheckRaftIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.RequestVoteRequest;
@@ -30,6 +32,11 @@ class RaftClient extends AbstractClient implements RaftRPC {
     @Override
     public StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException {
         return (StateMachineResponse) getTransport().sendRecv(request);
+    }
+
+    @Override
+    public CheckRaftIntegrityResponse checkRaftIntegrity(CheckRaftIntegrityRequest request) throws IOException {
+        return (CheckRaftIntegrityResponse) getTransport().sendRecv(request);
     }
 
     @Override

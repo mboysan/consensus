@@ -3,6 +3,8 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.RaftConfig;
 import com.mboysan.consensus.message.AppendEntriesRequest;
 import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.CheckRaftIntegrityRequest;
+import com.mboysan.consensus.message.CheckRaftIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.LogEntry;
@@ -15,8 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -360,6 +364,61 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     @Override
+    public synchronized CheckRaftIntegrityResponse checkRaftIntegrity(CheckRaftIntegrityRequest request) throws IOException {
+        switch (request.getLevel()) {
+            case CheckRaftIntegrityRequest.Level.STATE -> {
+                return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toString());
+            }
+            case CheckRaftIntegrityRequest.Level.THIN_STATE -> {
+                return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toThinString());
+            }
+            case CheckRaftIntegrityRequest.Level.STATE_FROM_ALL, CheckRaftIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
+                int levelOverride = request.getLevel() == CheckRaftIntegrityRequest.Level.STATE_FROM_ALL
+                        ? CheckRaftIntegrityRequest.Level.STATE
+                        : CheckRaftIntegrityRequest.Level.THIN_STATE;
+
+                CheckRaftIntegrityResponse thisNodeResponse = this.checkRaftIntegrity(
+                        new CheckRaftIntegrityRequest(levelOverride));
+
+                String thisNodeIntegrityHash = thisNodeResponse.getIntegrityHash();
+                String thisNodeState = thisNodeResponse.getState();
+
+                Map<Integer, String> integrityHashes = new ConcurrentHashMap<>();
+                Map<Integer, String> states = new ConcurrentHashMap<>();
+
+                integrityHashes.put(getNodeId(), thisNodeIntegrityHash);
+                states.put(getNodeId(), thisNodeState);
+
+                forEachPeerParallel(peer -> {
+                    CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(levelOverride)
+                            .setSenderId(getNodeId())
+                            .setReceiverId(peer.peerId);
+                    try {
+                        CheckRaftIntegrityResponse raftResponse = getRPC().checkRaftIntegrity(raftRequest);
+                        integrityHashes.put(peer.peerId, raftResponse.getIntegrityHash());
+                        states.put(peer.peerId, raftResponse.getState());
+                    } catch (IOException e) {
+                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, raftRequest, e.getMessage());
+                    }
+                });
+
+                boolean isMajorityResponded = integrityHashes.size() > peers.size() / 2;
+                boolean integrityCheckSuccess = isMajorityResponded;
+                if (isMajorityResponded) {
+                    for (String hash : integrityHashes.values()) {
+                        if (!thisNodeIntegrityHash.equals(hash)) {
+                            integrityCheckSuccess = false;
+                            break;
+                        }
+                    }
+                }
+                return new CheckRaftIntegrityResponse(integrityCheckSuccess, thisNodeIntegrityHash, states.toString());
+            }
+            default -> throw new IOException("unsupported level=" + request.getLevel());
+        }
+    }
+
+    @Override
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
@@ -369,6 +428,13 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         }
         synchronized (this) {
             switch (request.getRequest()) {
+                case CustomRequest.Command.CHECK_INTEGRITY -> {
+                    int level = Integer.parseInt(Objects.requireNonNull(
+                            request.getArguments(), "level is required"));
+                    CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(level);
+                    CheckRaftIntegrityResponse raftResponse = checkRaftIntegrity(raftRequest);
+                    return new CustomResponse(raftResponse.isSuccess(), null, raftResponse.toString());
+                }
                 case "askState" -> {
                     String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
                     return new CustomResponse(true, null, stateStr);

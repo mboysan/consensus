@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
+import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
 import com.mboysan.consensus.message.CustomRequest;
@@ -43,6 +45,8 @@ interface BizurRPC extends RPCProtocol {
 
     KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
 
+    CheckBizurIntegrityResponse checkBizurIntegrity(CheckBizurIntegrityRequest request) throws IOException;
+
     CustomResponse customRequest(CustomRequest request) throws IOException;
 
     @Override
@@ -65,6 +69,8 @@ interface BizurRPC extends RPCProtocol {
             return delete(request);
         } else if (message instanceof KVIterateKeysRequest request) {
             return iterateKeys(request);
+        } else if (message instanceof CheckBizurIntegrityRequest request) {
+            return checkBizurIntegrity(request);
         } else if (message instanceof CustomRequest request) {
             return customRequest(request);
         }

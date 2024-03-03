@@ -2,6 +2,7 @@ package com.mboysan.consensus;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -75,6 +76,10 @@ class BucketRange {
         lock.unlock();
     }
 
+    String getIntegrityHash() {
+        return Integer.toHexString(Objects.hash(leaderId, bucketMap));
+    }
+
     public String toThinString() {
         String bucketMapThinStr = bucketMap.values().stream()
                 .map(Bucket::toThinString)
@@ -85,6 +90,7 @@ class BucketRange {
                 ", electId=" + electId +
                 ", votedElectId=" + votedElectId +
                 ", bucketMap=" + bucketMapThinStr +
+                ", integrityHash=" + getIntegrityHash() +
                 '}';
     }
 
@@ -96,6 +102,7 @@ class BucketRange {
                 ", electId=" + electId +
                 ", votedElectId=" + votedElectId +
                 ", bucketMap=" + bucketMap +
+                ", integrityHash=" + getIntegrityHash() +
                 '}';
     }
 

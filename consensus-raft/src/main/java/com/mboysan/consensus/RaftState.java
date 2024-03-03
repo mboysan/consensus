@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import java.util.Objects;
+
 class RaftState {
 
     enum Role {
@@ -47,6 +49,10 @@ class RaftState {
         this.role = Role.FOLLOWER;
     }
 
+    String getIntegrityHash() {
+        return Integer.toHexString(Objects.hash(currentTerm, commitIndex, leaderId, raftLog));
+    }
+
     public String toThinString() {
         return "State{" +
                 "currentTerm=" + currentTerm +
@@ -57,6 +63,7 @@ class RaftState {
                 ", leaderId=" + leaderId +
                 ", seenLeader=" + seenLeader +
                 ", role=" + role +
+                ", integrityHash=" + getIntegrityHash() +
                 '}';
     }
 
@@ -71,6 +78,7 @@ class RaftState {
                 ", leaderId=" + leaderId +
                 ", seenLeader=" + seenLeader +
                 ", role=" + role +
+                ", integrityHash=" + getIntegrityHash() +
                 '}';
     }
 }

@@ -118,6 +118,43 @@ in action, i.e. as long as the majority of all nodes remain active in the cluste
 failures by selecting a new leader and forming consensus on the latest state of the whole cluster, acting as a single 
 unit.
 
+## Sending Custom Commands
+
+To send custom commands, use the following format:
+```
+command=<command> arguments=<arguments> routeId=<(optional) node-id to route the command to from the node that your client connected>
+
+# short form:
+cmd=<command> args=<arguments> to=<(optional) routeId>
+cmd=<command> arg=<arguments> to=<(optional) routeId>
+```
+
+### `checkIntegrity`:
+`command=checkIntegrity` Checks the Integrity of all the nodes or just prints the state of a single node.
+The `arguments` parameter defines the level of integrity check and can be 1, 2, 3 or 4
+where 1 is the verbose state, 2 is the simple state, 3 is to run an integrity check on all nodes with verbose state 
+information and 4 to run an integrity check on all nodes with simple state information.
+The `routeId` parameter is optional and is used to route the command to a specific node in the cluster.
+
+```
+# examples:
+
+# to get the verbose state of a node:
+command=checkIntegrity arguments=1
+
+# to get the simple state of a node:
+command=checkIntegrity arguments=2
+
+# to run an integrity check on all nodes:
+command=checkIntegrity arguments=3
+
+# to run an integrity check on all nodes initiated by node-2 (routeId=2):
+command=checkIntegrity arguments=3 routeId=2
+
+# short form:
+cmd=checkIntegrity arg=3 to=2
+```
+
 ## Using The Project as a Library
 
 The project is deployed to a [separate repository](https://github.com/mboysan/mvn-repo) as a library which can be 

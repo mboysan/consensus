@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.event.MeasurementEvent.MeasurementType;
+import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
+import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
 import com.mboysan.consensus.message.Message;
@@ -16,9 +18,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -354,6 +358,45 @@ final class BizurRun {
             }
         }
         return sj.toString();
+    }
+
+    CheckBizurIntegrityResponse checkIntegrity(int level) throws IOException {
+        CheckBizurIntegrityResponse thisNodeResponse = bizurNode.checkBizurIntegrity(
+                new CheckBizurIntegrityRequest(level));
+
+        String thisNodeIntegrityHash = thisNodeResponse.getIntegrityHash();
+        String thisNodeState = thisNodeResponse.getState();
+
+        Map<Integer, String> integrityHashes = new ConcurrentHashMap<>();
+        Map<Integer, String> states = new ConcurrentHashMap<>();
+
+        integrityHashes.put(getNodeId(), thisNodeIntegrityHash);
+        states.put(getNodeId(), thisNodeState);
+
+        forEachPeerParallel(peer -> {
+            CheckBizurIntegrityRequest request = new CheckBizurIntegrityRequest(level)
+                    .setSenderId(getNodeId())
+                    .setReceiverId(peer.peerId);
+            try {
+                CheckBizurIntegrityResponse response = getRPC().checkBizurIntegrity(request);
+                integrityHashes.put(peer.peerId, response.getIntegrityHash());
+                states.put(peer.peerId, response.getState());
+            } catch (IOException e) {
+                LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
+            }
+        });
+
+        boolean isMajorityResponded = isMajorityAcked(integrityHashes.size());
+        boolean integrityCheckSuccess = isMajorityResponded;
+        if (isMajorityResponded) {
+            for (String hash : integrityHashes.values()) {
+                if (!thisNodeIntegrityHash.equals(hash)) {
+                    integrityCheckSuccess = false;
+                    break;
+                }
+            }
+        }
+        return new CheckBizurIntegrityResponse(integrityCheckSuccess, thisNodeIntegrityHash, states.toString());
     }
 
     void dumpMetricsAsync() {

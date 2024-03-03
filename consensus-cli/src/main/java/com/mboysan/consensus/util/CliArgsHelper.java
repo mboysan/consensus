@@ -1,5 +1,6 @@
 package com.mboysan.consensus.util;
 
+import com.mboysan.consensus.configuration.CliClientConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.configuration.TcpTransportConfig;
 import org.slf4j.Logger;
@@ -25,6 +26,10 @@ public final class CliArgsHelper {
         ALIAS_MAP.put("port", TcpTransportConfig.Param.SERVER_PORT);
         ALIAS_MAP.put("destinations", TcpTransportConfig.Param.DESTINATIONS);
         ALIAS_MAP.put("callbackTimeoutMs", TcpTransportConfig.Param.MESSAGE_CALLBACK_TIMEOUT_MS);
+        ALIAS_MAP.put("cmd", CliClientConfig.Param.COMMAND);
+        ALIAS_MAP.put("args", CliClientConfig.Param.ARGUMENTS);
+        ALIAS_MAP.put("arg", CliClientConfig.Param.ARGUMENTS);
+        ALIAS_MAP.put("to", CliClientConfig.Param.ROUTE_TO);
     }
 
     private CliArgsHelper() {

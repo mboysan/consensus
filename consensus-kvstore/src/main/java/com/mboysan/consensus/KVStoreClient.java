@@ -85,12 +85,16 @@ public class KVStoreClient extends AbstractClient {
     }
 
     public String customRequest(String command) throws CommandException {
-        return customRequest(command, -1);
+        return customRequest(command, null, -1);
     }
 
-    public String customRequest(String command, int routeTo) throws CommandException {
+    public String customRequest(String command, String arguments) throws CommandException {
+        return customRequest(command, arguments, -1);
+    }
+
+    public String customRequest(String command, String arguments, int routeTo) throws CommandException {
         try {
-            CustomRequest request = new CustomRequest(command)
+            CustomRequest request = new CustomRequest(command, arguments)
                     .setRouteTo(routeTo)
                     .setReceiverId(nextNodeId());
             CustomResponse response = (CustomResponse) getTransport().sendRecv(request);
