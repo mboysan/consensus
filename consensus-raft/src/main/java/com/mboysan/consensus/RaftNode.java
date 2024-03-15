@@ -12,6 +12,7 @@ import com.mboysan.consensus.message.RequestVoteRequest;
 import com.mboysan.consensus.message.RequestVoteResponse;
 import com.mboysan.consensus.message.StateMachineRequest;
 import com.mboysan.consensus.message.StateMachineResponse;
+import com.mboysan.consensus.util.HashUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -402,17 +404,22 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                     }
                 });
 
-                boolean isMajorityResponded = integrityHashes.size() > peers.size() / 2;
-                boolean integrityCheckSuccess = isMajorityResponded;
-                if (isMajorityResponded) {
-                    for (String hash : integrityHashes.values()) {
-                        if (!thisNodeIntegrityHash.equals(hash)) {
-                            integrityCheckSuccess = false;
-                            break;
-                        }
+                Optional<String> majorityHash = HashUtil.findCommonHash(
+                        integrityHashes.values(), peers.size() / 2);
+                String leaderHash = integrityHashes.get(state.leaderId);
+
+                LOGGER.info("node-{} integrityHash={}, majorityHash={}, leaderHash={}",
+                        getNodeId(), thisNodeIntegrityHash, majorityHash.orElse(null), leaderHash);
+
+                if (majorityHash.isPresent()) {
+                    if (!majorityHash.get().equals(leaderHash)) {
+                        LOGGER.warn("leader integrity hash={} is different than majorityHash={}",
+                                leaderHash, majorityHash.get());
                     }
+                    return new CheckRaftIntegrityResponse(true, majorityHash.get(), states.toString());
                 }
-                return new CheckRaftIntegrityResponse(integrityCheckSuccess, thisNodeIntegrityHash, states.toString());
+
+                return new CheckRaftIntegrityResponse(false, thisNodeIntegrityHash, states.toString());
             }
             default -> throw new IOException("unsupported level=" + request.getLevel());
         }

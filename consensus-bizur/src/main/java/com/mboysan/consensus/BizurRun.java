@@ -13,6 +13,7 @@ import com.mboysan.consensus.message.ReplicaReadRequest;
 import com.mboysan.consensus.message.ReplicaReadResponse;
 import com.mboysan.consensus.message.ReplicaWriteRequest;
 import com.mboysan.consensus.message.ReplicaWriteResponse;
+import com.mboysan.consensus.util.HashUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,7 +61,11 @@ final class BizurRun {
     }
 
     private boolean isMajorityAcked(int voteCount) {
-        return voteCount > bizurNode.getNumPeers() / 2;
+        return voteCount > countMajority();
+    }
+
+    private int countMajority() {
+        return bizurNode.getNumPeers() / 2;
     }
 
     private int hashKey(String key) {
@@ -386,17 +392,15 @@ final class BizurRun {
             }
         });
 
-        boolean isMajorityResponded = isMajorityAcked(integrityHashes.size());
-        boolean integrityCheckSuccess = isMajorityResponded;
-        if (isMajorityResponded) {
-            for (String hash : integrityHashes.values()) {
-                if (!thisNodeIntegrityHash.equals(hash)) {
-                    integrityCheckSuccess = false;
-                    break;
-                }
-            }
-        }
-        return new CheckBizurIntegrityResponse(integrityCheckSuccess, thisNodeIntegrityHash, states.toString());
+        Optional<String> majorityHash = HashUtil.findCommonHash(integrityHashes.values(), countMajority());
+
+        LOGGER.info("node-{} integrityHash={}, majorityHash={}",
+                getNodeId(), thisNodeIntegrityHash, majorityHash.orElse(null));
+
+        return majorityHash.map(s ->
+                        new CheckBizurIntegrityResponse(true, s, states.toString()))
+                .orElseGet(() ->
+                        new CheckBizurIntegrityResponse(false, thisNodeIntegrityHash, states.toString()));
     }
 
     void dumpMetricsAsync() {

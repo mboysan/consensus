@@ -320,7 +320,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                         range.unlock();
                     }
                 }
-                return new CheckBizurIntegrityResponse(false, Integer.toHexString(finalIntegrityHash), states.toString());
+                return new CheckBizurIntegrityResponse(
+                        true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
             case CheckBizurIntegrityRequest.Level.STATE_FROM_ALL, CheckBizurIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
                 int levelOverride = request.getLevel() == CheckBizurIntegrityRequest.Level.STATE_FROM_ALL
