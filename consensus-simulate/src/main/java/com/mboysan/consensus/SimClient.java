@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CheckSimIntegrityRequest;
+import com.mboysan.consensus.message.CheckSimIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.SimMessage;
@@ -14,6 +16,11 @@ public class SimClient extends AbstractClient implements SimRPC {
     @Override
     public SimMessage simulate(SimMessage message) throws IOException {
         return (SimMessage) getTransport().sendRecv(message);
+    }
+
+    @Override
+    public CheckSimIntegrityResponse checkSimIntegrity(CheckSimIntegrityRequest request) throws IOException {
+        return (CheckSimIntegrityResponse) getTransport().sendRecv(request);
     }
 
     @Override

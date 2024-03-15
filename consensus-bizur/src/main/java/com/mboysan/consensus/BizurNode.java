@@ -305,6 +305,10 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
 
     @Override
     public CheckBizurIntegrityResponse checkBizurIntegrity(CheckBizurIntegrityRequest request) throws IOException {
+        validateAction();
+        if (request.isRoutingNeeded()) {
+            return routeMessage(request);
+        }
         switch (request.getLevel()) {
             case CheckBizurIntegrityRequest.Level.STATE, CheckBizurIntegrityRequest.Level.THIN_STATE -> {
                 boolean isThinState = request.getLevel() == CheckBizurIntegrityRequest.Level.THIN_STATE;
@@ -336,15 +340,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     @Override
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
-        if (request.getRouteTo() != -1) {
+        if (request.isRoutingNeeded()) {
             return routeMessage(request);
-        }
-        if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
-            int level = Integer.parseInt(Objects.requireNonNull(
-                    request.getArguments(), "level is required"));
-            CheckBizurIntegrityRequest bizurRequest = new CheckBizurIntegrityRequest(level);
-            CheckBizurIntegrityResponse bizurResponse = checkBizurIntegrity(bizurRequest);
-            return new CustomResponse(bizurResponse.isSuccess(), null, bizurResponse.toString());
         }
         return new CustomResponse(
                 false, new UnsupportedOperationException(request.getRequest()), null);

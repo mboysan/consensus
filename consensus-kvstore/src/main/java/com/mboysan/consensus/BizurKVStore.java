@@ -8,6 +8,10 @@ import com.mboysan.consensus.message.BizurKVIterateKeysRequest;
 import com.mboysan.consensus.message.BizurKVIterateKeysResponse;
 import com.mboysan.consensus.message.BizurKVSetRequest;
 import com.mboysan.consensus.message.BizurKVSetResponse;
+import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
+import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
+import com.mboysan.consensus.message.CheckStoreIntegrityRequest;
+import com.mboysan.consensus.message.CheckStoreIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -71,6 +75,20 @@ public class BizurKVStore extends AbstractKVStore<BizurNode> {
         } catch (Exception e) {
             logError(request, e);
             return new KVIterateKeysResponse(false, e, null);
+        }
+    }
+
+    @Override
+    public CheckStoreIntegrityResponse checkStoreIntegrity(CheckStoreIntegrityRequest request) {
+        try {
+            int routeTo = request.getRouteTo();
+            CheckBizurIntegrityRequest bizurRequest = new CheckBizurIntegrityRequest(routeTo, request.getLevel());
+            CheckBizurIntegrityResponse response = getNode().checkBizurIntegrity(bizurRequest);
+            return new CheckStoreIntegrityResponse(
+                    response.isSuccess(), "bizur", response.getIntegrityHash(), response.getState());
+        } catch (Exception e) {
+            logError(request, e);
+            return new CheckStoreIntegrityResponse(e, "bizur");
         }
     }
 

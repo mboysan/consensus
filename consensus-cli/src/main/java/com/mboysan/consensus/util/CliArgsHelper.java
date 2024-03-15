@@ -29,7 +29,6 @@ public final class CliArgsHelper {
         ALIAS_MAP.put("cmd", CliClientConfig.Param.COMMAND);
         ALIAS_MAP.put("args", CliClientConfig.Param.ARGUMENTS);
         ALIAS_MAP.put("arg", CliClientConfig.Param.ARGUMENTS);
-        ALIAS_MAP.put("level", CliClientConfig.Param.ARGUMENTS);
         ALIAS_MAP.put("to", CliClientConfig.Param.ROUTE_TO);
         ALIAS_MAP.put("k", CliClientConfig.Param.KEY);
         ALIAS_MAP.put("v", CliClientConfig.Param.VALUE);

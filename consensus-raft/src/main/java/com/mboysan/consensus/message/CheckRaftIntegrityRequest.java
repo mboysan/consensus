@@ -1,6 +1,6 @@
 package com.mboysan.consensus.message;
 
-public class CheckRaftIntegrityRequest extends Message {
+public class CheckRaftIntegrityRequest extends RoutableRequest {
 
     public interface Level {
         int STATE = 1;
@@ -12,6 +12,11 @@ public class CheckRaftIntegrityRequest extends Message {
     private final int level;
 
     public CheckRaftIntegrityRequest(int level) {
+        this(ROUTE_TO_SELF, level);
+    }
+
+    public CheckRaftIntegrityRequest(int routeTo, int level) {
+        super(routeTo);
         this.level = level;
     }
 

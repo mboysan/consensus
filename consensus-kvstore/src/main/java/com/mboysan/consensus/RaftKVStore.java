@@ -2,6 +2,10 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.event.MeasurementEvent;
 import com.mboysan.consensus.event.MeasurementEvent.MeasurementType;
+import com.mboysan.consensus.message.CheckRaftIntegrityRequest;
+import com.mboysan.consensus.message.CheckRaftIntegrityResponse;
+import com.mboysan.consensus.message.CheckStoreIntegrityRequest;
+import com.mboysan.consensus.message.CheckStoreIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -121,6 +125,21 @@ public class RaftKVStore extends AbstractKVStore<RaftNode> {
                 .setCorrelationId(baseRequest.getCorrelationId());
         StateMachineResponse response = getNode().stateMachineRequest(request);
         return response.isApplied();
+    }
+
+
+    @Override
+    public CheckStoreIntegrityResponse checkStoreIntegrity(CheckStoreIntegrityRequest request) {
+        try {
+            int routeTo = request.getRouteTo();
+            CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(routeTo, request.getLevel());
+            CheckRaftIntegrityResponse response = getNode().checkRaftIntegrity(raftRequest);
+            return new CheckStoreIntegrityResponse(
+                    response.isSuccess(), "raft", response.getIntegrityHash(), response.getState());
+        } catch (Exception e) {
+            logError(request, e);
+            return new CheckStoreIntegrityResponse(e, "raft");
+        }
     }
 
     @Override

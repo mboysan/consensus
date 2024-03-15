@@ -1,7 +1,7 @@
 package com.mboysan.consensus;
 
-import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.CliClientConfig;
+import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
@@ -55,7 +54,7 @@ public class KVStoreClientCLI {
 
         if (isOneOffCommand) {
             LOGGER.info("Sending one-off command");
-            sendCustomCommand(client, cliClientConfig.command(), cliClientConfig.arguments(), cliClientConfig.routeTo());
+            handle(client, cliClientConfig.command(), cliClientConfig);
             client.shutdown();
         } else if (isInteractiveSession) {
             LOGGER.info("Interactive session started. Client ready to receive commands:");
@@ -67,26 +66,10 @@ public class KVStoreClientCLI {
                         String[] cmd = input.split(" ");
                         CliClientConfig cliArgs = parseCliClientConfig(cmd);
                         String command = cliArgs.command() == null ? cmd[0] : cliArgs.command();
-                        switch (command) {
-                            case "set" -> {
-                                client.set(cliArgs.key(), cliArgs.value());
-                                printResult("OK");
-                            }
-                            case "get" -> {
-                                String result = client.get(cliArgs.key());
-                                printResult(result);
-                            }
-                            case "delete" -> {
-                                client.delete(cliArgs.key());
-                                printResult("OK");
-                            }
-                            case "iterateKeys" -> {
-                                Set<String> result = client.iterateKeys();
-                                printResult(result);
-                            }
-                            case "exit" -> exited = true;
-                            default -> sendCustomCommand(client, command, cliArgs.arguments(), cliArgs.routeTo());
-                        }
+
+                        int returnCode = handle(client, command, cliArgs);
+
+                        exited = returnCode == 1;
                     } catch (Exception e) {
                         LOGGER.error(e.getMessage());
                     }
@@ -118,6 +101,35 @@ public class KVStoreClientCLI {
     private static void startMetricsCollector(Properties properties) {
         MetricsConfig config = CoreConfig.newInstance(MetricsConfig.class, properties);
         MetricsCollectorService.initAndStart(config);
+    }
+
+    private static int handle(KVStoreClient client, String command, CliClientConfig cliArgs) throws CommandException {
+        int returnCode = 0;
+        switch (command) {
+            case "set" -> {
+                client.set(cliArgs.key(), cliArgs.value());
+                printResult("OK");
+            }
+            case "get" -> {
+                String result = client.get(cliArgs.key());
+                printResult(result);
+            }
+            case "delete" -> {
+                client.delete(cliArgs.key());
+                printResult("OK");
+            }
+            case "iterateKeys" -> {
+                Set<String> result = client.iterateKeys();
+                printResult(result);
+            }
+            case "checkIntegrity" -> {
+                String result = client.checkIntegrity(cliArgs.level(), cliArgs.routeTo());
+                printResult(result);
+            }
+            case "exit" -> returnCode = 1;
+            default -> sendCustomCommand(client, command, cliArgs.arguments(), cliArgs.routeTo());
+        }
+        return returnCode;
     }
 
     private static void sendCustomCommand(KVStoreClient client, String command, String arguments, int routeTo) {

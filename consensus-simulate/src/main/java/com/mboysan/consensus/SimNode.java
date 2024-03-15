@@ -1,6 +1,8 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.SimConfig;
+import com.mboysan.consensus.message.CheckSimIntegrityRequest;
+import com.mboysan.consensus.message.CheckSimIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.SimMessage;
@@ -98,19 +100,23 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     }
 
     @Override
-    public CustomResponse customRequest(CustomRequest request) throws IOException {
+    public CheckSimIntegrityResponse checkSimIntegrity(CheckSimIntegrityRequest request) throws IOException {
         validateAction();
-        if (request.getRouteTo() != -1) {
+        if (request.isRoutingNeeded()) {
             return routeMessage(request);
         }
-        synchronized (this) {
-            if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
-                String stateStr = "node-" + getNodeId() + ": " + state.toString();
-                return new CustomResponse(true, null, stateStr);
-            }
-            return new CustomResponse(
-                    false, new UnsupportedOperationException(request.getRequest()), null);
+        String stateStr = "node-" + getNodeId() + ": " + state.toString();
+        return new CheckSimIntegrityResponse(true, null, stateStr);
+    }
+
+    @Override
+    public CustomResponse customRequest(CustomRequest request) throws IOException {
+        validateAction();
+        if (request.isRoutingNeeded()) {
+            return routeMessage(request);
         }
+        return new CustomResponse(
+                false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     SimState getState() {

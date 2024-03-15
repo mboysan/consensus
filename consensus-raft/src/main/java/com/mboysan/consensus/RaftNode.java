@@ -366,82 +366,79 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     @Override
-    public synchronized CheckRaftIntegrityResponse checkRaftIntegrity(CheckRaftIntegrityRequest request) throws IOException {
-        switch (request.getLevel()) {
-            case CheckRaftIntegrityRequest.Level.STATE -> {
-                return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toString());
-            }
-            case CheckRaftIntegrityRequest.Level.THIN_STATE -> {
-                return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toThinString());
-            }
-            case CheckRaftIntegrityRequest.Level.STATE_FROM_ALL, CheckRaftIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
-                int levelOverride = request.getLevel() == CheckRaftIntegrityRequest.Level.STATE_FROM_ALL
-                        ? CheckRaftIntegrityRequest.Level.STATE
-                        : CheckRaftIntegrityRequest.Level.THIN_STATE;
-
-                CheckRaftIntegrityResponse thisNodeResponse = this.checkRaftIntegrity(
-                        new CheckRaftIntegrityRequest(levelOverride));
-
-                String thisNodeIntegrityHash = thisNodeResponse.getIntegrityHash();
-                String thisNodeState = thisNodeResponse.getState();
-
-                Map<Integer, String> integrityHashes = new ConcurrentHashMap<>();
-                Map<Integer, String> states = new ConcurrentHashMap<>();
-
-                integrityHashes.put(getNodeId(), thisNodeIntegrityHash);
-                states.put(getNodeId(), thisNodeState);
-
-                forEachPeerParallel(peer -> {
-                    CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(levelOverride)
-                            .setSenderId(getNodeId())
-                            .setReceiverId(peer.peerId);
-                    try {
-                        CheckRaftIntegrityResponse raftResponse = getRPC().checkRaftIntegrity(raftRequest);
-                        integrityHashes.put(peer.peerId, raftResponse.getIntegrityHash());
-                        states.put(peer.peerId, raftResponse.getState());
-                    } catch (IOException e) {
-                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, raftRequest, e.getMessage());
-                    }
-                });
-
-                Optional<String> majorityHash = HashUtil.findCommonHash(
-                        integrityHashes.values(), peers.size() / 2);
-                String leaderHash = integrityHashes.get(state.leaderId);
-
-                LOGGER.info("node-{} integrityHash={}, majorityHash={}, leaderHash={}",
-                        getNodeId(), thisNodeIntegrityHash, majorityHash.orElse(null), leaderHash);
-
-                if (majorityHash.isPresent()) {
-                    if (!majorityHash.get().equals(leaderHash)) {
-                        LOGGER.warn("leader integrity hash={} is different than majorityHash={}",
-                                leaderHash, majorityHash.get());
-                    }
-                    return new CheckRaftIntegrityResponse(true, majorityHash.get(), states.toString());
+    public CheckRaftIntegrityResponse checkRaftIntegrity(CheckRaftIntegrityRequest request) throws IOException {
+        validateAction();
+        if (request.isRoutingNeeded()) {
+            return routeMessage(request);
+        }
+        synchronized (this) {
+            switch (request.getLevel()) {
+                case CheckRaftIntegrityRequest.Level.STATE -> {
+                    return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toString());
                 }
+                case CheckRaftIntegrityRequest.Level.THIN_STATE -> {
+                    return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toThinString());
+                }
+                case CheckRaftIntegrityRequest.Level.STATE_FROM_ALL, CheckRaftIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
+                    int levelOverride = request.getLevel() == CheckRaftIntegrityRequest.Level.STATE_FROM_ALL
+                            ? CheckRaftIntegrityRequest.Level.STATE
+                            : CheckRaftIntegrityRequest.Level.THIN_STATE;
 
-                return new CheckRaftIntegrityResponse(false, thisNodeIntegrityHash, states.toString());
+                    CheckRaftIntegrityResponse thisNodeResponse = this.checkRaftIntegrity(
+                            new CheckRaftIntegrityRequest(levelOverride));
+
+                    String thisNodeIntegrityHash = thisNodeResponse.getIntegrityHash();
+                    String thisNodeState = thisNodeResponse.getState();
+
+                    Map<Integer, String> integrityHashes = new ConcurrentHashMap<>();
+                    Map<Integer, String> states = new ConcurrentHashMap<>();
+
+                    integrityHashes.put(getNodeId(), thisNodeIntegrityHash);
+                    states.put(getNodeId(), thisNodeState);
+
+                    forEachPeerParallel(peer -> {
+                        CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(levelOverride)
+                                .setSenderId(getNodeId())
+                                .setReceiverId(peer.peerId);
+                        try {
+                            CheckRaftIntegrityResponse raftResponse = getRPC().checkRaftIntegrity(raftRequest);
+                            integrityHashes.put(peer.peerId, raftResponse.getIntegrityHash());
+                            states.put(peer.peerId, raftResponse.getState());
+                        } catch (IOException e) {
+                            LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, raftRequest, e.getMessage());
+                        }
+                    });
+
+                    Optional<String> majorityHash = HashUtil.findCommonHash(
+                            integrityHashes.values(), peers.size() / 2);
+                    String leaderHash = integrityHashes.get(state.leaderId);
+
+                    LOGGER.info("node-{} integrityHash={}, majorityHash={}, leaderHash={}",
+                            getNodeId(), thisNodeIntegrityHash, majorityHash.orElse(null), leaderHash);
+
+                    if (majorityHash.isPresent()) {
+                        if (!majorityHash.get().equals(leaderHash)) {
+                            LOGGER.warn("leader integrity hash={} is different than majorityHash={}",
+                                    leaderHash, majorityHash.get());
+                        }
+                        return new CheckRaftIntegrityResponse(true, majorityHash.get(), states.toString());
+                    }
+
+                    return new CheckRaftIntegrityResponse(false, thisNodeIntegrityHash, states.toString());
+                }
+                default -> throw new IOException("unsupported level=" + request.getLevel());
             }
-            default -> throw new IOException("unsupported level=" + request.getLevel());
         }
     }
 
     @Override
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
-        if (request.getRouteTo() != -1) {
+        if (request.isRoutingNeeded()) {
             return routeMessage(request);
         }
-        synchronized (this) {
-            if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
-                int level = Integer.parseInt(Objects.requireNonNull(
-                        request.getArguments(), "level is required"));
-                CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(level);
-                CheckRaftIntegrityResponse raftResponse = checkRaftIntegrity(raftRequest);
-                return new CustomResponse(raftResponse.isSuccess(), null, raftResponse.toString());
-            }
-            return new CustomResponse(
-                    false, new UnsupportedOperationException(request.getRequest()), null);
-        }
+        return new CustomResponse(
+                false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     /*----------------------------------------------------------------------------------

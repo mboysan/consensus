@@ -9,6 +9,7 @@ public interface CliClientConfig extends CoreConfig {
             String ROUTE_TO = "routeTo";
             String KEY = "key";
             String VALUE = "value";
+            String LEVEL = "level";
         }
 
         @Key(Param.INTERACTIVE)
@@ -26,6 +27,9 @@ public interface CliClientConfig extends CoreConfig {
 
         @Key(Param.VALUE)
         String value();
+
+        @Key(Param.LEVEL)
+        int level();
 
         @Key(Param.ROUTE_TO)
         @DefaultValue("-1")

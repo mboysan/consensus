@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CheckStoreIntegrityRequest;
+import com.mboysan.consensus.message.CheckStoreIntegrityResponse;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
@@ -89,26 +91,28 @@ public class KVStoreClient extends AbstractClient {
         }
     }
 
-    public String customRequest(String command) throws CommandException {
-        return customRequest(command, null, -1);
-    }
-
-    public String customRequest(String command, String arguments) throws CommandException {
-        return customRequest(command, arguments, -1);
+    public String checkIntegrity(int level, int routeTo) throws CommandException {
+        try {
+            CheckStoreIntegrityRequest request = new CheckStoreIntegrityRequest(routeTo, level)
+                    .setReceiverId(nextNodeId());
+            CheckStoreIntegrityResponse response = (CheckStoreIntegrityResponse) getTransport().sendRecv(request);
+            if (!response.isSuccess()) {
+                throw new CommandException(response.getException());
+            }
+            return response.toString();
+        } catch (Exception e) {
+            throw new CommandException(e);
+        }
     }
 
     public String customRequest(String command, String arguments, int routeTo) throws CommandException {
         try {
             String cmd = Objects.requireNonNull(command, "command is required");
-            CustomRequest request = new CustomRequest(cmd, arguments)
-                    .setRouteTo(routeTo)
+            CustomRequest request = new CustomRequest(routeTo, cmd, arguments)
                     .setReceiverId(nextNodeId());
             CustomResponse response = (CustomResponse) getTransport().sendRecv(request);
             if (!response.isSuccess()) {
-                Exception e = response.getException();
-                if (e != null) {
-                    throw new CommandException(e);
-                }
+                throw new CommandException(response.getException());
             }
             return response.getPayload();
         } catch (Exception e) {

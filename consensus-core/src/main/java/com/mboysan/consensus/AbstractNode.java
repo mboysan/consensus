@@ -4,9 +4,8 @@ import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
-import com.mboysan.consensus.message.CustomRequest;
-import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.Message;
+import com.mboysan.consensus.message.RoutableRequest;
 import com.mboysan.consensus.util.Scheduler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
@@ -160,10 +159,10 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         }
     }
 
-    CustomResponse routeMessage(CustomRequest request) throws IOException {
+    <S extends Message> S routeMessage(RoutableRequest request) throws IOException {
         validateAction();
         int receiverId = request.getRouteTo();
-        request.setRouteTo(-1);
+        request.resetRoutingState();
         return routeMessage(request, receiverId);
     }
 

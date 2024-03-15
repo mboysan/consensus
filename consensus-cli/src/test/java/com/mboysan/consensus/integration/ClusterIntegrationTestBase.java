@@ -1,13 +1,9 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.BizurKVStoreCluster;
-import com.mboysan.consensus.CliConstants;
 import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
-import com.mboysan.consensus.RaftKVStoreCluster;
 import com.mboysan.consensus.message.CommandException;
-import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class ClusterIntegrationTestBase {
@@ -102,28 +99,14 @@ abstract class ClusterIntegrationTestBase {
         assertIntegrityCheckPassed(cluster);
     }
 
-    void testCustomCommands(KVStoreClusterBase cluster) throws CommandException {
-        // populate the stores
-        cluster.getClient(0).set("a", "v0");
+    void testCustomCommands(KVStoreClusterBase cluster) {
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(0).customRequest("some-random-request", null, -1)
+        );
 
-        int level;
-        int routeTo = -1;
-
-        level = 1;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 2;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 3;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 4;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 1;
-        routeTo = 1;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(0).customRequest("some-random-request", null, 1)
+        );
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {
@@ -142,15 +125,10 @@ abstract class ClusterIntegrationTestBase {
     }
 
     private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) {
-        int defaultLevel = 3;
-        int defaultRouteTo = -1;
-        assertIntegrityCheckPassed(cluster, defaultLevel, defaultRouteTo);
-    }
-
-    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster, int level, int routeTo) {
         awaiting(() -> {
-            String response = cluster.getClient(0)
-                    .customRequest(CustomRequest.Command.CHECK_INTEGRITY, String.valueOf(level), routeTo);
+            int defaultLevel = 3;
+            int defaultRouteTo = -1;
+            String response = cluster.getClient(0).checkIntegrity(defaultLevel, defaultRouteTo);
             assertTrue(response.contains("success"));
             assertTrue(response.contains("integrityHash"));
         });
