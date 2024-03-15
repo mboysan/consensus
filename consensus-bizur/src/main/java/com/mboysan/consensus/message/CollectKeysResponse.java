@@ -2,7 +2,7 @@ package com.mboysan.consensus.message;
 
 import java.util.Set;
 
-public class CollectKeysResponse extends KVOperationResponse {
+public class CollectKeysResponse extends BizurKVOperationResponse {
 
     private final Set<String> keySet;
 

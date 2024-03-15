@@ -1,6 +1,15 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
+import com.mboysan.consensus.message.BizurKVDeleteRequest;
+import com.mboysan.consensus.message.BizurKVDeleteResponse;
+import com.mboysan.consensus.message.BizurKVGetRequest;
+import com.mboysan.consensus.message.BizurKVGetResponse;
+import com.mboysan.consensus.message.BizurKVIterateKeysRequest;
+import com.mboysan.consensus.message.BizurKVIterateKeysResponse;
+import com.mboysan.consensus.message.BizurKVOperationResponse;
+import com.mboysan.consensus.message.BizurKVSetRequest;
+import com.mboysan.consensus.message.BizurKVSetResponse;
 import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
 import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
@@ -9,15 +18,6 @@ import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVOperationResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.PleaseVoteRequest;
 import com.mboysan.consensus.message.PleaseVoteResponse;
@@ -255,7 +255,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
      * ----------------------------------------------------------------------------------*/
 
     @Override
-    public KVGetResponse get(KVGetRequest request) throws IOException {
+    public BizurKVGetResponse get(BizurKVGetRequest request) throws IOException {
         validateAction();
         try {
             String value = new BizurRun(request.getCorrelationId(), this).apiGet(request.getKey());
@@ -269,7 +269,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
-    public KVSetResponse set(KVSetRequest request) throws IOException {
+    public BizurKVSetResponse set(BizurKVSetRequest request) throws IOException {
         validateAction();
         try {
             new BizurRun(request.getCorrelationId(), this).apiSet(request.getKey(), request.getValue());
@@ -283,7 +283,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
-    public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
+    public BizurKVDeleteResponse delete(BizurKVDeleteRequest request) throws IOException {
         validateAction();
         try {
             new BizurRun(request.getCorrelationId(), this).apiDelete(request.getKey());
@@ -297,7 +297,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
-    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
+    public BizurKVIterateKeysResponse iterateKeys(BizurKVIterateKeysRequest request) throws IOException {
         validateAction();
         Set<String> keySet = new BizurRun(request.getCorrelationId(), this).apiIterateKeys();
         return response(request, true, null, keySet);
@@ -350,7 +350,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
-    private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {
+    private <T extends BizurKVOperationResponse> T route(Message request, int receiverId) throws IOException {
         if (receiverId == -1) {
             BizurException err = new BizurException("leader unresolved");
             logErrorForRequest(err, request);
@@ -360,20 +360,20 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends KVOperationResponse> T response(
+    private <T extends BizurKVOperationResponse> T response(
             Message request, boolean success, Exception err, Object payload)
     {
-        if (request instanceof  KVGetRequest) {
-            return (T) new KVGetResponse(success, err, (String) payload);
+        if (request instanceof BizurKVGetRequest) {
+            return (T) new BizurKVGetResponse(success, err, (String) payload);
         }
-        if (request instanceof  KVSetRequest) {
-            return (T) new KVSetResponse(success, err);
+        if (request instanceof BizurKVSetRequest) {
+            return (T) new BizurKVSetResponse(success, err);
         }
-        if (request instanceof  KVDeleteRequest) {
-            return (T) new KVDeleteResponse(success, err);
+        if (request instanceof BizurKVDeleteRequest) {
+            return (T) new BizurKVDeleteResponse(success, err);
         }
-        if (request instanceof  KVIterateKeysRequest) {
-            return (T) new KVIterateKeysResponse(success, err, (Set<String>) payload);
+        if (request instanceof BizurKVIterateKeysRequest) {
+            return (T) new BizurKVIterateKeysResponse(success, err, (Set<String>) payload);
         }
         throw new IllegalArgumentException("unrecognized request=" + request.toString());
     }

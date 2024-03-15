@@ -8,7 +8,7 @@ import java.io.Serializable;
 public abstract class Message implements Serializable {
 
     @Serial
-    private static final long serialVersionUID = 1_0L;
+    private static final long serialVersionUID = 2_0L;
 
     /**
      * Unique id of a request and response message pair.
