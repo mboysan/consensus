@@ -164,11 +164,13 @@ abstract class ClusterIntegrationTestBase {
         }
     }
 
-    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) throws CommandException {
-        String level = "3";  // check integrity for all stores
-        String response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, level);
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) {
+        awaiting(() -> {
+            String level = "3";  // check integrity for all stores
+            String response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, level);
+            assertTrue(response.contains("success"));
+            assertTrue(response.contains("integrityHash"));
+        });
     }
 
 }
