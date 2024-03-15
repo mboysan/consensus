@@ -344,7 +344,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             return routeMessage(request);
         }
         return new CustomResponse(
-                false, new UnsupportedOperationException(request.getRequest()), null);
+                false, new UnsupportedOperationException(request.getCommand()), null);
     }
 
     private <T extends BizurKVOperationResponse> T route(Message request, int receiverId) throws IOException {

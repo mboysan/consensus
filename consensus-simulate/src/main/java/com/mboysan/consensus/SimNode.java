@@ -116,7 +116,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
             return routeMessage(request);
         }
         return new CustomResponse(
-                false, new UnsupportedOperationException(request.getRequest()), null);
+                false, new UnsupportedOperationException(request.getCommand()), null);
     }
 
     SimState getState() {

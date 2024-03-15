@@ -1,25 +1,25 @@
 package com.mboysan.consensus.message;
 
 public class CustomRequest extends RoutableRequest {
-    private final String request;
+    private final String command;
     private final String arguments;
 
-    public CustomRequest(String request) {
-        this(request, null);
+    public CustomRequest(String command) {
+        this(command, null);
     }
 
-    public CustomRequest(String request, String arguments) {
-        this(ROUTE_TO_SELF, request, arguments);
+    public CustomRequest(String command, String arguments) {
+        this(ROUTE_TO_SELF, command, arguments);
     }
 
-    public CustomRequest(int routeTo, String request, String arguments) {
+    public CustomRequest(int routeTo, String command, String arguments) {
         super(routeTo);
-        this.request = request;
+        this.command = command;
         this.arguments = arguments;
     }
 
-    public String getRequest() {
-        return request;
+    public String getCommand() {
+        return command;
     }
 
     public String getArguments() {
@@ -29,7 +29,7 @@ public class CustomRequest extends RoutableRequest {
     @Override
     public String toString() {
         return "CustomRequest{" +
-                "request='" + request + '\'' +
+                "command='" + command + '\'' +
                 ", arguments='" + arguments + '\'' +
                 "} " + super.toString();
     }

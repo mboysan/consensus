@@ -438,7 +438,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             return routeMessage(request);
         }
         return new CustomResponse(
-                false, new UnsupportedOperationException(request.getRequest()), null);
+                false, new UnsupportedOperationException(request.getCommand()), null);
     }
 
     /*----------------------------------------------------------------------------------
