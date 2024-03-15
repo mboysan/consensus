@@ -422,9 +422,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
-            int routeToId = request.getRouteTo();
-            request.setRouteTo(-1);
-            return routeMessage(request, routeToId);
+            return routeMessage(request);
         }
         synchronized (this) {
             if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {

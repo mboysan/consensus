@@ -101,9 +101,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
-            int routeToId = request.getRouteTo();
-            request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()));
+            return routeMessage(request);
         }
         synchronized (this) {
             if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {

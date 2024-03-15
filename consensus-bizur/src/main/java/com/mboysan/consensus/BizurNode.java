@@ -336,9 +336,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
-            int routeToId = request.getRouteTo();
-            request.setRouteTo(-1);
-            return routeMessage(request, routeToId);
+            return routeMessage(request);
         }
         if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
             int level = Integer.parseInt(Objects.requireNonNull(
