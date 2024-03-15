@@ -49,13 +49,13 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
         response = simCluster.getClient(0).customRequest("askState");
         assertTrue(response.startsWith("Verbose State of node"));
 
-        response = simCluster.getClient(0).customRequest("askState", 1);
+        response = simCluster.getClient(0).customRequest("askState", null, 1);
         assertTrue(response.startsWith("Verbose State of node-1"));
 
         response = simCluster.getClient(0).customRequest("askStateFull");
         assertTrue(response.startsWith("Verbose State of node"));
 
-        response = simCluster.getClient(0).customRequest("askStateFull", 1);
+        response = simCluster.getClient(0).customRequest("askStateFull", null, 1);
         assertTrue(response.startsWith("Verbose State of node-1"));
 
         response = simCluster.getClient(0).customRequest("askProtocol");

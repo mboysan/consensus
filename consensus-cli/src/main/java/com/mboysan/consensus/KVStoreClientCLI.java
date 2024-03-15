@@ -1,6 +1,7 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.CoreConfig;
+import com.mboysan.consensus.configuration.CliClientConfig;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.util.CliArgsHelper;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
@@ -19,8 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class KVStoreClientCLI {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KVStoreClientCLI.class);
-
-    private static final String ROUTE_TO_SEPARATOR = "#";
 
     private static final Map<Integer, KVStoreClient> CLIENT_REFERENCES = new ConcurrentHashMap<>();
 
@@ -36,6 +36,8 @@ public class KVStoreClientCLI {
         CliArgsHelper.logArgs(args);
 
         Properties properties = CliArgsHelper.getProperties(args);
+        CliClientConfig cliClientConfig = CoreConfig.newInstance(CliClientConfig.class, properties);
+        LOGGER.info("CliClientConfig={}", cliClientConfig);
 
         int clientId = resolveClientId(properties);
         KVStoreClient client = CLIFactory.createKVStoreClient(properties);
@@ -48,26 +50,34 @@ public class KVStoreClientCLI {
         client.start();
         LOGGER.info("client started");
 
-        if (isInteractiveSession(properties)) {
-            LOGGER.info("client ready to receive commands:");
+        boolean isOneOffCommand = cliClientConfig.command() != null;
+        boolean isInteractiveSession = cliClientConfig.interactive() && !isOneOffCommand;
 
+        if (isOneOffCommand) {
+            LOGGER.info("Sending one-off command");
+            sendCustomCommand(client, cliClientConfig.command(), cliClientConfig.arguments(), cliClientConfig.routeTo());
+            client.shutdown();
+        } else if (isInteractiveSession) {
+            LOGGER.info("Interactive session started. Client ready to receive commands:");
             try (Scanner scanner = new Scanner(System.in)) {
                 boolean exited = false;
                 while (!exited) {
                     try {
                         String input = scanner.nextLine();
                         String[] cmd = input.split(" ");
-                        switch (cmd[0]) {
+                        CliClientConfig cliArgs = parseCliClientConfig(cmd);
+                        String command = cliArgs.command() == null ? cmd[0] : cliArgs.command();
+                        switch (command) {
                             case "set" -> {
-                                client.set(cmd[1], cmd[2]);
+                                client.set(cliArgs.key(), cliArgs.value());
                                 printResult("OK");
                             }
                             case "get" -> {
-                                String result = client.get(cmd[1]);
+                                String result = client.get(cliArgs.key());
                                 printResult(result);
                             }
                             case "delete" -> {
-                                client.delete(cmd[1]);
+                                client.delete(cliArgs.key());
                                 printResult("OK");
                             }
                             case "iterateKeys" -> {
@@ -75,7 +85,7 @@ public class KVStoreClientCLI {
                                 printResult(result);
                             }
                             case "exit" -> exited = true;
-                            default -> sendCustomCommand(client, input);
+                            default -> sendCustomCommand(client, command, cliArgs.arguments(), cliArgs.routeTo());
                         }
                     } catch (Exception e) {
                         LOGGER.error(e.getMessage());
@@ -83,14 +93,8 @@ public class KVStoreClientCLI {
                 }
             }
             client.shutdown();
-        } else {
-            String commandFromCli = properties.getProperty("command");
-            if (commandFromCli != null) {
-                sendCustomCommand(client, commandFromCli);
-                client.shutdown();
-            }
-            // otherwise, keep the client running for Integration Tests.
         }
+        // otherwise, keep the client running for Integration Tests.
     }
 
     private static int resolveClientId(Properties mainProps) {
@@ -116,29 +120,20 @@ public class KVStoreClientCLI {
         MetricsCollectorService.initAndStart(config);
     }
 
-    private static boolean isInteractiveSession(Properties properties) {
-        String interactiveFlag = properties.getProperty("interactive");
-        if ("false".equals(interactiveFlag)) {
-            return false;
+    private static void sendCustomCommand(KVStoreClient client, String command, String arguments, int routeTo) {
+        try {
+            String result = client.customRequest(command, arguments, routeTo);
+            printResult(result);
+        } catch (CommandException e) {
+            LOGGER.error(e.getMessage(), e);
         }
-        String commandFromCli = properties.getProperty("command");
-        return commandFromCli == null;
     }
 
-    private static void sendCustomCommand(KVStoreClient client, String input) throws CommandException {
-        String[] request = prepareRequest(input);
-        int routeToId = Integer.parseInt(request[0]);
-        String command = request[1];
-        String result = client.customRequest(command, routeToId);
-        printResult(result);
-    }
-
-    private static String[] prepareRequest(String command) {
-        if (!command.contains(ROUTE_TO_SEPARATOR)) {
-            //returns: -1#<command>
-            command = "%d%s%s".formatted(-1, ROUTE_TO_SEPARATOR, command);
-        }
-        return command.split(ROUTE_TO_SEPARATOR);
+    private static CliClientConfig parseCliClientConfig(String[] args) {
+        Properties properties = CliArgsHelper.getProperties(args);
+        CliClientConfig cliClientConfig = CoreConfig.newInstance(CliClientConfig.class, properties);
+        LOGGER.debug("CliClientConfig={}", cliClientConfig);
+        return cliClientConfig;
     }
 
     private static void printResult(Object result) {

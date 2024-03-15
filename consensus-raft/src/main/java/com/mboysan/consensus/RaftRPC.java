@@ -2,6 +2,8 @@ package com.mboysan.consensus;
 
 import com.mboysan.consensus.message.AppendEntriesRequest;
 import com.mboysan.consensus.message.AppendEntriesResponse;
+import com.mboysan.consensus.message.CheckRaftIntegrityRequest;
+import com.mboysan.consensus.message.CheckRaftIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.Message;
@@ -19,6 +21,8 @@ interface RaftRPC extends RPCProtocol {
 
     StateMachineResponse stateMachineRequest(StateMachineRequest request) throws IOException;
 
+    CheckRaftIntegrityResponse checkRaftIntegrity(CheckRaftIntegrityRequest request) throws IOException;
+
     CustomResponse customRequest(CustomRequest request) throws IOException;
 
     @Override
@@ -31,6 +35,9 @@ interface RaftRPC extends RPCProtocol {
         }
         if (message instanceof StateMachineRequest request) {
             return stateMachineRequest(request);
+        }
+        if (message instanceof CheckRaftIntegrityRequest request) {
+            return checkRaftIntegrity(request);
         }
         if (message instanceof CustomRequest request) {
             return customRequest(request);

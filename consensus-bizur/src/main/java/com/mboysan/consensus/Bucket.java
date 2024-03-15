@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class Bucket implements Serializable, Comparable<Bucket> {
@@ -95,6 +96,32 @@ public class Bucket implements Serializable, Comparable<Bucket> {
      * Utils
      *----------------------------------------------------------------------------------*/
 
+    long getSizeOfKeys() {
+        return bucketMap.keySet().stream().mapToLong(k -> k.length()).sum();
+    }
+
+    long getSizeOfValues() {
+        return bucketMap.values().stream().mapToLong(v -> v.length()).sum();
+    }
+
+    long getTotalSize() {
+        return bucketMap.keySet().stream().mapToLong(k -> k.length() + bucketMap.get(k).length()).sum();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Bucket bucket = (Bucket) o;
+        return index == bucket.index && verElectId == bucket.verElectId && verCounter == bucket.verCounter
+                && Objects.equals(bucketMap, bucket.bucketMap);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(index, verElectId, verCounter, bucketMap);
+    }
+
     @Override
     public int compareTo(Bucket o) {
         if (this.getVerElectId() > o.getVerElectId()) {
@@ -104,18 +131,6 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         } else {
             return -1;
         }
-    }
-
-    public long getSizeOfKeys() {
-        return bucketMap.keySet().stream().mapToLong(k -> k.length()).sum();
-    }
-
-    public long getSizeOfValues() {
-        return bucketMap.values().stream().mapToLong(v -> v.length()).sum();
-    }
-
-    public long getTotalSize() {
-        return bucketMap.keySet().stream().mapToLong(k -> k.length() + bucketMap.get(k).length()).sum();
     }
 
     public String toThinString() {

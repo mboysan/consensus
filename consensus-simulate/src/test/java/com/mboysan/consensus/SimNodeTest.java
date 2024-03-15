@@ -20,6 +20,7 @@ import java.util.concurrent.Future;
 import static com.mboysan.consensus.SimState.Role.FOLLOWER;
 import static com.mboysan.consensus.SimState.Role.LEADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SimNodeTest extends NodeTestBase {
 
@@ -63,6 +64,12 @@ class SimNodeTest extends NodeTestBase {
     @Override
     SimNode getNode(int nodeId) {
         return nodes[nodeId];
+    }
+
+    @Test
+    void testUnsupportedOperations() throws Exception {
+        initCluster(new TestConfig(1));
+        assertThrows(UnsupportedOperationException.class, () -> getNode(0).update());
     }
 
     @Test

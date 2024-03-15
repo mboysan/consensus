@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Set;
 
 public class KVStoreClient extends AbstractClient {
@@ -36,7 +37,9 @@ public class KVStoreClient extends AbstractClient {
 
     public void set(String key, String value) throws KVOperationException {
         exec(() -> {
-            KVSetRequest request = new KVSetRequest(key, value).setReceiverId(nextNodeId());
+            String k = Objects.requireNonNull(key, "key is required");
+            String v = Objects.requireNonNull(value, "value is required");
+            KVSetRequest request = new KVSetRequest(k, v).setReceiverId(nextNodeId());
             KVSetResponse response = (KVSetResponse) getTransport().sendRecv(request);
             validateResponse(response);
             return null;
@@ -45,7 +48,8 @@ public class KVStoreClient extends AbstractClient {
 
     public String get(String key) throws KVOperationException {
         return exec(() -> {
-            KVGetRequest request = new KVGetRequest(key).setReceiverId(nextNodeId());
+            String k = Objects.requireNonNull(key, "key is required");
+            KVGetRequest request = new KVGetRequest(k).setReceiverId(nextNodeId());
             KVGetResponse response = (KVGetResponse) getTransport().sendRecv(request);
             validateResponse(response);
             return response.getValue();
@@ -54,7 +58,8 @@ public class KVStoreClient extends AbstractClient {
 
     public void delete(String key) throws KVOperationException {
         exec(() -> {
-            KVDeleteRequest request = new KVDeleteRequest(key).setReceiverId(nextNodeId());
+            String k = Objects.requireNonNull(key, "key is required");
+            KVDeleteRequest request = new KVDeleteRequest(k).setReceiverId(nextNodeId());
             KVDeleteResponse response = (KVDeleteResponse) getTransport().sendRecv(request);
             validateResponse(response);
             return null;
@@ -85,12 +90,17 @@ public class KVStoreClient extends AbstractClient {
     }
 
     public String customRequest(String command) throws CommandException {
-        return customRequest(command, -1);
+        return customRequest(command, null, -1);
     }
 
-    public String customRequest(String command, int routeTo) throws CommandException {
+    public String customRequest(String command, String arguments) throws CommandException {
+        return customRequest(command, arguments, -1);
+    }
+
+    public String customRequest(String command, String arguments, int routeTo) throws CommandException {
         try {
-            CustomRequest request = new CustomRequest(command)
+            String cmd = Objects.requireNonNull(command, "command is required");
+            CustomRequest request = new CustomRequest(cmd, arguments)
                     .setRouteTo(routeTo)
                     .setReceiverId(nextNodeId());
             CustomResponse response = (CustomResponse) getTransport().sendRecv(request);

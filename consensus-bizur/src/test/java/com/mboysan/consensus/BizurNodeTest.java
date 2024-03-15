@@ -3,6 +3,7 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
+import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
 import com.mboysan.consensus.message.KVDeleteRequest;
 import com.mboysan.consensus.message.KVDeleteResponse;
 import com.mboysan.consensus.message.KVGetRequest;
@@ -120,6 +121,7 @@ class BizurNodeTest extends NodeTestBase {
         revive(0);
         // when node-0 is revived, this node will reclaim its leadership of range-0.
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     /**
@@ -165,6 +167,7 @@ class BizurNodeTest extends NodeTestBase {
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     /**
@@ -190,6 +193,7 @@ class BizurNodeTest extends NodeTestBase {
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     /**
@@ -235,6 +239,7 @@ class BizurNodeTest extends NodeTestBase {
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     /**
@@ -261,6 +266,7 @@ class BizurNodeTest extends NodeTestBase {
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     /**
@@ -290,9 +296,16 @@ class BizurNodeTest extends NodeTestBase {
         assertKeyValueIntegrity(expectedKVs);
 
         assertAllNodesAgreedOnRangeLeaders();
+        assertIntegrityCheckPassed();
     }
 
     // ------------------------------------------------------------- assertions
+
+    private void assertIntegrityCheckPassed() throws IOException {
+        for (BizurNode node : nodes) {
+            assertTrue(checkIntegrity(node.getNodeId()));
+        }
+    }
 
     /**
      * asserts that all ranges in all nodes have the supposed leader.
@@ -405,6 +418,11 @@ class BizurNodeTest extends NodeTestBase {
         if (!response.isSuccess()) {
             throw new BizurException("failed response=[%s] for request=[%s]".formatted(response, forRequest));
         }
+    }
+
+    private boolean checkIntegrity(int nodeId) throws IOException {
+        return nodes[nodeId].checkBizurIntegrity(
+                new CheckBizurIntegrityRequest(CheckBizurIntegrityRequest.Level.STATE_FROM_ALL)).isSuccess();
     }
 
     @AfterEach

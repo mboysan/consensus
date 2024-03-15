@@ -1,6 +1,8 @@
 package com.mboysan.consensus;
 
 import com.mboysan.consensus.configuration.BizurConfig;
+import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
+import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
 import com.mboysan.consensus.message.CollectKeysResponse;
 import com.mboysan.consensus.message.CustomRequest;
@@ -28,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -301,6 +304,35 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
+    public CheckBizurIntegrityResponse checkBizurIntegrity(CheckBizurIntegrityRequest request) throws IOException {
+        switch (request.getLevel()) {
+            case CheckBizurIntegrityRequest.Level.STATE, CheckBizurIntegrityRequest.Level.THIN_STATE -> {
+                boolean isThinState = request.getLevel() == CheckBizurIntegrityRequest.Level.THIN_STATE;
+                Map<Integer, String> states = new HashMap<>();
+                int finalIntegrityHash = 0;
+                for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
+                    BucketRange range = getBucketRange(rangeIndex).lock();
+                    try {
+                        finalIntegrityHash = Objects.hash(finalIntegrityHash, range.getIntegrityHash());
+                        String state = isThinState ? range.toThinString() : range.toString();
+                        states.put(rangeIndex, state);
+                    } finally {
+                        range.unlock();
+                    }
+                }
+                return new CheckBizurIntegrityResponse(false, Integer.toHexString(finalIntegrityHash), states.toString());
+            }
+            case CheckBizurIntegrityRequest.Level.STATE_FROM_ALL, CheckBizurIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
+                int levelOverride = request.getLevel() == CheckBizurIntegrityRequest.Level.STATE_FROM_ALL
+                        ? CheckBizurIntegrityRequest.Level.STATE
+                        : CheckBizurIntegrityRequest.Level.THIN_STATE;
+                return new BizurRun(request.getCorrelationId(), this).checkIntegrity(levelOverride);
+            }
+            default -> throw new IOException("unsupported level=" + request.getLevel());
+        }
+    }
+
+    @Override
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
@@ -309,6 +341,13 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             return routeMessage(request, routeToId);
         }
         switch (request.getRequest()) {
+            case CustomRequest.Command.CHECK_INTEGRITY -> {
+                int level = Integer.parseInt(Objects.requireNonNull(
+                        request.getArguments(), "level is required"));
+                CheckBizurIntegrityRequest bizurRequest = new CheckBizurIntegrityRequest(level);
+                CheckBizurIntegrityResponse bizurResponse = checkBizurIntegrity(bizurRequest);
+                return new CustomResponse(bizurResponse.isSuccess(), null, bizurResponse.toString());
+            }
             case "askState" -> {
                 String state = new BizurRun(request.getCorrelationId(), this).apiGetState(true);
                 state = "State of node-" + getNodeId() + ": " + state;

@@ -83,7 +83,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
                     try {
                         getRPC().simulate(request); // we aren't interested in the response
                     } catch (IOException e) {
-                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, message, e.getMessage());
+                        LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
                     }
                 });
             }
