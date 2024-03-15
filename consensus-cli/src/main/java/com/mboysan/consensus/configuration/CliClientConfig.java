@@ -7,6 +7,8 @@ public interface CliClientConfig extends CoreConfig {
             String COMMAND = "command";
             String ARGUMENTS = "arguments";
             String ROUTE_TO = "routeTo";
+            String KEY = "key";
+            String VALUE = "value";
         }
 
         @Key(Param.INTERACTIVE)
@@ -18,6 +20,12 @@ public interface CliClientConfig extends CoreConfig {
 
         @Key(Param.ARGUMENTS)
         String arguments();
+
+        @Key(Param.KEY)
+        String key();
+
+        @Key(Param.VALUE)
+        String value();
 
         @Key(Param.ROUTE_TO)
         @DefaultValue("-1")

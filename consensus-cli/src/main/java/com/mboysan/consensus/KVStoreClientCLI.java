@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
@@ -54,9 +55,8 @@ public class KVStoreClientCLI {
 
         if (isOneOffCommand) {
             LOGGER.info("Sending one-off command");
-            sendCustomCommand(client, args);
+            sendCustomCommand(client, cliClientConfig.command(), cliClientConfig.arguments(), cliClientConfig.routeTo());
             client.shutdown();
-
         } else if (isInteractiveSession) {
             LOGGER.info("Interactive session started. Client ready to receive commands:");
             try (Scanner scanner = new Scanner(System.in)) {
@@ -65,17 +65,19 @@ public class KVStoreClientCLI {
                     try {
                         String input = scanner.nextLine();
                         String[] cmd = input.split(" ");
-                        switch (cmd[0]) {
+                        CliClientConfig cliArgs = parseCliClientConfig(cmd);
+                        String command = cliArgs.command() == null ? cmd[0] : cliArgs.command();
+                        switch (command) {
                             case "set" -> {
-                                client.set(cmd[1], cmd[2]);
+                                client.set(cliArgs.key(), cliArgs.value());
                                 printResult("OK");
                             }
                             case "get" -> {
-                                String result = client.get(cmd[1]);
+                                String result = client.get(cliArgs.key());
                                 printResult(result);
                             }
                             case "delete" -> {
-                                client.delete(cmd[1]);
+                                client.delete(cliArgs.key());
                                 printResult("OK");
                             }
                             case "iterateKeys" -> {
@@ -83,7 +85,7 @@ public class KVStoreClientCLI {
                                 printResult(result);
                             }
                             case "exit" -> exited = true;
-                            default -> sendCustomCommand(client, cmd);
+                            default -> sendCustomCommand(client, command, cliArgs.arguments(), cliArgs.routeTo());
                         }
                     } catch (Exception e) {
                         LOGGER.error(e.getMessage());
@@ -118,14 +120,20 @@ public class KVStoreClientCLI {
         MetricsCollectorService.initAndStart(config);
     }
 
-    private static void sendCustomCommand(KVStoreClient client, String[] args) throws CommandException {
+    private static void sendCustomCommand(KVStoreClient client, String command, String arguments, int routeTo) {
+        try {
+            String result = client.customRequest(command, arguments, routeTo);
+            printResult(result);
+        } catch (CommandException e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+    }
+
+    private static CliClientConfig parseCliClientConfig(String[] args) {
         Properties properties = CliArgsHelper.getProperties(args);
         CliClientConfig cliClientConfig = CoreConfig.newInstance(CliClientConfig.class, properties);
         LOGGER.debug("CliClientConfig={}", cliClientConfig);
-        String result = client.customRequest(
-                cliClientConfig.command(), cliClientConfig.arguments(), cliClientConfig.routeTo()
-        );
-        printResult(result);
+        return cliClientConfig;
     }
 
     private static void printResult(Object result) {
