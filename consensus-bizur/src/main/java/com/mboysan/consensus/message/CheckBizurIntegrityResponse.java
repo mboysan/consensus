@@ -30,6 +30,7 @@ public class CheckBizurIntegrityResponse extends Message {
                 "success=" + success +
                 ", integrityHash='" + integrityHash + '\'' +
                 ", state='" + state + '\'' +
+                ", protocol='bizur'"+
                 "} " + super.toString();
     }
 }
