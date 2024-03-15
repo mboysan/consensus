@@ -427,30 +427,15 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
             return routeMessage(request, routeToId);
         }
         synchronized (this) {
-            switch (request.getRequest()) {
-                case CustomRequest.Command.CHECK_INTEGRITY -> {
-                    int level = Integer.parseInt(Objects.requireNonNull(
-                            request.getArguments(), "level is required"));
-                    CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(level);
-                    CheckRaftIntegrityResponse raftResponse = checkRaftIntegrity(raftRequest);
-                    return new CustomResponse(raftResponse.isSuccess(), null, raftResponse.toString());
-                }
-                case "askState" -> {
-                    String stateStr = "State of node-" + getNodeId() + ": " + state.toThinString();
-                    return new CustomResponse(true, null, stateStr);
-                }
-                case "askStateFull" -> {
-                    String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
-                    return new CustomResponse(true, null, stateStr);
-                }
-                case "askProtocol" -> {
-                    return new CustomResponse(true, null, "raft");
-                }
-                default -> {
-                    return new CustomResponse(
-                            false, new UnsupportedOperationException(request.getRequest()), null);
-                }
+            if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
+                int level = Integer.parseInt(Objects.requireNonNull(
+                        request.getArguments(), "level is required"));
+                CheckRaftIntegrityRequest raftRequest = new CheckRaftIntegrityRequest(level);
+                CheckRaftIntegrityResponse raftResponse = checkRaftIntegrity(raftRequest);
+                return new CustomResponse(raftResponse.isSuccess(), null, raftResponse.toString());
             }
+            return new CustomResponse(
+                    false, new UnsupportedOperationException(request.getRequest()), null);
         }
     }
 
