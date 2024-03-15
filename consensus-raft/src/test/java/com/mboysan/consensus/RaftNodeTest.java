@@ -93,7 +93,7 @@ class RaftNodeTest extends NodeTestBase {
         // wait a while and check again to see if leader remained unchanged
         awaitingAtLeast(2000L, () -> {
             assertEquals(leaderId, assertOneLeader());
-            assertIntegrityCheckPassed();
+            awaiting(this::assertIntegrityCheckPassed);
         });
     }
 
@@ -166,7 +166,7 @@ class RaftNodeTest extends NodeTestBase {
         awaitingAtLeast(2000L, () -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
-            assertIntegrityCheckPassed();
+            awaiting(this::assertIntegrityCheckPassed);
         });
     }
 
@@ -205,7 +205,7 @@ class RaftNodeTest extends NodeTestBase {
         awaitingAtLeast(2000L, () -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
-            assertIntegrityCheckPassed();
+            awaiting(this::assertIntegrityCheckPassed);
         });
     }
 
@@ -229,7 +229,7 @@ class RaftNodeTest extends NodeTestBase {
         awaiting(() -> {
             assertLeaderNotChanged(leaderId);
             assertLogsEquals(expectedCommands);
-            assertIntegrityCheckPassed();
+            awaiting(this::assertIntegrityCheckPassed);
         });
     }
 

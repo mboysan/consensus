@@ -4,6 +4,8 @@ import com.mboysan.consensus.configuration.NodeConfig;
 import com.mboysan.consensus.event.NodeListChangedEvent;
 import com.mboysan.consensus.event.NodeStartedEvent;
 import com.mboysan.consensus.event.NodeStoppedEvent;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.Scheduler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -156,6 +158,13 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         if (!isRunning) {
             throw new IllegalStateException("node-" + nodeId + " not running");
         }
+    }
+
+    CustomResponse routeMessage(CustomRequest request) throws IOException {
+        validateAction();
+        int receiverId = request.getRouteTo();
+        request.setRouteTo(-1);
+        return routeMessage(request, receiverId);
     }
 
     @SuppressWarnings("unchecked")

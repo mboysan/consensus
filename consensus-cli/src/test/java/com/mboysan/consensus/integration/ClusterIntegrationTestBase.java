@@ -106,47 +106,24 @@ abstract class ClusterIntegrationTestBase {
         // populate the stores
         cluster.getClient(0).set("a", "v0");
 
-        String response;
+        int level;
+        int routeTo = -1;
 
-        response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1");
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+        level = 1;
+        assertIntegrityCheckPassed(cluster, level, routeTo);
 
-        response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, "2");
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+        level = 2;
+        assertIntegrityCheckPassed(cluster, level, routeTo);
 
-        response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, "3");
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+        level = 3;
+        assertIntegrityCheckPassed(cluster, level, routeTo);
 
-        response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, "4");
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+        level = 4;
+        assertIntegrityCheckPassed(cluster, level, routeTo);
 
-        response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1", 1);
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
-
-        response = cluster.getClient(0).customRequest("askState");
-        assertTrue(response.startsWith("State of node"));
-
-        response = cluster.getClient(0).customRequest("askState", null, 1);
-        assertTrue(response.startsWith("State of node-1"));
-
-        response = cluster.getClient(0).customRequest("askStateFull");
-        assertTrue(response.startsWith("Verbose State of node"));
-
-        response = cluster.getClient(0).customRequest("askStateFull", null, 1);
-        assertTrue(response.startsWith("Verbose State of node-1"));
-
-        response = cluster.getClient(0).customRequest("askProtocol");
-        if (cluster instanceof RaftKVStoreCluster) {
-            assertEquals(CliConstants.Protocol.RAFT, response);
-        }
-        if (cluster instanceof BizurKVStoreCluster) {
-            assertEquals(CliConstants.Protocol.BIZUR, response);
-        }
+        level = 1;
+        routeTo = 1;
+        assertIntegrityCheckPassed(cluster, level, routeTo);
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {
@@ -164,11 +141,19 @@ abstract class ClusterIntegrationTestBase {
         }
     }
 
-    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) throws CommandException {
-        String level = "3";  // check integrity for all stores
-        String response = cluster.getClient(0).customRequest(CustomRequest.Command.CHECK_INTEGRITY, level);
-        assertTrue(response.contains("success"));
-        assertTrue(response.contains("integrityHash"));
+    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) {
+        int defaultLevel = 3;
+        int defaultRouteTo = -1;
+        assertIntegrityCheckPassed(cluster, defaultLevel, defaultRouteTo);
+    }
+
+    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster, int level, int routeTo) {
+        awaiting(() -> {
+            String response = cluster.getClient(0)
+                    .customRequest(CustomRequest.Command.CHECK_INTEGRITY, String.valueOf(level), routeTo);
+            assertTrue(response.contains("success"));
+            assertTrue(response.contains("integrityHash"));
+        });
     }
 
 }

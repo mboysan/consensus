@@ -320,7 +320,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                         range.unlock();
                     }
                 }
-                return new CheckBizurIntegrityResponse(false, Integer.toHexString(finalIntegrityHash), states.toString());
+                return new CheckBizurIntegrityResponse(
+                        true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
             case CheckBizurIntegrityRequest.Level.STATE_FROM_ALL, CheckBizurIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
                 int levelOverride = request.getLevel() == CheckBizurIntegrityRequest.Level.STATE_FROM_ALL
@@ -336,36 +337,17 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
-            int routeToId = request.getRouteTo();
-            request.setRouteTo(-1);
-            return routeMessage(request, routeToId);
+            return routeMessage(request);
         }
-        switch (request.getRequest()) {
-            case CustomRequest.Command.CHECK_INTEGRITY -> {
-                int level = Integer.parseInt(Objects.requireNonNull(
-                        request.getArguments(), "level is required"));
-                CheckBizurIntegrityRequest bizurRequest = new CheckBizurIntegrityRequest(level);
-                CheckBizurIntegrityResponse bizurResponse = checkBizurIntegrity(bizurRequest);
-                return new CustomResponse(bizurResponse.isSuccess(), null, bizurResponse.toString());
-            }
-            case "askState" -> {
-                String state = new BizurRun(request.getCorrelationId(), this).apiGetState(true);
-                state = "State of node-" + getNodeId() + ": " + state;
-                return new CustomResponse(true, null, state);
-            }
-            case "askStateFull" -> {
-                String state = new BizurRun(request.getCorrelationId(), this).apiGetState(false);
-                state = "Verbose State of node-" + getNodeId() + ": " + state;
-                return new CustomResponse(true, null, state);
-            }
-            case "askProtocol" -> {
-                return new CustomResponse(true, null, "bizur");
-            }
-            default -> {
-                return new CustomResponse(
-                        false, new UnsupportedOperationException(request.getRequest()), null);
-            }
+        if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
+            int level = Integer.parseInt(Objects.requireNonNull(
+                    request.getArguments(), "level is required"));
+            CheckBizurIntegrityRequest bizurRequest = new CheckBizurIntegrityRequest(level);
+            CheckBizurIntegrityResponse bizurResponse = checkBizurIntegrity(bizurRequest);
+            return new CustomResponse(bizurResponse.isSuccess(), null, bizurResponse.toString());
         }
+        return new CustomResponse(
+                false, new UnsupportedOperationException(request.getRequest()), null);
     }
 
     private <T extends KVOperationResponse> T route(Message request, int receiverId) throws IOException {

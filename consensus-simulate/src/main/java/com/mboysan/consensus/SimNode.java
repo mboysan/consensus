@@ -101,24 +101,15 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     public CustomResponse customRequest(CustomRequest request) throws IOException {
         validateAction();
         if (request.getRouteTo() != -1) {
-            int routeToId = request.getRouteTo();
-            request.setRouteTo(-1);
-            return getRPC().customRequest(request.setReceiverId(routeToId).setSenderId(getNodeId()));
+            return routeMessage(request);
         }
         synchronized (this) {
-            switch (request.getRequest()) {
-                case "askState", "askStateFull" -> {
-                    String stateStr = "Verbose State of node-" + getNodeId() + ": " + state.toString();
-                    return new CustomResponse(true, null, stateStr);
-                }
-                case "askProtocol" -> {
-                    return new CustomResponse(true, null, "simulate");
-                }
-                default -> {
-                    return new CustomResponse(
-                            false, new UnsupportedOperationException(request.getRequest()), null);
-                }
+            if (CustomRequest.Command.CHECK_INTEGRITY.equals(request.getRequest())) {
+                String stateStr = "node-" + getNodeId() + ": " + state.toString();
+                return new CustomResponse(true, null, stateStr);
             }
+            return new CustomResponse(
+                    false, new UnsupportedOperationException(request.getRequest()), null);
         }
     }
 

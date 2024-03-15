@@ -1,7 +1,7 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.CliConstants;
 import com.mboysan.consensus.SimKVStoreCluster;
+import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
@@ -46,20 +45,13 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
         String response;
 
-        response = simCluster.getClient(0).customRequest("askState");
-        assertTrue(response.startsWith("Verbose State of node"));
+        response = simCluster.getClient(0)
+                .customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1", -1);
+        assertTrue(response.contains("node-0"));
 
-        response = simCluster.getClient(0).customRequest("askState", null, 1);
-        assertTrue(response.startsWith("Verbose State of node-1"));
-
-        response = simCluster.getClient(0).customRequest("askStateFull");
-        assertTrue(response.startsWith("Verbose State of node"));
-
-        response = simCluster.getClient(0).customRequest("askStateFull", null, 1);
-        assertTrue(response.startsWith("Verbose State of node-1"));
-
-        response = simCluster.getClient(0).customRequest("askProtocol");
-        assertEquals(CliConstants.Protocol.SIMULATE, response);
+        response = simCluster.getClient(0)
+                .customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1", 1);
+        assertTrue(response.contains("node-1"));
     }
 
 }

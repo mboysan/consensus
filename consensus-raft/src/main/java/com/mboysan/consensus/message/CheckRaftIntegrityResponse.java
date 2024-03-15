@@ -30,6 +30,7 @@ public class CheckRaftIntegrityResponse extends Message {
                 "success=" + success +
                 ", integrityHash='" + integrityHash + '\'' +
                 ", state='" + state + '\'' +
+                ", protocol='raft'"+
                 "} " + super.toString();
     }
 }
