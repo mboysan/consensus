@@ -343,6 +343,9 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         if (request.isRoutingNeeded()) {
             return routeMessage(request);
         }
+        if (CustomRequest.Command.PING.equals(request.getCommand())) {
+            return new CustomResponse(true, null, CustomResponse.CommonPayload.PONG);
+        }
         return new CustomResponse(
                 false, new UnsupportedOperationException(request.getCommand()), null);
     }

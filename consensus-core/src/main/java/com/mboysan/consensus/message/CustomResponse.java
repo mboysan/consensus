@@ -2,8 +2,11 @@ package com.mboysan.consensus.message;
 
 public class CustomResponse extends Message {
 
-    private final boolean success;
+    public interface CommonPayload {
+        String PONG = "pong";
+    }
 
+    private final boolean success;
     private final Exception exception;
     private final String payload;
 

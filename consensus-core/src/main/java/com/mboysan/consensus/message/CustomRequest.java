@@ -1,6 +1,11 @@
 package com.mboysan.consensus.message;
 
 public class CustomRequest extends RoutableRequest {
+
+    public interface Command {
+        String PING = "ping";
+    }
+
     private final String command;
     private final String arguments;
 

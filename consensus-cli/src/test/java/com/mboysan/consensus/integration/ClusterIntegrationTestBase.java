@@ -4,6 +4,8 @@ import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
 import com.mboysan.consensus.message.CommandException;
+import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +101,7 @@ abstract class ClusterIntegrationTestBase {
         assertIntegrityCheckPassed(cluster);
     }
 
-    void testCustomCommands(KVStoreClusterBase cluster) {
+    void testCustomCommands(KVStoreClusterBase cluster) throws CommandException {
         assertThrows(CommandException.class, () ->
                 cluster.getClient(0).customRequest("some-random-request", null, -1)
         );
@@ -107,6 +109,12 @@ abstract class ClusterIntegrationTestBase {
         assertThrows(CommandException.class, () ->
                 cluster.getClient(0).customRequest("some-random-request", null, 1)
         );
+
+        String response0 = cluster.getClient(0).customRequest(CustomRequest.Command.PING, null, -1);
+        assertEquals(CustomResponse.CommonPayload.PONG, response0);
+
+        String response1 = cluster.getClient(0).customRequest(CustomRequest.Command.PING, null, 1);
+        assertEquals(CustomResponse.CommonPayload.PONG, response1);
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {
