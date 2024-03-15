@@ -124,14 +124,15 @@ To send custom commands, use the following format:
 ```
 command=<command> arguments=<arguments> routeId=<(optional) node-id to route the command to from the node that your client connected>
 
-# short form:
+# short forms:
 cmd=<command> args=<arguments> to=<(optional) routeId>
 cmd=<command> arg=<arguments> to=<(optional) routeId>
+<command> args=<arguments> to=<(optional) routeId>
 ```
 
 ### `checkIntegrity`:
-`command=checkIntegrity` Checks the Integrity of all the nodes or just prints the state of a single node.
-The `arguments` parameter defines the level of integrity check and can be 1, 2, 3 or 4
+`checkIntegrity` Checks the Integrity of all the nodes or just prints the state of a single node.
+The `level` parameter defines the level of integrity check and can be 1, 2, 3 or 4
 where 1 is the verbose state, 2 is the simple state, 3 is to run an integrity check on all nodes with verbose state 
 information and 4 to run an integrity check on all nodes with simple state information.
 The `routeId` parameter is optional and is used to route the command to a specific node in the cluster.
@@ -140,19 +141,20 @@ The `routeId` parameter is optional and is used to route the command to a specif
 # examples:
 
 # to get the verbose state of a node:
-command=checkIntegrity arguments=1
+command=checkIntegrity level=1
 
 # to get the simple state of a node:
-command=checkIntegrity arguments=2
+command=checkIntegrity level=2
 
 # to run an integrity check on all nodes:
-command=checkIntegrity arguments=3
+command=checkIntegrity level=3
 
 # to run an integrity check on all nodes initiated by node-2 (routeId=2):
-command=checkIntegrity arguments=3 routeId=2
+command=checkIntegrity level=3 routeId=2
 
 # short form:
-cmd=checkIntegrity arg=3 to=2
+cmd=checkIntegrity level=3 to=2
+checkIntegrity level=3 to=2
 ```
 
 ## Using The Project as a Library
