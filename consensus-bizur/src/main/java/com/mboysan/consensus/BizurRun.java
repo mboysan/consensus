@@ -55,8 +55,8 @@ final class BizurRun {
         bizurNode.forEachPeerParallel(peerConsumer);
     }
 
-    private BizurClient getRPC() {
-        return bizurNode.getRPC();
+    private BizurClient rpc() {
+        return bizurNode.rpc();
     }
 
     private boolean isMajorityAcked(int voteCount) {
@@ -127,7 +127,7 @@ final class BizurRun {
                         .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    PleaseVoteResponse response = getRPC().pleaseVote(request);
+                    PleaseVoteResponse response = rpc().pleaseVote(request);
                     if (response.isAcked()) {
                         ackCount.incrementAndGet();
                     }
@@ -166,7 +166,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaWriteResponse response = getRPC().replicaWrite(request);
+                ReplicaWriteResponse response = rpc().replicaWrite(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -198,7 +198,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC().replicaRead(request);
+                ReplicaReadResponse response = rpc().replicaRead(request);
                 if (response.isAcked()) {
                     ackCount.incrementAndGet();
                 }
@@ -231,7 +231,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                ReplicaReadResponse response = getRPC().replicaRead(request);
+                ReplicaReadResponse response = rpc().replicaRead(request);
                 if (response.isAcked()) {
                     Bucket respBucket = response.getBucket();
                     synchronized (maxVerBucket) {
@@ -337,7 +337,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                CollectKeysResponse response = getRPC().collectKeys(req);
+                CollectKeysResponse response = rpc().collectKeys(req);
                 synchronized (keySet) {
                     keySet.addAll(response.keySet());
                 }
@@ -367,7 +367,7 @@ final class BizurRun {
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
-                CheckBizurIntegrityResponse response = getRPC().checkBizurIntegrity(request);
+                CheckBizurIntegrityResponse response = rpc().checkBizurIntegrity(request);
                 integrityHashes.put(peer.peerId, response.getIntegrityHash());
                 states.put(peer.peerId, response.getState());
             } catch (IOException e) {
