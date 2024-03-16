@@ -1,52 +1,41 @@
 package com.mboysan.consensus.message;
 
-public class CustomRequest extends Message {
+public class CustomRequest extends RoutableRequest {
 
     public interface Command {
-        String CHECK_INTEGRITY = "checkIntegrity";
+        String PING = "ping";
     }
 
-    private final String request;
+    private final String command;
     private final String arguments;
-    /**
-     * Asks the receiver node to route the request to this id. For instance, if the {@link #receiverId}=0 and
-     * {@link #routeTo}=1, then node-0 will route the request to node-1 internally. And the client will still receive
-     * the response from node-0.
-     */
-    private int routeTo = -1;
 
-    public CustomRequest(String request) {
-        this(request, null);
+    public CustomRequest(String command) {
+        this(command, null);
     }
 
-    public CustomRequest(String request, String arguments) {
-        this.request = request;
+    public CustomRequest(String command, String arguments) {
+        this(ROUTE_TO_SELF, command, arguments);
+    }
+
+    public CustomRequest(int routeTo, String command, String arguments) {
+        super(routeTo);
+        this.command = command;
         this.arguments = arguments;
     }
 
-    public String getRequest() {
-        return request;
+    public String getCommand() {
+        return command;
     }
 
     public String getArguments() {
         return arguments;
     }
 
-    public int getRouteTo() {
-        return routeTo;
-    }
-
-    public CustomRequest setRouteTo(int nodeId) {
-        this.routeTo = nodeId;
-        return this;
-    }
-
     @Override
     public String toString() {
         return "CustomRequest{" +
-                "request='" + request + '\'' +
+                "command='" + command + '\'' +
                 ", arguments='" + arguments + '\'' +
-                ", routeTo=" + routeTo +
                 "} " + super.toString();
     }
 }

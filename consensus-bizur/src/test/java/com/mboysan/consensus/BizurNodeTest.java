@@ -3,16 +3,16 @@ package com.mboysan.consensus;
 import com.mboysan.consensus.configuration.BizurConfig;
 import com.mboysan.consensus.configuration.CoreConfig;
 import com.mboysan.consensus.configuration.NodeConfig;
+import com.mboysan.consensus.message.BizurKVDeleteRequest;
+import com.mboysan.consensus.message.BizurKVDeleteResponse;
+import com.mboysan.consensus.message.BizurKVGetRequest;
+import com.mboysan.consensus.message.BizurKVGetResponse;
+import com.mboysan.consensus.message.BizurKVIterateKeysRequest;
+import com.mboysan.consensus.message.BizurKVIterateKeysResponse;
+import com.mboysan.consensus.message.BizurKVOperationResponse;
+import com.mboysan.consensus.message.BizurKVSetRequest;
+import com.mboysan.consensus.message.BizurKVSetResponse;
 import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVOperationResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -93,9 +94,22 @@ class BizurNodeTest extends NodeTestBase {
         Transport transport = new InVMTransport();
         BizurNode node = new BizurNode(bizurConfig(0, 3, 1), transport);
 
-        KVGetRequest request = new KVGetRequest("some-key");
+        BizurKVGetRequest request = new BizurKVGetRequest("some-key");
         assertThrows(IllegalStateException.class, () -> node.get(request));
         skipTeardown = true;
+    }
+
+    @Test
+    void testIntegrityCheckFailsWhenMajorityCannotRespond() throws Exception {
+        int numServers = 3;
+        initCluster(numServers, 1);
+        int nodeIdToCheck = 0;
+
+        disconnect((nodeIdToCheck + 1) % numServers);
+        disconnect((nodeIdToCheck + 2) % numServers);
+
+        boolean success = checkIntegrity(nodeIdToCheck);
+        assertFalse(success);
     }
 
     @Test
@@ -389,32 +403,32 @@ class BizurNodeTest extends NodeTestBase {
     }
 
     private String get(int byNodeId, String key) throws Exception {
-        KVGetRequest request = new KVGetRequest(key);
-        KVGetResponse response = nodes[byNodeId].get(request);
+        BizurKVGetRequest request = new BizurKVGetRequest(key);
+        BizurKVGetResponse response = nodes[byNodeId].get(request);
         validateResponse(response, request);
         return response.getValue();
     }
 
     private void set(int byNodeId, String key, String value) throws Exception {
-        KVSetRequest request = new KVSetRequest(key, value);
-        KVSetResponse response = nodes[byNodeId].set(request);
+        BizurKVSetRequest request = new BizurKVSetRequest(key, value);
+        BizurKVSetResponse response = nodes[byNodeId].set(request);
         validateResponse(response, request);
     }
 
     private void delete(int byNodeId, String key) throws Exception {
-        KVDeleteRequest request = new KVDeleteRequest(key);
-        KVDeleteResponse response = nodes[byNodeId].delete(request);
+        BizurKVDeleteRequest request = new BizurKVDeleteRequest(key);
+        BizurKVDeleteResponse response = nodes[byNodeId].delete(request);
         validateResponse(response, request);
     }
 
     private Set<String> iterateKeys(int byNodeId) throws Exception {
-        KVIterateKeysRequest request = new KVIterateKeysRequest();
-        KVIterateKeysResponse response = nodes[byNodeId].iterateKeys(request);
+        BizurKVIterateKeysRequest request = new BizurKVIterateKeysRequest();
+        BizurKVIterateKeysResponse response = nodes[byNodeId].iterateKeys(request);
         validateResponse(response, request);
         return response.getKeys();
     }
 
-    private void validateResponse(KVOperationResponse response, Message forRequest) throws BizurException {
+    private void validateResponse(BizurKVOperationResponse response, Message forRequest) throws BizurException {
         if (!response.isSuccess()) {
             throw new BizurException("failed response=[%s] for request=[%s]".formatted(response, forRequest));
         }

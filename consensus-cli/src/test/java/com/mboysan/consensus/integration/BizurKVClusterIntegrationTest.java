@@ -110,6 +110,14 @@ class BizurKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     }
 
     @Test
+    void testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown() throws Exception {
+        this.bizurCluster = new BizurKVStoreCluster.Builder()
+                .setNumNodes(3)
+                .build();
+        testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown(bizurCluster);
+    }
+
+    @Test
     void testCustomCommands() throws Exception {
         this.bizurCluster = new BizurKVStoreCluster.Builder()
                 .setNumBuckets(3)

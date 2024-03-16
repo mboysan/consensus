@@ -1,13 +1,11 @@
 package com.mboysan.consensus.integration;
 
-import com.mboysan.consensus.BizurKVStoreCluster;
-import com.mboysan.consensus.CliConstants;
 import com.mboysan.consensus.KVOperationException;
 import com.mboysan.consensus.KVStoreClient;
 import com.mboysan.consensus.KVStoreClusterBase;
-import com.mboysan.consensus.RaftKVStoreCluster;
 import com.mboysan.consensus.message.CommandException;
 import com.mboysan.consensus.message.CustomRequest;
+import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.util.MultiThreadExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +19,13 @@ import java.util.concurrent.ExecutionException;
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class ClusterIntegrationTestBase {
+
+    private static final int DEFAULT_INTEGRITY_CHECK_LEVEL = 3;
+    private static final int DEFAULT_ROUTE_TO = -1;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterIntegrationTestBase.class);
 
@@ -102,28 +104,30 @@ abstract class ClusterIntegrationTestBase {
         assertIntegrityCheckPassed(cluster);
     }
 
+    void testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown(KVStoreClusterBase cluster) {
+        int majorityCount = (cluster.numStores() / 2) + 1;
+        int lastNodeIndex = cluster.numStores() - 1;
+        for (int i = 0; i < majorityCount; i++) {
+            cluster.getStore(i).shutdown();
+        }
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(lastNodeIndex).checkIntegrity(DEFAULT_INTEGRITY_CHECK_LEVEL, DEFAULT_ROUTE_TO));
+    }
+
     void testCustomCommands(KVStoreClusterBase cluster) throws CommandException {
-        // populate the stores
-        cluster.getClient(0).set("a", "v0");
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(0).customRequest("some-random-request", null, -1)
+        );
 
-        int level;
-        int routeTo = -1;
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(0).customRequest("some-random-request", null, 1)
+        );
 
-        level = 1;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
+        String response0 = cluster.getClient(0).customRequest(CustomRequest.Command.PING, null, -1);
+        assertEquals(CustomResponse.CommonPayload.PONG, response0);
 
-        level = 2;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 3;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 4;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
-
-        level = 1;
-        routeTo = 1;
-        assertIntegrityCheckPassed(cluster, level, routeTo);
+        String response1 = cluster.getClient(0).customRequest(CustomRequest.Command.PING, null, 1);
+        assertEquals(CustomResponse.CommonPayload.PONG, response1);
     }
 
     private void assertEntriesForAllConnectedClients(KVStoreClusterBase cluster, Map<String, String> expectedEntries) throws KVOperationException {
@@ -142,15 +146,8 @@ abstract class ClusterIntegrationTestBase {
     }
 
     private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) {
-        int defaultLevel = 3;
-        int defaultRouteTo = -1;
-        assertIntegrityCheckPassed(cluster, defaultLevel, defaultRouteTo);
-    }
-
-    private void assertIntegrityCheckPassed(KVStoreClusterBase cluster, int level, int routeTo) {
         awaiting(() -> {
-            String response = cluster.getClient(0)
-                    .customRequest(CustomRequest.Command.CHECK_INTEGRITY, String.valueOf(level), routeTo);
+            String response = cluster.getClient(0).checkIntegrity(DEFAULT_INTEGRITY_CHECK_LEVEL, DEFAULT_ROUTE_TO);
             assertTrue(response.contains("success"));
             assertTrue(response.contains("integrityHash"));
         });

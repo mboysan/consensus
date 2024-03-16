@@ -1,5 +1,13 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.BizurKVDeleteRequest;
+import com.mboysan.consensus.message.BizurKVDeleteResponse;
+import com.mboysan.consensus.message.BizurKVGetRequest;
+import com.mboysan.consensus.message.BizurKVGetResponse;
+import com.mboysan.consensus.message.BizurKVIterateKeysRequest;
+import com.mboysan.consensus.message.BizurKVIterateKeysResponse;
+import com.mboysan.consensus.message.BizurKVSetRequest;
+import com.mboysan.consensus.message.BizurKVSetResponse;
 import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
 import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
@@ -8,14 +16,6 @@ import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.Message;
 import com.mboysan.consensus.message.PleaseVoteRequest;
 import com.mboysan.consensus.message.PleaseVoteResponse;
@@ -37,13 +37,13 @@ interface BizurRPC extends RPCProtocol {
 
     CollectKeysResponse collectKeys(CollectKeysRequest request) throws IOException;
 
-    KVGetResponse get(KVGetRequest request) throws IOException;
+    BizurKVGetResponse get(BizurKVGetRequest request) throws IOException;
 
-    KVSetResponse set(KVSetRequest request) throws IOException;
+    BizurKVSetResponse set(BizurKVSetRequest request) throws IOException;
 
-    KVDeleteResponse delete(KVDeleteRequest request) throws IOException;
+    BizurKVDeleteResponse delete(BizurKVDeleteRequest request) throws IOException;
 
-    KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
+    BizurKVIterateKeysResponse iterateKeys(BizurKVIterateKeysRequest request) throws IOException;
 
     CheckBizurIntegrityResponse checkBizurIntegrity(CheckBizurIntegrityRequest request) throws IOException;
 
@@ -61,13 +61,13 @@ interface BizurRPC extends RPCProtocol {
             return replicaWrite(request);
         } else if(message instanceof  CollectKeysRequest request) {
             return collectKeys(request);
-        } else if (message instanceof KVGetRequest request) {
+        } else if (message instanceof BizurKVGetRequest request) {
             return get(request);
-        } else if (message instanceof KVSetRequest request) {
+        } else if (message instanceof BizurKVSetRequest request) {
             return set(request);
-        } else if (message instanceof KVDeleteRequest request) {
+        } else if (message instanceof BizurKVDeleteRequest request) {
             return delete(request);
-        } else if (message instanceof KVIterateKeysRequest request) {
+        } else if (message instanceof BizurKVIterateKeysRequest request) {
             return iterateKeys(request);
         } else if (message instanceof CheckBizurIntegrityRequest request) {
             return checkBizurIntegrity(request);

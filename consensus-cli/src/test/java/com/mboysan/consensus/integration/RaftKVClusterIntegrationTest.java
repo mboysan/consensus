@@ -54,6 +54,14 @@ class RaftKVClusterIntegrationTest extends ClusterIntegrationTestBase {
     }
 
     @Test
+    void testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown() throws Exception {
+        this.raftCluster = new RaftKVStoreCluster.Builder()
+                .setNumNodes(3)
+                .build();
+        testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown(raftCluster);
+    }
+
+    @Test
     void testCustomCommands() throws Exception {
         this.raftCluster = new RaftKVStoreCluster.Builder()
                 .setNumNodes(3)

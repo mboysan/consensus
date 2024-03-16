@@ -50,7 +50,8 @@ class FailureDetector {
                 // temporarily mark server as stable to be able to send a ping request.
                 failedServer.markedStableTemporarily = true;
                 try {
-                    CustomRequest ping = new CustomRequest("ping").setReceiverId(failedServer.serverId);
+                    CustomRequest ping = new CustomRequest(CustomRequest.Command.PING)
+                            .setReceiverId(failedServer.serverId);
                     clientTransport.sendRecv(ping);
                     // we received some response
                     iterator.remove();

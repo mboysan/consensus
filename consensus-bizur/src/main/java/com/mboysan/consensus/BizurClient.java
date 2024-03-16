@@ -1,5 +1,13 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.BizurKVDeleteRequest;
+import com.mboysan.consensus.message.BizurKVDeleteResponse;
+import com.mboysan.consensus.message.BizurKVGetRequest;
+import com.mboysan.consensus.message.BizurKVGetResponse;
+import com.mboysan.consensus.message.BizurKVIterateKeysRequest;
+import com.mboysan.consensus.message.BizurKVIterateKeysResponse;
+import com.mboysan.consensus.message.BizurKVSetRequest;
+import com.mboysan.consensus.message.BizurKVSetResponse;
 import com.mboysan.consensus.message.CheckBizurIntegrityRequest;
 import com.mboysan.consensus.message.CheckBizurIntegrityResponse;
 import com.mboysan.consensus.message.CollectKeysRequest;
@@ -8,14 +16,6 @@ import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.HeartbeatRequest;
 import com.mboysan.consensus.message.HeartbeatResponse;
-import com.mboysan.consensus.message.KVDeleteRequest;
-import com.mboysan.consensus.message.KVDeleteResponse;
-import com.mboysan.consensus.message.KVGetRequest;
-import com.mboysan.consensus.message.KVGetResponse;
-import com.mboysan.consensus.message.KVIterateKeysRequest;
-import com.mboysan.consensus.message.KVIterateKeysResponse;
-import com.mboysan.consensus.message.KVSetRequest;
-import com.mboysan.consensus.message.KVSetResponse;
 import com.mboysan.consensus.message.PleaseVoteRequest;
 import com.mboysan.consensus.message.PleaseVoteResponse;
 import com.mboysan.consensus.message.ReplicaReadRequest;
@@ -56,23 +56,23 @@ class BizurClient extends AbstractClient implements BizurRPC {
     }
 
     @Override
-    public KVGetResponse get(KVGetRequest request) throws IOException {
-        return (KVGetResponse) getTransport().sendRecv(request);
+    public BizurKVGetResponse get(BizurKVGetRequest request) throws IOException {
+        return (BizurKVGetResponse) getTransport().sendRecv(request);
     }
 
     @Override
-    public KVSetResponse set(KVSetRequest request) throws IOException {
-        return (KVSetResponse) getTransport().sendRecv(request);
+    public BizurKVSetResponse set(BizurKVSetRequest request) throws IOException {
+        return (BizurKVSetResponse) getTransport().sendRecv(request);
     }
 
     @Override
-    public KVDeleteResponse delete(KVDeleteRequest request) throws IOException {
-        return (KVDeleteResponse) getTransport().sendRecv(request);
+    public BizurKVDeleteResponse delete(BizurKVDeleteRequest request) throws IOException {
+        return (BizurKVDeleteResponse) getTransport().sendRecv(request);
     }
 
     @Override
-    public KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException {
-        return (KVIterateKeysResponse) getTransport().sendRecv(request);
+    public BizurKVIterateKeysResponse iterateKeys(BizurKVIterateKeysRequest request) throws IOException {
+        return (BizurKVIterateKeysResponse) getTransport().sendRecv(request);
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.mboysan.consensus.integration;
 
 import com.mboysan.consensus.SimKVStoreCluster;
-import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.util.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
 
@@ -35,6 +33,8 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
         assertDoesNotThrow(() -> simCluster.getRandomClient().get("a"));
         assertDoesNotThrow(() -> simCluster.getRandomClient().delete("a"));
         assertDoesNotThrow(() -> simCluster.getRandomClient().iterateKeys());
+        assertDoesNotThrow(() -> simCluster.getRandomClient().checkIntegrity(1, -1));
+        assertDoesNotThrow(() -> simCluster.getRandomClient().checkIntegrity(1, 1));
     }
 
     @Test
@@ -42,16 +42,7 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
         this.simCluster = new SimKVStoreCluster.Builder()
                 .setNumNodes(3)
                 .build();
-
-        String response;
-
-        response = simCluster.getClient(0)
-                .customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1", -1);
-        assertTrue(response.contains("node-0"));
-
-        response = simCluster.getClient(0)
-                .customRequest(CustomRequest.Command.CHECK_INTEGRITY, "1", 1);
-        assertTrue(response.contains("node-1"));
+        testCustomCommands(simCluster);
     }
 
 }

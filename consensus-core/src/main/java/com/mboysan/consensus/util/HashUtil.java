@@ -16,7 +16,7 @@ public final class HashUtil {
     }
 
     public static Optional<String> findCommonHash(List<String> hashList, int threshold) {
-        if (threshold < 0 || threshold > hashList.size() || hashList.isEmpty()) {
+        if (threshold < 0 || hashList.isEmpty()) {
             throw new IllegalArgumentException("invalid threshold or hashList");
         }
 

@@ -1,23 +1,12 @@
 package com.mboysan.consensus.message;
 
-public class CustomResponse extends Message {
-
-    public interface CommonPayload {
-        String PONG = "pong";
-    }
-
+public class BizurKVOperationResponse extends Message {
     private final boolean success;
     private final Exception exception;
-    private final String payload;
 
-    public CustomResponse(boolean success, Exception exception, String payload) {
+    public BizurKVOperationResponse(boolean success, Exception exception) {
         this.success = success;
         this.exception = exception;
-        this.payload = payload;
-    }
-
-    public String getPayload() {
-        return payload;
     }
 
     public boolean isSuccess() {
@@ -30,10 +19,9 @@ public class CustomResponse extends Message {
 
     @Override
     public String toString() {
-        return "CustomResponse{" +
+        return "BizurKVOperationResponse{" +
                 "success=" + success +
                 ", exception=" + exception +
-                ", payload='" + payload + '\'' +
                 "} " + super.toString();
     }
 }

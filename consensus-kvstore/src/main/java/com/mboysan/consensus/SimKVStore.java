@@ -1,5 +1,9 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CheckSimIntegrityRequest;
+import com.mboysan.consensus.message.CheckSimIntegrityResponse;
+import com.mboysan.consensus.message.CheckStoreIntegrityRequest;
+import com.mboysan.consensus.message.CheckStoreIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -70,6 +74,20 @@ public class SimKVStore extends AbstractKVStore<SimNode> {
         } catch (Exception e) {
             logError(request, e);
             return new KVIterateKeysResponse(false, e, null);
+        }
+    }
+
+    @Override
+    public CheckStoreIntegrityResponse checkStoreIntegrity(CheckStoreIntegrityRequest request) {
+        try {
+            int routeTo = request.getRouteTo();
+            CheckSimIntegrityRequest simRequest = new CheckSimIntegrityRequest(routeTo);
+            CheckSimIntegrityResponse response = getNode().checkSimIntegrity(simRequest);
+            return new CheckStoreIntegrityResponse(
+                    response.isSuccess(), "simulate", response.getIntegrityHash(), response.getState());
+        } catch (Exception e) {
+            logError(request, e);
+            return new CheckStoreIntegrityResponse(e, "simulate");
         }
     }
 

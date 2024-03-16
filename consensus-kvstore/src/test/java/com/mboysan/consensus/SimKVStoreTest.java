@@ -94,6 +94,8 @@ class SimKVStoreTest extends KVStoreTestBase {
         assertDoesNotThrow(() -> getRandomClient().get("a"));
         assertDoesNotThrow(() -> getRandomClient().delete("a"));
         assertDoesNotThrow(() -> getRandomClient().iterateKeys());
+        assertDoesNotThrow(() -> getRandomClient().checkIntegrity(1, -1));
+        assertDoesNotThrow(() -> getRandomClient().checkIntegrity(1, 1));
     }
 
     @Test

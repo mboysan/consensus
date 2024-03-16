@@ -288,6 +288,19 @@ class RaftNodeTest extends NodeTestBase {
         });
     }
 
+    @Test
+    void testIntegrityCheckFailsWhenQuorumNotFormed() throws Exception {
+        int numServers = 3;
+        initCluster(numServers);
+        int leaderId = assertOneLeader();
+
+        disconnect((leaderId + 1) % numServers);
+        disconnect((leaderId + 2) % numServers);
+
+        boolean success = checkIntegrity(leaderId);
+        assertFalse(success);
+    }
+
     /**
      * Tests append event during a broken quorum. Append will fail.
      */

@@ -1,5 +1,7 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.message.CheckStoreIntegrityRequest;
+import com.mboysan.consensus.message.CheckStoreIntegrityResponse;
 import com.mboysan.consensus.message.CustomRequest;
 import com.mboysan.consensus.message.CustomResponse;
 import com.mboysan.consensus.message.KVDeleteRequest;
@@ -29,6 +31,8 @@ public interface KVStoreRPC extends RPCProtocol {
 
     KVIterateKeysResponse iterateKeys(KVIterateKeysRequest request) throws IOException;
 
+    CheckStoreIntegrityResponse checkStoreIntegrity(CheckStoreIntegrityRequest request) throws IOException;
+
     CustomResponse customRequest(CustomRequest request) throws IOException;
 
     @Override
@@ -41,6 +45,8 @@ public interface KVStoreRPC extends RPCProtocol {
             return delete(request);
         } else if (message instanceof KVIterateKeysRequest request) {
             return iterateKeys(request);
+        } else if (message instanceof CheckStoreIntegrityRequest request) {
+            return checkStoreIntegrity(request);
         } else if (message instanceof CustomRequest request) {
             return customRequest(request);
         }
