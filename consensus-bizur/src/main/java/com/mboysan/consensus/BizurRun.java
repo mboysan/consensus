@@ -363,6 +363,7 @@ final class BizurRun {
 
         forEachPeerParallel(peer -> {
             CheckBizurIntegrityRequest request = new CheckBizurIntegrityRequest(level)
+                    .setCorrelationId(correlationId)
                     .setSenderId(getNodeId())
                     .setReceiverId(peer.peerId);
             try {
