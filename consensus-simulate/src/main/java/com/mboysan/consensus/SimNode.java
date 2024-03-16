@@ -68,7 +68,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     }
 
     @Override
-    SimRPC getRPC() {
+    SimClient getRPC() {
         return rpcClient;
     }
 

@@ -57,7 +57,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     @Override
-    RaftRPC getRPC() {
+    RaftClient getRPC() {
         return rpcClient;
     }
 

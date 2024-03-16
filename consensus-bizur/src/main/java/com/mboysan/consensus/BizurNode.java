@@ -61,7 +61,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
-    BizurRPC getRPC() {
+    BizurClient getRPC() {
         return rpcClient;
     }
 

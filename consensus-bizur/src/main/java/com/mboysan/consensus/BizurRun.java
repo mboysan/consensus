@@ -55,7 +55,7 @@ final class BizurRun {
         bizurNode.forEachPeerParallel(peerConsumer);
     }
 
-    private BizurRPC getRPC() {
+    private BizurClient getRPC() {
         return bizurNode.getRPC();
     }
 
