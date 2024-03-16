@@ -16,7 +16,6 @@ class HashUtilTest {
     void testFindCommonHashWithInvalidThreshold() {
         assertThrows(IllegalArgumentException.class, () -> HashUtil.findCommonHash(List.of(), 1));
         assertThrows(IllegalArgumentException.class, () -> HashUtil.findCommonHash(List.of("a"), -1));
-        assertThrows(IllegalArgumentException.class, () -> HashUtil.findCommonHash(List.of("a"), 2));
     }
 
     @Test

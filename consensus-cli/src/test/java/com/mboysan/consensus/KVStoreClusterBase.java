@@ -39,6 +39,10 @@ public abstract class KVStoreClusterBase {
         return KVStoreServerCLI.getStore(nodeId);
     }
 
+    public int numStores() {
+        return KVStoreServerCLI.getStores().size();
+    }
+
     public KVStoreClient getClient(int clientId) {
         return KVStoreClientCLI.getClient(clientId);
     }

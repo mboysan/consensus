@@ -33,6 +33,8 @@ class SimKVClusterIntegrationTest extends ClusterIntegrationTestBase {
         assertDoesNotThrow(() -> simCluster.getRandomClient().get("a"));
         assertDoesNotThrow(() -> simCluster.getRandomClient().delete("a"));
         assertDoesNotThrow(() -> simCluster.getRandomClient().iterateKeys());
+        assertDoesNotThrow(() -> simCluster.getRandomClient().checkIntegrity(1, -1));
+        assertDoesNotThrow(() -> simCluster.getRandomClient().checkIntegrity(1, 1));
     }
 
     @Test

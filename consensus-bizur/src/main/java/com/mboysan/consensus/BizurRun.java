@@ -60,11 +60,11 @@ final class BizurRun {
     }
 
     private boolean isMajorityAcked(int voteCount) {
-        return voteCount > countMajority();
+        return voteCount >= countMajority();
     }
 
     private int countMajority() {
-        return bizurNode.getNumPeers() / 2;
+        return (bizurNode.getNumPeers() / 2) + 1;
     }
 
     private int hashKey(String key) {

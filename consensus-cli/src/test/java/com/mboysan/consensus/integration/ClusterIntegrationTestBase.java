@@ -24,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class ClusterIntegrationTestBase {
 
+    private static final int DEFAULT_INTEGRITY_CHECK_LEVEL = 3;
+    private static final int DEFAULT_ROUTE_TO = -1;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterIntegrationTestBase.class);
 
     void testKVOperationsSimple(KVStoreClusterBase cluster) throws CommandException {
@@ -101,6 +104,16 @@ abstract class ClusterIntegrationTestBase {
         assertIntegrityCheckPassed(cluster);
     }
 
+    void testKVStoreIntegrityCheckFailsWhenMajorityOfStoresAreDown(KVStoreClusterBase cluster) {
+        int majorityCount = (cluster.numStores() / 2) + 1;
+        int lastNodeIndex = cluster.numStores() - 1;
+        for (int i = 0; i < majorityCount; i++) {
+            cluster.getStore(i).shutdown();
+        }
+        assertThrows(CommandException.class, () ->
+                cluster.getClient(lastNodeIndex).checkIntegrity(DEFAULT_INTEGRITY_CHECK_LEVEL, DEFAULT_ROUTE_TO));
+    }
+
     void testCustomCommands(KVStoreClusterBase cluster) throws CommandException {
         assertThrows(CommandException.class, () ->
                 cluster.getClient(0).customRequest("some-random-request", null, -1)
@@ -134,9 +147,7 @@ abstract class ClusterIntegrationTestBase {
 
     private void assertIntegrityCheckPassed(KVStoreClusterBase cluster) {
         awaiting(() -> {
-            int defaultLevel = 3;
-            int defaultRouteTo = -1;
-            String response = cluster.getClient(0).checkIntegrity(defaultLevel, defaultRouteTo);
+            String response = cluster.getClient(0).checkIntegrity(DEFAULT_INTEGRITY_CHECK_LEVEL, DEFAULT_ROUTE_TO);
             assertTrue(response.contains("success"));
             assertTrue(response.contains("integrityHash"));
         });

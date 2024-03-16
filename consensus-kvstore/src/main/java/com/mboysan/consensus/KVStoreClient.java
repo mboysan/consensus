@@ -97,6 +97,7 @@ public class KVStoreClient extends AbstractClient {
                     .setReceiverId(nextNodeId());
             CheckStoreIntegrityResponse response = (CheckStoreIntegrityResponse) getTransport().sendRecv(request);
             if (!response.isSuccess()) {
+                LOGGER.error("checkIntegrity failed, response=[{}]", response, response.getException());
                 throw new CommandException(response.getException());
             }
             return response.toString();

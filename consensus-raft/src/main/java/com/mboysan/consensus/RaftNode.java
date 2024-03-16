@@ -409,8 +409,8 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         }
                     });
 
-                    Optional<String> majorityHash = HashUtil.findCommonHash(
-                            integrityHashes.values(), peers.size() / 2);
+                    int majorityCount = (peers.size() / 2) + 1;
+                    Optional<String> majorityHash = HashUtil.findCommonHash(integrityHashes.values(), majorityCount);
                     String leaderHash = integrityHashes.get(state.leaderId);
 
                     LOGGER.info("node-{} integrityHash={}, majorityHash={}, leaderHash={}",

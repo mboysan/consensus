@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 
 import static com.mboysan.consensus.util.AwaitUtil.awaiting;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -96,6 +97,19 @@ class BizurNodeTest extends NodeTestBase {
         BizurKVGetRequest request = new BizurKVGetRequest("some-key");
         assertThrows(IllegalStateException.class, () -> node.get(request));
         skipTeardown = true;
+    }
+
+    @Test
+    void testIntegrityCheckFailsWhenMajorityCannotRespond() throws Exception {
+        int numServers = 3;
+        initCluster(numServers, 1);
+        int nodeIdToCheck = 0;
+
+        disconnect((nodeIdToCheck + 1) % numServers);
+        disconnect((nodeIdToCheck + 2) % numServers);
+
+        boolean success = checkIntegrity(nodeIdToCheck);
+        assertFalse(success);
     }
 
     @Test
