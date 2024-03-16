@@ -42,7 +42,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
                             .setReceiverId(peer.peerId)
                             .setSenderId(getNodeId());
                     try {
-                        getRPC().customRequest(request); // we aren't interested in the response
+                        rpc().customRequest(request); // we aren't interested in the response
                         count.incrementAndGet();
                     } catch (IOException e) {
                         LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
@@ -68,7 +68,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
     }
 
     @Override
-    SimRPC getRPC() {
+    SimClient rpc() {
         return rpcClient;
     }
 
@@ -83,7 +83,7 @@ public class SimNode extends AbstractNode<SimPeer> implements SimRPC {
                             .setSenderId(getNodeId())
                             .setReceiverId(peer.peerId);
                     try {
-                        getRPC().simulate(request); // we aren't interested in the response
+                        rpc().simulate(request); // we aren't interested in the response
                     } catch (IOException e) {
                         LOGGER.error("peer-{} IO exception for request={}, cause={}", peer.peerId, request, e.getMessage());
                     }

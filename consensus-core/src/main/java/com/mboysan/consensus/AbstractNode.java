@@ -174,7 +174,7 @@ abstract class AbstractNode<P extends AbstractPeer> implements RPCProtocol {
         return (S) transport.sendRecv(message);
     }
 
-    abstract RPCProtocol getRPC();
+    abstract AbstractClient rpc();
 
     Scheduler getScheduler() {
         return scheduler;

@@ -61,7 +61,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
     }
 
     @Override
-    BizurRPC getRPC() {
+    BizurClient rpc() {
         return rpcClient;
     }
 
@@ -158,7 +158,7 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 .setSenderId(getNodeId())
                 .setReceiverId(leaderId);
         try {
-            HeartbeatResponse response = getRPC().heartbeat(request);
+            HeartbeatResponse response = rpc().heartbeat(request);
             if (LOGGER.isTraceEnabled()) {
                 long elapsed = response.getSendTimeMs() - request.getSendTimeMs();
                 LOGGER.trace("peer-{} heartbeat elapsed={}", leaderId, elapsed);

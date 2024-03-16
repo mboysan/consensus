@@ -57,7 +57,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     }
 
     @Override
-    RaftRPC getRPC() {
+    RaftClient rpc() {
         return rpcClient;
     }
 
@@ -164,7 +164,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                         .setSenderId(getNodeId())
                         .setReceiverId(peer.peerId);
                 try {
-                    RequestVoteResponse response = getRPC().requestVote(request);
+                    RequestVoteResponse response = rpc().requestVote(request);
 
                     synchronized (lock) {
                         if (state.currentTerm < response.getTerm()) {
@@ -214,7 +214,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                             .setSenderId(getNodeId())
                             .setReceiverId(peer.peerId);
                     try {
-                        AppendEntriesResponse response = getRPC().appendEntries(request);
+                        AppendEntriesResponse response = rpc().appendEntries(request);
 
                         synchronized (lock) {
                             if (state.currentTerm < response.getTerm()) {
@@ -401,7 +401,7 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                                 .setSenderId(getNodeId())
                                 .setReceiverId(peer.peerId);
                         try {
-                            CheckRaftIntegrityResponse raftResponse = getRPC().checkRaftIntegrity(raftRequest);
+                            CheckRaftIntegrityResponse raftResponse = rpc().checkRaftIntegrity(raftRequest);
                             integrityHashes.put(peer.peerId, raftResponse.getIntegrityHash());
                             states.put(peer.peerId, raftResponse.getState());
                         } catch (IOException e) {
