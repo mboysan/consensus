@@ -379,13 +379,12 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
                 case CoreConstants.StateLevels.DEBUG_STATE -> {
                     return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toDebugString());
                 }
-                case CoreConstants.StateLevels.TRACE_STATE -> {
-                    return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toTraceString());
-                }
                 case CoreConstants.StateLevels.INFO_STATE_FROM_ALL,
-                     CoreConstants.StateLevels.TRACE_STATE_FROM_ALL,
                      CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL -> {
-                    final int levelOverride = getLevelOverride(request);
+                    int requestLevel = request.getLevel();
+                    final int levelOverride = requestLevel == CoreConstants.StateLevels.INFO_STATE_FROM_ALL
+                            ? CoreConstants.StateLevels.INFO_STATE
+                            : CoreConstants.StateLevels.DEBUG_STATE;
 
                     CheckRaftIntegrityResponse thisNodeResponse = this.checkRaftIntegrity(
                             new CheckRaftIntegrityRequest(levelOverride));
@@ -469,19 +468,6 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
     private synchronized void doNotifyAll() {
         notified = true;
         notifyAll();
-    }
-
-    private static int getLevelOverride(CheckRaftIntegrityRequest request) {
-        final int levelOverride;
-        switch (request.getLevel()) {
-            case CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL ->
-                    levelOverride = CoreConstants.StateLevels.DEBUG_STATE;
-            case CoreConstants.StateLevels.TRACE_STATE_FROM_ALL ->
-                    levelOverride = CoreConstants.StateLevels.TRACE_STATE;
-            default ->
-                    levelOverride = CoreConstants.StateLevels.INFO_STATE;
-        }
-        return levelOverride;
     }
 
     /*----------------------------------------------------------------------------------

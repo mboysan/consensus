@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class ClusterIntegrationTestBase {
 
-    private static final int DEFAULT_INTEGRITY_CHECK_LEVEL = CoreConstants.StateLevels.TRACE_STATE_FROM_ALL;
+    private static final int DEFAULT_INTEGRITY_CHECK_LEVEL = CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL;
     private static final int DEFAULT_ROUTE_TO = -1;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterIntegrationTestBase.class);

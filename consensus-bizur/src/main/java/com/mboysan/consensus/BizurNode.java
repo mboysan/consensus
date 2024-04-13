@@ -311,20 +311,16 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         }
         switch (request.getLevel()) {
             case CoreConstants.StateLevels.INFO_STATE,
-                 CoreConstants.StateLevels.DEBUG_STATE,
-                 CoreConstants.StateLevels.TRACE_STATE -> {
+                 CoreConstants.StateLevels.DEBUG_STATE -> {
                 Map<Integer, String> states = new HashMap<>();
                 int finalIntegrityHash = 0;
                 for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
                     BucketRange range = getBucketRange(rangeIndex).lock();
                     try {
                         finalIntegrityHash = Objects.hash(finalIntegrityHash, range.getIntegrityHash());
-                        final String state;
-                        switch (request.getLevel()) {
-                            case CoreConstants.StateLevels.DEBUG_STATE -> state = range.toDebugString();
-                            case CoreConstants.StateLevels.TRACE_STATE -> state = range.toTraceString();
-                            default -> state = range.toInfoString();
-                        }
+                        final String state = CoreConstants.StateLevels.INFO_STATE == request.getLevel()
+                                ? range.toInfoString()
+                                : range.toDebugString();
                         states.put(rangeIndex, state);
                     } finally {
                         range.unlock();
@@ -334,9 +330,10 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                         true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
             case CoreConstants.StateLevels.INFO_STATE_FROM_ALL,
-                 CoreConstants.StateLevels.TRACE_STATE_FROM_ALL,
                  CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL -> {
-                int levelOverride = getLevelOverride(request);
+                int levelOverride = CoreConstants.StateLevels.INFO_STATE_FROM_ALL == request.getLevel()
+                        ? CoreConstants.StateLevels.INFO_STATE
+                        : CoreConstants.StateLevels.DEBUG_STATE;
                 return new BizurRun(request.getCorrelationId(), this).checkIntegrity(levelOverride);
             }
             default -> throw new IOException("unsupported level=" + request.getLevel());
@@ -425,19 +422,6 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
         if (LOGGER.isErrorEnabled()) {
             LOGGER.error("err on node-{}: exception={}, request={}", getNodeId(), exception.getMessage(), request);
         }
-    }
-
-    private static int getLevelOverride(CheckBizurIntegrityRequest request) {
-        final int levelOverride;
-        switch (request.getLevel()) {
-            case CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL ->
-                    levelOverride = CoreConstants.StateLevels.DEBUG_STATE;
-            case CoreConstants.StateLevels.TRACE_STATE_FROM_ALL ->
-                    levelOverride = CoreConstants.StateLevels.TRACE_STATE;
-            default ->
-                    levelOverride = CoreConstants.StateLevels.INFO_STATE;
-        }
-        return levelOverride;
     }
 
     /*----------------------------------------------------------------------------------

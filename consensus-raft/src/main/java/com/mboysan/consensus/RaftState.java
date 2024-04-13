@@ -66,10 +66,6 @@ class RaftState {
         return toString(raftLog.toDebugString());
     }
 
-    public String toTraceString() {
-        return toString(raftLog.toTraceString());
-    }
-
     private String toString(String raftLogString) {
         return "State{" +
                 "currentTerm=" + currentTerm +

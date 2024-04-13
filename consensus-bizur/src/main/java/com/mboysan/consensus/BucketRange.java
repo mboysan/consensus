@@ -86,35 +86,25 @@ class BucketRange {
     }
 
     public String toInfoString() {
-        return toString(null);
+        return toString("N/A");
     }
 
     public String toDebugString() {
         String bucketMapStr = bucketMap.values().stream()
-                .map(Bucket::toDebugString)
-                .collect(Collectors.joining(", "));
-        return toString(bucketMapStr);
-    }
-
-    public String toTraceString() {
-        String bucketMapStr = bucketMap.values().stream()
-                .map(Bucket::toTraceString)
+                .map(Bucket::toString)
                 .collect(Collectors.joining(", "));
         return toString(bucketMapStr);
     }
 
     private String toString(String bucketMapString) {
-        String bucketMapStr = bucketMapString == null ? "" : ", bucketMap=" + bucketMapString;
-        String bucketRangeStr =
-                "BucketRange{" +
-                        "rangeIndex=" + rangeIndex +
-                        ", leaderId=" + leaderId +
-                        ", electId=" + electId +
-                        ", votedElectId=" + votedElectId +
-                        "%s" +
-                        ", integrityHash=" + getIntegrityHash() +
-                        '}';
-        return bucketRangeStr.formatted(bucketMapStr);
+        return "BucketRange{" +
+                "rangeIndex=" + rangeIndex +
+                ", leaderId=" + leaderId +
+                ", electId=" + electId +
+                ", votedElectId=" + votedElectId +
+                ", bucketMap=" + bucketMapString +
+                ", integrityHash=" + getIntegrityHash() +
+                '}';
     }
 
     //------------------------------- for testing -------------------------------//

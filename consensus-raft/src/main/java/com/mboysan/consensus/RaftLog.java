@@ -122,25 +122,18 @@ class RaftLog implements Comparable<RaftLog> {
     }
 
     public String toInfoString() {
-        return toString(null);
+        return toString("N/A");
     }
 
     public String toDebugString() {
-        return toString("<...>");
-    }
-
-    public String toTraceString() {
         return toString(entries.toString());
     }
 
     private String toString(String entriesString) {
-        String entriesStr = entriesString == null ? "" : ", entries=" + entriesString;
-        String raftLogStr =
-                "RaftLog{" +
-                        "lastLogTerm=" + lastLogTerm() +
-                        ", lastLogIndex=" + lastLogIndex() +
-                        "%s" +
-                        "}";
-        return raftLogStr.formatted(entriesStr);
+        return "RaftLog{" +
+                "lastLogTerm=" + lastLogTerm() +
+                ", lastLogIndex=" + lastLogIndex() +
+                ", entries=" + entriesString +
+                '}';
     }
 }

@@ -17,13 +17,9 @@ public interface CoreConstants {
         int INFO_STATE = 1;
         /** Verbose state info */
         int DEBUG_STATE = 2;
-        /** More verbose state info */
-        int TRACE_STATE = 3;
         /** Integrity hash from all nodes */
         int INFO_STATE_FROM_ALL = 10;
         /** Verbose state from all nodes */
         int DEBUG_STATE_FROM_ALL = 20;
-        /** More verbose state from all nodes */
-        int TRACE_STATE_FROM_ALL = 30;
     }
 }
