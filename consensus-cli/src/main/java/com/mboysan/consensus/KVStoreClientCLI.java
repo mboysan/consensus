@@ -54,8 +54,11 @@ public class KVStoreClientCLI {
 
         if (isOneOffCommand) {
             LOGGER.info("Sending one-off command");
-            handle(client, cliClientConfig.command(), cliClientConfig);
-            client.shutdown();
+            try {
+                handle(client, cliClientConfig.command(), cliClientConfig);
+            } finally {
+                client.shutdown();
+            }
         } else if (isInteractiveSession) {
             LOGGER.info("Interactive session started. Client ready to receive commands:");
             try (Scanner scanner = new Scanner(System.in)) {
