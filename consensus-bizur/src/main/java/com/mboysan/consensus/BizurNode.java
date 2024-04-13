@@ -310,8 +310,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             return routeMessage(request);
         }
         switch (request.getLevel()) {
-            case CheckBizurIntegrityRequest.Level.STATE, CheckBizurIntegrityRequest.Level.THIN_STATE -> {
-                boolean isThinState = request.getLevel() == CheckBizurIntegrityRequest.Level.THIN_STATE;
+            case CoreConstants.IntegrityCheckLevel.STATE, CoreConstants.IntegrityCheckLevel.THIN_STATE -> {
+                boolean isThinState = request.getLevel() == CoreConstants.IntegrityCheckLevel.THIN_STATE;
                 Map<Integer, String> states = new HashMap<>();
                 int finalIntegrityHash = 0;
                 for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
@@ -327,10 +327,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 return new CheckBizurIntegrityResponse(
                         true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
-            case CheckBizurIntegrityRequest.Level.STATE_FROM_ALL, CheckBizurIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
-                int levelOverride = request.getLevel() == CheckBizurIntegrityRequest.Level.STATE_FROM_ALL
-                        ? CheckBizurIntegrityRequest.Level.STATE
-                        : CheckBizurIntegrityRequest.Level.THIN_STATE;
+            case CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL,
+                 CoreConstants.IntegrityCheckLevel.THIN_STATE_FROM_ALL ->
+            {
+                int levelOverride = request.getLevel() == CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL
+                        ? CoreConstants.IntegrityCheckLevel.STATE
+                        : CoreConstants.IntegrityCheckLevel.THIN_STATE;
                 return new BizurRun(request.getCorrelationId(), this).checkIntegrity(levelOverride);
             }
             default -> throw new IOException("unsupported level=" + request.getLevel());

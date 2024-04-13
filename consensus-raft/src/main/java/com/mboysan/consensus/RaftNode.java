@@ -373,16 +373,18 @@ public class RaftNode extends AbstractNode<RaftPeer> implements RaftRPC {
         }
         synchronized (this) {
             switch (request.getLevel()) {
-                case CheckRaftIntegrityRequest.Level.STATE -> {
+                case CoreConstants.IntegrityCheckLevel.STATE -> {
                     return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toString());
                 }
-                case CheckRaftIntegrityRequest.Level.THIN_STATE -> {
+                case CoreConstants.IntegrityCheckLevel.THIN_STATE -> {
                     return new CheckRaftIntegrityResponse(true, state.getIntegrityHash(), state.toThinString());
                 }
-                case CheckRaftIntegrityRequest.Level.STATE_FROM_ALL, CheckRaftIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
-                    int levelOverride = request.getLevel() == CheckRaftIntegrityRequest.Level.STATE_FROM_ALL
-                            ? CheckRaftIntegrityRequest.Level.STATE
-                            : CheckRaftIntegrityRequest.Level.THIN_STATE;
+                case CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL,
+                     CoreConstants.IntegrityCheckLevel.THIN_STATE_FROM_ALL ->
+                {
+                    int levelOverride = request.getLevel() == CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL
+                            ? CoreConstants.IntegrityCheckLevel.STATE
+                            : CoreConstants.IntegrityCheckLevel.THIN_STATE;
 
                     CheckRaftIntegrityResponse thisNodeResponse = this.checkRaftIntegrity(
                             new CheckRaftIntegrityRequest(levelOverride));

@@ -11,4 +11,11 @@ public interface CoreConstants {
         String INSIGHTS_TCP_SERVER_SEND_SIZEOF = "insights.tcp.server.send.sizeOf.%s";
         String INSIGHTS_TCP_SERVER_RECEIVE_SIZEOF = "insights.tcp.server.receive.sizeOf.%s";
     }
+
+    interface IntegrityCheckLevel {
+        int STATE = 1;
+        int THIN_STATE = 2;
+        int STATE_FROM_ALL = 3;
+        int THIN_STATE_FROM_ALL = 4;
+    }
 }

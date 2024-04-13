@@ -513,7 +513,7 @@ class RaftNodeTest extends NodeTestBase {
 
     private boolean checkIntegrity(int nodeId) throws IOException {
         return nodes[nodeId].checkRaftIntegrity(
-                new CheckRaftIntegrityRequest(CheckRaftIntegrityRequest.Level.STATE_FROM_ALL)).isSuccess();
+                new CheckRaftIntegrityRequest(CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL)).isSuccess();
 
     }
 
