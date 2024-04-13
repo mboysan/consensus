@@ -80,30 +80,41 @@ class BucketRange {
         return Integer.toHexString(Objects.hash(leaderId, bucketMap));
     }
 
-    public String toThinString() {
-        String bucketMapThinStr = bucketMap.values().stream()
-                .map(Bucket::toThinString)
-                .collect(Collectors.joining(", "));
-        return "BucketRange{" +
-                "rangeIndex=" + rangeIndex +
-                ", leaderId=" + leaderId +
-                ", electId=" + electId +
-                ", votedElectId=" + votedElectId +
-                ", bucketMap=" + bucketMapThinStr +
-                ", integrityHash=" + getIntegrityHash() +
-                '}';
-    }
-
     @Override
     public String toString() {
-        return "BucketRange{" +
-                "rangeIndex=" + rangeIndex +
-                ", leaderId=" + leaderId +
-                ", electId=" + electId +
-                ", votedElectId=" + votedElectId +
-                ", bucketMap=" + bucketMap +
-                ", integrityHash=" + getIntegrityHash() +
-                '}';
+        return toInfoString();
+    }
+
+    public String toInfoString() {
+        return toString(null);
+    }
+
+    public String toDebugString() {
+        String bucketMapStr = bucketMap.values().stream()
+                .map(Bucket::toDebugString)
+                .collect(Collectors.joining(", "));
+        return toString(bucketMapStr);
+    }
+
+    public String toTraceString() {
+        String bucketMapStr = bucketMap.values().stream()
+                .map(Bucket::toTraceString)
+                .collect(Collectors.joining(", "));
+        return toString(bucketMapStr);
+    }
+
+    private String toString(String bucketMapString) {
+        String bucketMapStr = bucketMapString == null ? "" : ", bucketMap=" + bucketMapString;
+        String bucketRangeStr =
+                "BucketRange{" +
+                        "rangeIndex=" + rangeIndex +
+                        ", leaderId=" + leaderId +
+                        ", electId=" + electId +
+                        ", votedElectId=" + votedElectId +
+                        "%s" +
+                        ", integrityHash=" + getIntegrityHash() +
+                        '}';
+        return bucketRangeStr.formatted(bucketMapStr);
     }
 
     //------------------------------- for testing -------------------------------//

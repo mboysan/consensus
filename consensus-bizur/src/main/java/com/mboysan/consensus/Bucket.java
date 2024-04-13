@@ -133,22 +133,28 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         }
     }
 
-    public String toThinString() {
-        return "Bucket{" +
-                "index=" + index +
-                ", verElectId=" + verElectId +
-                ", verCounter=" + verCounter +
-                ", bucketMap=<...>" +
-                '}';
-    }
-
     @Override
     public String toString() {
-        return "Bucket{" +
-                "index=" + index +
-                ", verElectId=" + verElectId +
-                ", verCounter=" + verCounter +
-                ", bucketMap=" + bucketMap +
-                '}';
+        return toDebugString();
+    }
+
+    public String toDebugString() {
+        return toString("<...>");
+    }
+
+    public String toTraceString() {
+        return toString(bucketMap.toString());
+    }
+
+    private String toString(String bucketMapString) {
+        String entriesStr = bucketMapString == null ? "" : ", bucketMap=" + bucketMapString;
+        String bucketStr =
+                "Bucket{" +
+                        "index=" + index +
+                        ", verElectId=" + verElectId +
+                        ", verCounter=" + verCounter +
+                        "%s" +
+                        "}";
+        return bucketStr.formatted(entriesStr);
     }
 }
