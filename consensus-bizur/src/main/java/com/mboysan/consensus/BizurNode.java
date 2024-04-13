@@ -310,8 +310,8 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             return routeMessage(request);
         }
         switch (request.getLevel()) {
-            case CoreConstants.IntegrityCheckLevel.STATE, CoreConstants.IntegrityCheckLevel.THIN_STATE -> {
-                boolean isThinState = request.getLevel() == CoreConstants.IntegrityCheckLevel.THIN_STATE;
+            case CoreConstants.StateLevels.TRACE_STATE, CoreConstants.StateLevels.DEBUG_STATE -> {
+                boolean isThinState = request.getLevel() == CoreConstants.StateLevels.DEBUG_STATE;
                 Map<Integer, String> states = new HashMap<>();
                 int finalIntegrityHash = 0;
                 for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
@@ -327,12 +327,12 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 return new CheckBizurIntegrityResponse(
                         true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
-            case CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL,
-                 CoreConstants.IntegrityCheckLevel.THIN_STATE_FROM_ALL ->
+            case CoreConstants.StateLevels.TRACE_STATE_FROM_ALL,
+                 CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL ->
             {
-                int levelOverride = request.getLevel() == CoreConstants.IntegrityCheckLevel.STATE_FROM_ALL
-                        ? CoreConstants.IntegrityCheckLevel.STATE
-                        : CoreConstants.IntegrityCheckLevel.THIN_STATE;
+                int levelOverride = request.getLevel() == CoreConstants.StateLevels.TRACE_STATE_FROM_ALL
+                        ? CoreConstants.StateLevels.TRACE_STATE
+                        : CoreConstants.StateLevels.DEBUG_STATE;
                 return new BizurRun(request.getCorrelationId(), this).checkIntegrity(levelOverride);
             }
             default -> throw new IOException("unsupported level=" + request.getLevel());
