@@ -310,15 +310,17 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
             return routeMessage(request);
         }
         switch (request.getLevel()) {
-            case CheckBizurIntegrityRequest.Level.STATE, CheckBizurIntegrityRequest.Level.THIN_STATE -> {
-                boolean isThinState = request.getLevel() == CheckBizurIntegrityRequest.Level.THIN_STATE;
+            case CoreConstants.StateLevels.INFO_STATE,
+                 CoreConstants.StateLevels.DEBUG_STATE -> {
                 Map<Integer, String> states = new HashMap<>();
                 int finalIntegrityHash = 0;
                 for (int rangeIndex = 0; rangeIndex < getNumRanges(); rangeIndex++) {
                     BucketRange range = getBucketRange(rangeIndex).lock();
                     try {
                         finalIntegrityHash = Objects.hash(finalIntegrityHash, range.getIntegrityHash());
-                        String state = isThinState ? range.toThinString() : range.toString();
+                        final String state = CoreConstants.StateLevels.INFO_STATE == request.getLevel()
+                                ? range.toInfoString()
+                                : range.toDebugString();
                         states.put(rangeIndex, state);
                     } finally {
                         range.unlock();
@@ -327,10 +329,11 @@ public class BizurNode extends AbstractNode<BizurPeer> implements BizurRPC {
                 return new CheckBizurIntegrityResponse(
                         true, Integer.toHexString(finalIntegrityHash), states.toString());
             }
-            case CheckBizurIntegrityRequest.Level.STATE_FROM_ALL, CheckBizurIntegrityRequest.Level.THIN_STATE_FROM_ALL -> {
-                int levelOverride = request.getLevel() == CheckBizurIntegrityRequest.Level.STATE_FROM_ALL
-                        ? CheckBizurIntegrityRequest.Level.STATE
-                        : CheckBizurIntegrityRequest.Level.THIN_STATE;
+            case CoreConstants.StateLevels.INFO_STATE_FROM_ALL,
+                 CoreConstants.StateLevels.DEBUG_STATE_FROM_ALL -> {
+                int levelOverride = CoreConstants.StateLevels.INFO_STATE_FROM_ALL == request.getLevel()
+                        ? CoreConstants.StateLevels.INFO_STATE
+                        : CoreConstants.StateLevels.DEBUG_STATE;
                 return new BizurRun(request.getCorrelationId(), this).checkIntegrity(levelOverride);
             }
             default -> throw new IOException("unsupported level=" + request.getLevel());

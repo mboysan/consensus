@@ -116,20 +116,24 @@ class RaftLog implements Comparable<RaftLog> {
         return entries.hashCode();
     }
 
-    public String toThinString() {
-        return "RaftLog{" +
-                "lastLogTerm=" + lastLogTerm() +
-                ", lastLogIndex=" + lastLogIndex() +
-                ", entries=<...>" +
-                "}";
-    }
-
     @Override
     public String toString() {
+        return toInfoString();
+    }
+
+    public String toInfoString() {
+        return toString("N/A");
+    }
+
+    public String toDebugString() {
+        return toString(entries.toString());
+    }
+
+    private String toString(String entriesString) {
         return "RaftLog{" +
                 "lastLogTerm=" + lastLogTerm() +
                 ", lastLogIndex=" + lastLogIndex() +
-                ", entries=" + entries +
-                "}";
+                ", entries=" + entriesString +
+                '}';
     }
 }

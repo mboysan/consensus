@@ -80,28 +80,29 @@ class BucketRange {
         return Integer.toHexString(Objects.hash(leaderId, bucketMap));
     }
 
-    public String toThinString() {
-        String bucketMapThinStr = bucketMap.values().stream()
-                .map(Bucket::toThinString)
-                .collect(Collectors.joining(", "));
-        return "BucketRange{" +
-                "rangeIndex=" + rangeIndex +
-                ", leaderId=" + leaderId +
-                ", electId=" + electId +
-                ", votedElectId=" + votedElectId +
-                ", bucketMap=" + bucketMapThinStr +
-                ", integrityHash=" + getIntegrityHash() +
-                '}';
-    }
-
     @Override
     public String toString() {
+        return toInfoString();
+    }
+
+    public String toInfoString() {
+        return toString("N/A");
+    }
+
+    public String toDebugString() {
+        String bucketMapStr = bucketMap.values().stream()
+                .map(Bucket::toString)
+                .collect(Collectors.joining(", "));
+        return toString(bucketMapStr);
+    }
+
+    private String toString(String bucketMapString) {
         return "BucketRange{" +
                 "rangeIndex=" + rangeIndex +
                 ", leaderId=" + leaderId +
                 ", electId=" + electId +
                 ", votedElectId=" + votedElectId +
-                ", bucketMap=" + bucketMap +
+                ", bucketMap=" + bucketMapString +
                 ", integrityHash=" + getIntegrityHash() +
                 '}';
     }

@@ -53,26 +53,24 @@ class RaftState {
         return Integer.toHexString(Objects.hash(currentTerm, commitIndex, leaderId, raftLog));
     }
 
-    public String toThinString() {
-        return "State{" +
-                "currentTerm=" + currentTerm +
-                ", votedFor=" + votedFor +
-                ", raftLog=" + raftLog.toThinString() + // raftLog entries are omitted.
-                ", commitIndex=" + commitIndex +
-                ", lastApplied=" + lastApplied +
-                ", leaderId=" + leaderId +
-                ", seenLeader=" + seenLeader +
-                ", role=" + role +
-                ", integrityHash=" + getIntegrityHash() +
-                '}';
-    }
-
     @Override
     public String toString() {
+        return toInfoString();
+    }
+
+    public String toInfoString() {
+        return toString(raftLog.toInfoString());
+    }
+
+    public String toDebugString() {
+        return toString(raftLog.toDebugString());
+    }
+
+    private String toString(String raftLogString) {
         return "State{" +
                 "currentTerm=" + currentTerm +
                 ", votedFor=" + votedFor +
-                ", raftLog=" + raftLog +
+                ", raftLog=" + raftLogString +
                 ", commitIndex=" + commitIndex +
                 ", lastApplied=" + lastApplied +
                 ", leaderId=" + leaderId +

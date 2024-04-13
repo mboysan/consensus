@@ -436,7 +436,7 @@ class BizurNodeTest extends NodeTestBase {
 
     private boolean checkIntegrity(int nodeId) throws IOException {
         return nodes[nodeId].checkBizurIntegrity(
-                new CheckBizurIntegrityRequest(CheckBizurIntegrityRequest.Level.STATE_FROM_ALL)).isSuccess();
+                new CheckBizurIntegrityRequest(CoreConstants.StateLevels.INFO_STATE_FROM_ALL)).isSuccess();
     }
 
     @AfterEach

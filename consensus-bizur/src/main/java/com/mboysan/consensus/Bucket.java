@@ -133,22 +133,13 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         }
     }
 
-    public String toThinString() {
-        return "Bucket{" +
-                "index=" + index +
-                ", verElectId=" + verElectId +
-                ", verCounter=" + verCounter +
-                ", bucketMap=<...>" +
-                '}';
-    }
-
     @Override
     public String toString() {
         return "Bucket{" +
                 "index=" + index +
                 ", verElectId=" + verElectId +
                 ", verCounter=" + verCounter +
-                ", bucketMap=" + bucketMap +
-                '}';
+                ", bucketMap=" + bucketMap.toString() +
+                "}";
     }
 }
