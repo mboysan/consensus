@@ -112,6 +112,18 @@ public class Bucket implements Serializable, Comparable<Bucket> {
         return bucketMap.keySet().stream().mapToLong(k -> k.length() + bucketMap.get(k).length()).sum();
     }
 
+    int hashCodeOfBucketMap() {
+        return Objects.hash(index, bucketMap);
+    }
+
+    int hashCodeOfBucketMetadata() {
+        return Objects.hash(index, verElectId, verCounter);
+    }
+
+    int hashCodeOfBucketMapAndBucketMetadata() {
+        return Objects.hash(index, verElectId, verCounter, bucketMap);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -123,7 +135,7 @@ public class Bucket implements Serializable, Comparable<Bucket> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(index, verElectId, verCounter, bucketMap);
+        return hashCodeOfBucketMap();
     }
 
     @Override
