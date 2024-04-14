@@ -86,7 +86,12 @@ class BucketRange {
     }
 
     public String toInfoString() {
-        return toString("N/A");
+        int totalBuckets = bucketMap.size();
+        int totalEntries = bucketMap.values().stream()
+                .mapToInt(Bucket::getNumberOfEntries)
+                .sum();
+        String bucketMapStr = "[totalBuckets=" + totalBuckets + ", totalEntries=" + totalEntries + "]";
+        return toString(bucketMapStr);
     }
 
     public String toDebugString() {

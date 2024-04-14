@@ -122,7 +122,8 @@ class RaftLog implements Comparable<RaftLog> {
     }
 
     public String toInfoString() {
-        return toString("N/A");
+        int totalEntries = entries.size();
+        return toString("[totalEntries=" + totalEntries + "]");
     }
 
     public String toDebugString() {
