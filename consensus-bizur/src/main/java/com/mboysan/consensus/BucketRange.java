@@ -86,27 +86,55 @@ class BucketRange {
     }
 
     public String toInfoString() {
+        String bucketMapMetaStr = getBucketMapMetaData();
+        String bucketMapStr = "N/A";
+        return toString(bucketMapMetaStr, bucketMapStr);
+    }
+
+    public String toDebugString() {
+        String bucketMapMetaStr = getBucketMapMetaData();
+        String bucketMapStr = bucketMap.values().stream()
+                .map(Bucket::toString)
+                .collect(Collectors.joining(", "));
+        return toString(bucketMapMetaStr, bucketMapStr);
+    }
+
+    private String getBucketMapMetaData() {
         int totalBuckets = bucketMap.size();
         int totalEntries = bucketMap.values().stream()
                 .mapToInt(Bucket::getNumberOfEntries)
                 .sum();
-        String bucketMapStr = "[totalBuckets=" + totalBuckets + ", totalEntries=" + totalEntries + "]";
-        return toString(bucketMapStr);
+        String hashCodeOfBucketMaps = Integer.toHexString(
+                bucketMap.values().stream()
+                .map(Bucket::hashCodeOfBucketMap)
+                .reduce(0, Objects::hash)
+        );
+        String hashCodeOfBucketMetadata = Integer.toHexString(
+                bucketMap.values().stream()
+                        .map(Bucket::hashCodeOfBucketMetadata)
+                        .reduce(0, Objects::hash)
+        );
+        String hashCodeOfBucketMapAndBucketMetadata = Integer.toHexString(
+                bucketMap.values().stream()
+                        .map(Bucket::hashCodeOfBucketMapAndBucketMetadata)
+                        .reduce(0, Objects::hash)
+        );
+        return "[" +
+                "totalBuckets=" + totalBuckets +
+                ", totalEntries=" + totalEntries +
+                ", hashOfBucketMaps=" + hashCodeOfBucketMaps +
+                ", hashOfBucketMapsMetadata=" + hashCodeOfBucketMetadata +
+                ", hashOfBucketMapsAndMetadata=" + hashCodeOfBucketMapAndBucketMetadata +
+                "]";
     }
 
-    public String toDebugString() {
-        String bucketMapStr = bucketMap.values().stream()
-                .map(Bucket::toString)
-                .collect(Collectors.joining(", "));
-        return toString(bucketMapStr);
-    }
-
-    private String toString(String bucketMapString) {
+    private String toString(String bucketMapMetaString, String bucketMapString) {
         return "BucketRange{" +
                 "rangeIndex=" + rangeIndex +
                 ", leaderId=" + leaderId +
                 ", electId=" + electId +
                 ", votedElectId=" + votedElectId +
+                ", bucketMapMetadata=" + bucketMapMetaString +
                 ", bucketMap=" + bucketMapString +
                 ", integrityHash=" + getIntegrityHash() +
                 '}';
