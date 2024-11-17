@@ -1,13 +1,15 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.time.Timestamp;
+
 import java.util.Objects;
 
 public class Measurement implements Comparable<Measurement> {
     private String name;
     private String value;
-    private long timestamp;
+    private Timestamp timestamp;
 
-    public Measurement(String name, String value, long timestamp) {
+    public Measurement(String name, String value, Timestamp timestamp) {
         this.name = Objects.requireNonNull(name);
         this.value = Objects.requireNonNull(value);
         this.timestamp = Objects.requireNonNull(timestamp);
@@ -31,16 +33,16 @@ public class Measurement implements Comparable<Measurement> {
     }
 
     public long getTimestamp() {
-        return timestamp;
+        return timestamp.getTimestamp();
     }
 
-    public void setTimestamp(long timestamp) {
+    public void setTimestamp(Timestamp timestamp) {
         this.timestamp = timestamp;
     }
 
     @Override
     public int compareTo(Measurement o) {
-        if (timestamp < o.timestamp) {
+        if (timestamp.getTimestamp() <= o.timestamp.getTimestamp()) {
             return -1;
         }
         return 1;
