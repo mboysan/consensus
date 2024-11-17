@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.graphite.GraphiteReporter;
 import com.mboysan.consensus.configuration.MetricsConfig;
 import com.mboysan.consensus.event.MeasurementEvent;
+import com.mboysan.consensus.time.UnixSecondsTimestamp;
 import com.mboysan.consensus.util.SerializationUtil;
 import com.mboysan.consensus.util.ShutdownUtil;
 import io.micrometer.core.instrument.Clock;
@@ -146,13 +147,13 @@ public final class MetricsCollectorService implements BackgroundService {
                     metricsAggregator.add(new Measurement(
                         measurementEvent.getName(),
                         value,
-                        measurementEvent.getTimestamp()
+                        new UnixSecondsTimestamp(measurementEvent.getTimestamp()) // for graphite compatibility
                     ));
             case AGGREGATE ->
                     metricsAggregator.add(new LongAggregateMeasurement(
                         measurementEvent.getName(),
                         String.valueOf(value),
-                        measurementEvent.getTimestamp()
+                        new UnixSecondsTimestamp(measurementEvent.getTimestamp()) // for graphite compatibility
                     ));
         }
     }

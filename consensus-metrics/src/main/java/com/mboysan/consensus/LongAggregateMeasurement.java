@@ -1,7 +1,9 @@
 package com.mboysan.consensus;
 
+import com.mboysan.consensus.time.Timestamp;
+
 public class LongAggregateMeasurement extends AggregateMeasurement {
-    public LongAggregateMeasurement(String name, String value, long timestamp) {
+    public LongAggregateMeasurement(String name, String value, Timestamp timestamp) {
         super(name, value, timestamp);
     }
 
